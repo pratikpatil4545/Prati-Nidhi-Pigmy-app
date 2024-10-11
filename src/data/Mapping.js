@@ -1,0 +1,62 @@
+import { Model } from '@nozbe/watermelondb'
+import { field } from '@nozbe/watermelondb/decorators';
+
+export default class mapping_table extends Model {
+  static table = 'mapping_table';
+  @field('M_Field1') M_Field1;
+  @field('M_Field2') M_Field2;
+  @field('M_Field3') M_Field3;
+  @field('M_Field4') M_Field4;
+  @field('M_Field5') M_Field5;
+  @field('M_Field6') M_Field6;
+  @field('M_Field7') M_Field7;
+  @field('M_Field8') M_Field8;
+  @field('M_Field9') M_Field9;
+  @field('M_Field10') M_Field10;
+  @field('M_Field11') M_Field11;
+  @field('M_Field12') M_Field12;
+  @field('M_Field13') M_Field13;
+  @field('M_Field14') M_Field14;
+  @field('M_Field15') M_Field15;
+  @field('M_Field16') M_Field16;
+  @field('M_Field17') M_Field17;
+  @field('D_Field1') D_Field1;
+  @field('D_Field2') D_Field2;
+  @field('D_Field3') D_Field3;
+  @field('D_Field4') D_Field4;
+  @field('D_Field5') D_Field5;
+  @field('D_Field6') D_Field6;
+  @field('D_Field7') D_Field7;
+  @field('D_Field8') D_Field8;
+  @field('D_Field9') D_Field9;
+  @field('D_Field10') D_Field10;
+  @field('D_Field11') D_Field11;
+  @field('D_Field12') D_Field12;
+  @field('D_Field13') D_Field13;
+  @field('D_Field14') D_Field14;
+  @field('D_Field15') D_Field15;
+  @field('D_Field16') D_Field16;
+  @field('D_Field17') D_Field17;
+  @field('D_Field18') D_Field18;
+  @field('D_Field19') D_Field19;
+  @field('D_Field20') D_Field20;
+  @field('D_Field21') D_Field21;
+  @field('D_Field22') D_Field22;
+  @field('D_Field23') D_Field23;
+  @field('D_Field24') D_Field24;
+  @field('D_Field25') D_Field25;
+  @field('D_Field26') D_Field26;
+  @field('D_Field27') D_Field27;
+  @field('D_Field28') D_Field28;
+  @field('D_Field29') D_Field29;
+  @field('D_Field30') D_Field30;
+  @field('D_Field31') D_Field31;
+  @field('D_Field32') D_Field32;
+  @field('D_Field33') D_Field33;
+  @field('D_Field34') D_Field34;
+  @field('D_Field35') D_Field35;
+  @field('D_Field36') D_Field36;
+  @field('D_Field37') D_Field37;
+  @field('D_Field38') D_Field38;
+  
+}

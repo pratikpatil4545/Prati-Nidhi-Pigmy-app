@@ -1,0 +1,266 @@
+
+import { View, Text, StyleSheet, ScrollView, Pressable, Modal, ToastAndroid, StatusBar } from 'react-native'
+import React, { useEffect, useState } from 'react'
+import { COLORS, windowHeight, windowWidth } from '../../Common/Constants';
+import { useNavigation } from '@react-navigation/native';
+
+export default function TransactionCard(props) {
+
+    const navigation = useNavigation();
+    // console.log("searchQuery", props.item)
+
+    const HighlightedText = ({ name, query }) => {
+        if (!query) {
+            return <Text style={[styles.text, { color: COLORS.darkGrey }]}><Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>Name: </Text> {name}</Text>;
+        }
+        const regex = new RegExp(`(${query})`, 'gi'); // Create a regex to match the query
+        const parts = name.split(regex); // Split the name based on the query
+        return (
+            <Text style={[styles.text, { color: COLORS.darkGrey }]}>
+                <Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>Name: </Text>
+                {parts.map((part, index) =>
+                    part.toLowerCase() === query.toLowerCase() ? ( // Check if the part matches the query
+                        <Text key={index} style={{ backgroundColor: 'yellow' }}>{part}</Text> // Highlighted style
+                    ) : (
+                        <Text key={index}>{part}</Text>
+                    )
+                )}
+            </Text>
+        );
+    };
+
+    const weekday = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const date = new Date();
+    let day = weekday[date.getDay()];
+
+    const getDay = () => {
+        const dayMapping = {
+          "Sunday": 1,
+          "Monday": 2,
+          "Tuesday": 3,
+          "Wednesday": 4,
+          "Thursday": 5,
+          "Friday": 6,
+          "Saturday": 7
+        };
+    
+        return dayMapping[day];
+      };
+    
+    const dayIndex = getDay()
+
+    const dateTime = props.item[11]; 
+    const [CardDate, time] = dateTime.split(' ');
+    const [cardDay, month, year] = CardDate.split('/');
+  
+    // Convert month number to a three-letter abbreviation
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthIndex = parseInt(month, 10) - 1; // Convert month to zero-based index
+
+    return (
+        <View style={styles.mainView}>
+
+            <Pressable key={props.index} style={styles.card}>
+                <View style={styles.cardView}>
+                    <View style={styles.left}>
+                        <View style={styles.dateCard}>
+                            <View style={styles.dateCardInner}></View>
+                            <View style={[styles.dateCardInner, {backgroundColor: '#6482AD',borderTopLeftRadius: 0, borderTopRightRadius: 0, borderBottomLeftRadius: 5, borderBottomRightRadius: 5,}]}></View>
+                            <View style={{alignSelf: 'center',position: 'absolute'}}>
+                                <Text style={{ marginLeft: 'auto', marginRight: 'auto', fontFamily: 'Montserrat-Medium', color: COLORS.white}}>{cardDay}</Text>
+                                <Text style={{ fontFamily: 'Montserrat-Medium', color: COLORS.white}}>{monthNames[monthIndex]}</Text>
+                            </View>
+                            <View style={{width: 6, height: 6, borderRadius: 20, backgroundColor: COLORS.white, position: 'absolute'}}/>
+                            <View style={{width: 6, height: 6, borderRadius: 20, backgroundColor: COLORS.white, position: 'absolute', right: 0}}/>
+                        </View>
+                        {/* <Text style={{ fontFamily: 'Montserrat-Medium', color: COLORS.white, alignSelf: 'center'}}>{time}</Text> */}
+
+                        {/* <Text style={[styles.text, { color: COLORS.white, alignSelf: 'center', fontFamily: 'Montserrat-Bold', fontSize: 16, }]}> {props.index + 1}</Text>
+                        <Text style={[styles.text, { color: COLORS.white, alignSelf: 'center', fontFamily: 'Montserrat-Bold', fontSize: 16 }]}> {props.item[11]}</Text> */}
+                    </View>
+            
+                    {/* <View style={styles.lineCurve} />
+                    <View style={styles.lineCurve1} /> */}
+
+                    <View style={styles.right}>
+                        <HighlightedText name={props.item[8]} query={props.searchQuery} />
+                        {/* <HighlightedAccNo name={props.item[3]} query={props.searchQuery} /> */}
+                        <Text style={[styles.text, { color: COLORS.darkGrey }]}>
+                            <Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>Today's Entry:  </Text>
+                              {props.item[dayIndex]}.00
+                        </Text>
+                        <Text style={[styles.text, { color: COLORS.darkGrey }]}>
+                            <Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>Total balance:  </Text>
+                              {props.item[9]}.00
+                        </Text>
+                    </View>
+                </View>
+            </Pressable>
+
+        </View>
+    )
+}
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        padding: 16,
+    },
+    mainView: {
+        width: windowWidth * 1,
+        height: windowHeight * 0.15,
+        // backgroundColor: 'green',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+    },
+    card: {
+        width: windowWidth * 0.85,
+        height: windowHeight * 0.13,
+        display: "flex",
+        // flexDirection: 'row',
+        backgroundColor: COLORS.white,
+        borderRadius: 20,
+        // borderTopLeftRadius: 0,
+        // marginBottom: 5,
+        // marginTop: 15,
+        alignSelf: 'center',
+        elevation: 2,
+        overflow: 'hidden'
+    },
+    text: {
+        fontSize: 14,
+        color: COLORS.primary,
+        // marginBottom: 4,
+        fontFamily: 'Montserrat-SemiBold'
+    },
+    cardView: {
+        width: '100%',
+        display: 'flex',
+        flexDirection: 'row',
+        alignItems: "center",
+        // backgroundColor: COLORS.primary,
+
+    },
+    dateCard: {
+        width: 50,
+        height: 50,
+        // backgroundColor: '#00c967',
+        backgroundColor: COLORS.white,
+        alignSelf: 'center',
+        borderRadius: 5,
+        elevation: 5,
+        display: 'flex',
+        justifyContent: 'center',
+        overflow: 'hidden'
+    },
+    dateCardInner: {
+        width: '90%',
+        height: '45%',
+        backgroundColor: '#7FA1C3',
+        alignSelf: 'center',
+        borderTopLeftRadius: 5,
+        borderTopRightRadius: 5,
+    },
+    left: {
+        width: '32%',
+        minHeight: '100%',
+        maxHeight: '100%',
+        borderRightWidth: 2,
+        borderStyle: 'dashed',
+        borderRightColor: COLORS.white,
+        backgroundColor: COLORS.primaryAccent,
+        // borderTopRightRadius: 50,
+        // borderBottomRightRadius: 50,
+        marginTop: 'auto',
+        display: 'flex',
+        justifyContent: 'space-evenly',
+        alignItems: 'flex-start',
+        // paddingRight: 10
+        // marginBottom: 'auto'
+        // justifyContent: 'center'
+    },
+    right: {
+        marginLeft: 10,
+        width: '60%',
+        height: '100%',
+        display: 'flex',
+        justifyContent: 'space-evenly',
+        // backgroundColor:'red',
+        marginTop: 'auto'
+        // alignItems: 'center'
+    },
+    lineCurve: {
+        width: 20, 
+        height:20,
+        backgroundColor: COLORS.white,
+        // borderBottomLeftRadius:15,
+        // borderRadius: 15,
+        borderBottomRightRadius:15,
+        position:'absolute',
+        left: 0,
+        top:0 ,
+        // elevation:15
+    },  
+    lineCurve1: {
+        width: 20, 
+        height:20,
+        backgroundColor: COLORS.white,
+        // borderBottomLeftRadius:15,
+        // borderRadius: 15,
+        borderTopRightRadius:15,
+        position:'absolute',
+        left: 0,
+        bottom:0 ,
+    },
+
+
+
+    modalContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    modalView: {
+        width: windowWidth * 0.9,
+        // height: windowHeight * 0.5,
+        display: 'flex',
+        padding: 30,
+        paddingBottom: 50,
+        paddingTop: 30,
+        backgroundColor: 'white',
+        borderRadius: 10,
+        alignItems: 'center',
+    },
+    modalCard: {
+        width: '100%',
+        height: 150,
+        backgroundColor: COLORS.primary,
+        display: 'flex',
+        justifyContent: 'center',
+        borderRadius: 15
+    },
+    modalText: {
+        fontSize: 16,
+        marginHorizontal: 10,
+        marginBottom: 10,
+        // marginLeft: 10,
+        alignSelf: 'flex-start',
+        fontFamily: 'Montserrat-Regular',
+        color: '#FFFFFF'
+    },
+    input: {
+        width: '100%',
+        padding: 10,
+        borderWidth: 1,
+        borderColor: 'gray',
+        borderRadius: 5,
+        marginBottom: 20,
+    },
+    buttonContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        width: '100%',
+    }
+});
