@@ -1,8 +1,10 @@
-import { View, Text, StyleSheet, Alert, ActivityIndicator, ToastAndroid, Image } from 'react-native';
+import { View, Text, StyleSheet, Alert, ActivityIndicator, ToastAndroid, Image, PermissionsAndroid } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import { TextInput, Button } from 'react-native-paper';
 import { database } from '../../data/database';
 import { useIsFocused } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import SimCardsManagerModule from 'react-native-sim-cards-manager';
 export default function Login({ navigation }) {
 
   const [number, setNumber] = useState(null);
@@ -17,68 +19,111 @@ export default function Login({ navigation }) {
   const isFocused = useIsFocused();
 
   useEffect(() => {
-    const fetchData = async () => {
+    const checkAuthentication = async () => {
       try {
-        const usersCollection = database.collections.get('master_table');
-        const records = await usersCollection.query().fetch();
-        if (records && records.length > 0) {
-          setNewUser(false);
-          navigation.navigate('BottomTabs');
+        const storedMobileNumber = await AsyncStorage.getItem('mobileNumber');
+        const storedPassword = await AsyncStorage.getItem('password');
+  
+        if (storedMobileNumber && storedPassword) {
+          setNewUser(false); // User exists, set them to login mode
+          setNumber(storedMobileNumber); // Set the stored phone number
         } else {
-          setNewUser(true);
+          setNewUser(true); // No user found, set them as a new user
         }
-        // console.log(records, 'database data');
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error('Error checking authentication:', error);
       }
     };
 
-    fetchData();
+    const fetchPhoneNumber = async () => {
+      try {
+        // Request permissions and fetch SIM card info
+        const simCards = await SimCardsManagerModule.getSimCards({
+          title: 'App Permission',
+          message: 'Custom message',
+          buttonNeutral: 'Not now',
+          buttonNegative: 'Not OK',
+          buttonPositive: 'OK',
+        });
+
+        if (simCards && simCards.length > 0) {
+          // Access the phone number from the first SIM card
+          const phoneNumber = simCards[0].phoneNumber;
+          if (phoneNumber) {
+            setNumber(phoneNumber); // Set the phone number in state
+          } else {
+            console.log('Phone number is not available');
+          }
+        } else {
+          console.log('No SIM card information available');
+        }
+      } catch (error) {
+        console.error('Error fetching phone number:', error);
+      }
+    };
+
+    checkAuthentication();
+    fetchPhoneNumber(); // Call the function to fetch the phone number
   }, []);
 
-  const handleNext = () => {
+
+  const handleNext = async () => {
+    // navigation.navigate('BottomTabs');
     setLoading(true);
     setVerificationText('Verifying...');
-
+  
     if (newUser) {
+      // New user flow (sign up)
       setTimeout(() => {
         setLoading(false);
-        if (number === '1234567890') {
-          setVerificationText('Verified');
-          setShowSetPassword(true);
-        } else {
-          setVerificationText('User not found');
-          ToastAndroid.show('User not found', ToastAndroid.SHORT);
+        setVerificationText('Verified');
+        setShowSetPassword(true); // Show password setup screen for new users
+      }, 2000);
+    } else {
+      // Existing user login flow (logging in)
+      setTimeout(async () => {
+        setLoading(false);
+        try {
+          const storedPassword = await AsyncStorage.getItem('password'); // Fetch stored password
+  
+          if (password === storedPassword) {
+            // If entered password matches stored password, log in
+            setVerificationText('Verified');
+            ToastAndroid.show('Authentication Successful!', ToastAndroid.SHORT);
+            navigation.navigate('BottomTabs'); // Navigate to main app screen
+          } else {
+            // If password doesn't match
+            setVerificationText('Invalid credentials');
+            ToastAndroid.show('Invalid Credentials', ToastAndroid.SHORT);
+          }
+        } catch (error) {
+          console.error('Error accessing stored password:', error);
+          setVerificationText('Error logging in');
+          ToastAndroid.show('Error logging in', ToastAndroid.SHORT);
         }
       }, 2000);
     }
-    else {
-      setTimeout(() => {
-        setLoading(false);
-        if (number === '1234567890' && password === confirmPassword) {
-          setVerificationText('Verified');
-          ToastAndroid.show('Authentication Successful!', ToastAndroid.SHORT);
-          navigation.navigate('BottomTabs');
-        } else {
-          setVerificationText('User not found');
-          ToastAndroid.show('Invalid Credentials', ToastAndroid.SHORT);
-        }
-      }, 2000);
-    }
-
   };
+  
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (password === confirmPassword) {
-      setShowSetPassword(false);
-      setNewUser(false);
-      ToastAndroid.show('Password has been set successfully!', ToastAndroid.SHORT);
-    }
-    else {
+      try {
+        await AsyncStorage.setItem('mobileNumber', number);
+        await AsyncStorage.setItem('password', password); // Store password securely (or use encrypted storage)
+        ToastAndroid.show('Password has been set successfully!', ToastAndroid.SHORT);
+        setShowSetPassword(false); // Hide the set password UI
+        setNewUser(false); // Mark the user as an existing user
+      } catch (error) {
+        console.error('Error storing user data:', error);
+        ToastAndroid.show('Error setting password', ToastAndroid.SHORT);
+      }
+    } else {
       setPasswordMatched(false);
-      ToastAndroid.show('Password did not matched!', ToastAndroid.SHORT);
+      ToastAndroid.show('Passwords did not match!', ToastAndroid.SHORT);
     }
-  }
+  };
+  
 
   return (
     <View style={styles.flex}>

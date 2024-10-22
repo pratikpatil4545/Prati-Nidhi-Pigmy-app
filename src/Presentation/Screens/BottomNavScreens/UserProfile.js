@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Image, StatusBar, Pressable, ScrollView, Modal, BackHandler } from 'react-native'
+import { View, Text, StyleSheet, Image, StatusBar, Pressable, ScrollView, Modal, BackHandler, Linking, Alert } from 'react-native'
 import React, { useEffect, useRef, useState } from 'react'
 import { COLORS, windowHeight, windowWidth } from '../../../Common/Constants'
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -14,14 +14,35 @@ export default function UserProfile({ route, navigation }) {
   const [item, setItem] = useState(route.params.item);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalVisible2, setModalVisible2] = useState(false);
-  const [amount, setAmount] = useState(null);
-  const [isTodayCollected, setisTodayCollected] = useState(false);
+  const [amount, setAmount] = useState(item.DailyAmt);
+  const [isTodayCollected, setisTodayCollected] = useState(true);
   const [currentBalance, setCurrentBalance] = useState(item[9]);
   const [newBalance, setNewBalance] = useState(null);
-  const weekday = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   const isFocused = useIsFocused();
-  const date = new Date();
-  let day = weekday[date.getDay()];
+
+  const handleWhatsAppPress = () => {
+    // Define the message and phone number
+    const phoneNumber = '+917887760491'; // Replace with the actual phone number (with country code)
+    const message = 'Hi, I would like to get in touch with you!';
+
+    // Create the WhatsApp URL with the correct format
+    const url = `whatsapp://send?text=${encodeURIComponent(message)}&phone=${phoneNumber}`;
+
+    Linking.openURL(url);
+
+    // Check if WhatsApp is installed
+    // Linking.canOpenURL(url).then((supported) => {
+    //   if (supported) {
+    //     // Open WhatsApp with the predefined message
+    //     Linking.openURL(url);
+    //   } else {
+    //     // WhatsApp is not installed or not recognized
+    //     Alert.alert('WhatsApp not installed', 'Please install WhatsApp to send a message.');
+    //   }
+    // }).catch((err) => {
+    //   console.error('Error occurred while checking WhatsApp installation:', err);
+    // });
+  };
 
   const checkAsyncStorageForData = async () => {
     try {
@@ -44,31 +65,7 @@ export default function UserProfile({ route, navigation }) {
     checkAsyncStorageForData();
   }, [isFocused]);
 
-  // console.log("Current day is:", day)
-  // console.log(" routes darta", item, 'index : ', index);
-
-  const getDay = () => {
-    const dayMapping = {
-      "Sunday": 1,
-      "Monday": 2,
-      "Tuesday": 3,
-      "Wednesday": 4,
-      "Thursday": 5,
-      "Friday": 6,
-      "Saturday": 7
-    };
-
-    return dayMapping[day];
-  };
-
-  useEffect(() => {
-    let dayIndex = getDay();
-    if (item[dayIndex]?.toString() === '000000') {
-      setisTodayCollected(true);
-    }
-  }, [isFocused])
-
-  // console.log("Mapped value for the current day is:", getDay());
+  console.log("Current day is:", route.params.item)
 
   const handlePress = () => {
     setModalVisible(true);
@@ -82,45 +79,128 @@ export default function UserProfile({ route, navigation }) {
     setModalVisible2(false);
   };
 
-  const handleSubmit = async () => {
-    let newItemData = [...item];
-    const dayIndex = getDay();
-    newItemData[dayIndex] = amount;
-    // console.log("Updated item data:", newItemData);
+  let transactionCount = 1; // This should be initialized based on previous transaction count stored
 
-    let currentBalance = parseFloat(newItemData[9]) || 0;
+  const generateReceiptNo = () => {
+    const date = new Date();
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    const count = String(transactionCount).padStart(4, '0');
+  
+    transactionCount++; // Increment for the next transaction
+  
+    return `${day}${month}${year}${count}`;
+  };
+
+  const formatDateTime = (date) => {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0'); // Month is 0-based
+    const year = String(date.getFullYear()).slice(-2); // Last two digits of the year
+    let hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12 || 12; // Convert 24-hour to 12-hour format
+    return `${day}-${month}-${year} ${hours}:${minutes} ${ampm}`;
+};
+
+  const handleSubmit = async () => {
+    let OneShotLmt = parseInt(item.OneShotLmt);
+    let maxBalance = parseInt(item.MaxBalance);
+    let currentBalance = parseFloat(item.ThisMthBal) || 0;
     let amountValue = parseFloat(amount) || 0;
     let updatedBalance = currentBalance + amountValue;
+    let dailyAmount = parseInt(item.DailyAmt);
+    let maxInstalled = parseInt(item.MaxInstal);
 
-    setNewBalance(updatedBalance);
+    if (OneShotLmt != 0) {
+      if (amountValue >= OneShotLmt) {
+        Alert.alert('Warning', 'Amount inputed is greater than one shot limit, please re-input amount less than one shot limit.');
+        return;
+      }
+    }
 
-    newItemData[9] = updatedBalance.toString();
+    if (maxBalance != 0) {
+      if (updatedBalance >= maxBalance) {
+        Alert.alert('Warning', 'Amount inputed is greater than maximum balance, please re-input amount less than maximum balance.');
+        return;
+      }
+    }
 
-    const now = new Date();
-    const day = String(now.getDate()).padStart(2, '0');
-    const month = String(now.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
-    const year = String(now.getFullYear()).slice(-2);
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
+    if (maxInstalled != 0 && dailyAmount != 0) {
+      if (amountValue != dailyAmount) {
+        Alert.alert('Warning', 'Amount inputed is not equal to daily amount, please re-input amount which is equal to daily amount.');
+        return;
+      }
+    }
 
-    // Format as dd/mm/yy hh:mm
-    const dateTime = `${day}/${month}/${year} ${hours}:${minutes}`;
+    if (maxInstalled != 0 && dailyAmount != 0) {
+      if (amountValue % dailyAmount === 0 && amountValue <= maxInstalled) {
+        console.log('Valid amount entered');
+      } else {
+        if (amountValue % dailyAmount !== 0) {
+          Alert.alert('Warning', `Please enter an amount that is a multiple of ${dailyAmount}.`);
+          return;
+        } else if (amountValue > maxInstalled) {
+          Alert.alert('Amount Exceeds Maximum', `The entered amount exceeds the maximum allowed: ${maxInstalled}.`);
+          return;
+        }
+      }
+    }
 
-    // const now = new Date();
-    //   const dateTime = now.toLocaleString(); 
-    newItemData[11] = dateTime;
+    const receiptNo = generateReceiptNo();
 
-    // newItemData = newItemData.map(item => {
-    //   return [...item, dateTime];
-    // });
-    // console.log("new data with dates",newItemData);
-    const storedData = await AsyncStorage.getItem('customerData');
-    let data = JSON.parse(storedData) || [];
+    try {
+      let openingBalance;
 
-    data[index] = newItemData;
+      // if (item.IsAmtToBeAdded === 'True') {
+      //   openingBalance = updatedBalance;
+      //   setNewBalance(updatedBalance);
+      // } else if (currentBalance >= amountValue) {
+      //   const newBalance = currentBalance - amountValue;
+      //   openingBalance = newBalance;
+      //   setNewBalance(newBalance);
+      // } else {
+      //   console.log('Insufficient balance', 'Your current balance is insufficient for this transaction.');
+      //   return;
+      // }
 
-    await AsyncStorage.setItem('customerData', JSON.stringify(data));
-    setModalVisible2(true);
+      if (item.IsAmtToBeAdded === 'True') {
+        openingBalance = updatedBalance;
+        setNewBalance(updatedBalance);
+      }
+      else if (currentBalance >= amountValue) {
+        let newBalance = parseInt(currentBalance) - parseInt(amountValue);
+        openingBalance = newBalance;
+        setNewBalance(newBalance);
+      }
+      else {
+        openingBalance = updatedBalance;
+        setNewBalance(updatedBalance);
+      }
+
+      let transactionData = {
+        receiptNo: receiptNo,
+        glCode: item.GLCode,
+        accNo: item.AccountNo,
+        openingBalance: openingBalance,
+        collectionAmount: amountValue,
+        dateTimeCollected: formatDateTime(new Date()),
+        mblNo: await AsyncStorage.getItem('mobileNumber')
+      };
+
+      let transactionTable = await AsyncStorage.getItem('transactionTable');
+      transactionTable = transactionTable ? JSON.parse(transactionTable) : [];
+
+      transactionTable.push(transactionData);
+
+      await AsyncStorage.setItem('transactionTable', JSON.stringify(transactionTable));
+
+      setModalVisible2(true);
+    } catch (error) {
+      console.error("Error while processing transaction:", error);
+      Alert.alert('Error', 'An error occurred while processing your transaction. Please try again.');
+    }
   }
 
   const handleSubmit2 = () => {
@@ -143,14 +223,9 @@ export default function UserProfile({ route, navigation }) {
   return (
     <View style={styles.mainView}>
       <StatusBar backgroundColor={COLORS.primaryAccent} barStyle="light-content" />
-      {/* <Pressable onPress={() => navigation.goBack()} style={{ position: 'absolute', zIndex: 454 }}>
-        <MaterialCommunityIcons name='keyboard-backspace' color={COLORS.primary} size={45} />
-      </Pressable> */}
-
-
 
       <View style={styles.profileView}>
-      <MaterialCommunityIcons4 onPress={() => { navigation.navigate("DashboardStack") }} style={{zIndex: 454}} name='angle-left' color={COLORS.primaryAccent} size={40} />
+        <MaterialCommunityIcons4 onPress={() => { navigation.navigate("DashboardStack") }} style={{ zIndex: 454 }} name='angle-left' color={COLORS.primaryAccent} size={40} />
         <View style={styles.profileName}>
           <Text style={styles.text} >{item[8] ? item[8] : ''}</Text>
           {/* <Text style={[styles.text, {fontFamily: 'Montserrat-Regular', fontSize: 14}]} >A/C No. : {item[0] ? item[0] : ''}</Text> */}
@@ -169,15 +244,15 @@ export default function UserProfile({ route, navigation }) {
           <Text style={[styles.text1, { color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>A/C Opened date. : </Text>
         </View>
         <View style={styles.right}>
-          {/* <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold' }]}>{item[0]}</Text>
-          <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold' }]}>{item[1]}</Text>
-          <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold' }]}>{parseInt(item[9], 10).toString()}.00</Text>
-          <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold' }]}>{item[10] ? item[10] : ''}</Text> */}
+          <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold' }]}>{item.AccountNo}</Text>
+          <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold' }]}>1</Text>
+          <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold' }]}>{item.ThisMthBal}.00</Text>
+          <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold' }]}>{item.AccOpenDt}</Text>
         </View>
       </View>
 
-      <View style={styles.history}>
-        {/* <Text style={[styles.text, { marginStart: 10, fontSize: 18 }]}>History :</Text> */}
+      <>
+        {/* <View style={styles.history}>
         <View style={{ width: '100%', display: 'flex', flexDirection: 'row', }}>
           <Text style={[styles.text, { fontSize: 16, width: '50%', marginLeft: 15 }]}>Date :</Text>
           <Text style={[styles.text, { fontSize: 16, width: '50%', marginLeft: 1 }]}>Collections :</Text>
@@ -195,20 +270,21 @@ export default function UserProfile({ route, navigation }) {
               <Text style={[styles.text1, { marginVertical: 10 }]}>Saturday</Text>
             </View>
             <View style={styles.right}>
-              {/* <Text style={[styles.text1, { marginVertical: 10 }]}>{parseInt(item[1], 10).toString()}.00</Text>
+               <Text style={[styles.text1, { marginVertical: 10 }]}>{parseInt(item[1], 10).toString()}.00</Text>
               <Text style={[styles.text1, { marginVertical: 10 }]}>{parseInt(item[2], 10).toString()}.00</Text>
               <Text style={[styles.text1, { marginVertical: 10 }]}>{parseInt(item[3], 10).toString()}.00</Text>
               <Text style={[styles.text1, { marginVertical: 10 }]}>{parseInt(item[4], 10).toString()}.00</Text>
               <Text style={[styles.text1, { marginVertical: 10 }]}>{parseInt(item[5], 10).toString()}.00</Text>
               <Text style={[styles.text1, { marginVertical: 10 }]}>{parseInt(item[6], 10).toString()}.00</Text>
-              <Text style={[styles.text1, { marginVertical: 10 }]}>{parseInt(item[7], 10).toString()}.00</Text> */}
+              <Text style={[styles.text1, { marginVertical: 10 }]}>{parseInt(item[7], 10).toString()}.00</Text>
             </View>
           </View>
         </ScrollView>
-      </View>
+      </View> */}
+      </>
 
       <View style={{ width: '95%', alignSelf: 'center' }}>
-        {isTodayCollected ? (
+        {(route.params.collectionAllowed === 'true' || Boolean(route.params.collectionAllowed)) ? (
           <Button
             style={{
               width: '80%',
@@ -233,7 +309,12 @@ export default function UserProfile({ route, navigation }) {
           </Button>
         ) : (
           <View style={{ width: '95%', alignSelf: 'center', height: windowHeight * 0.09, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={[styles.text1, { alignSelf: 'center', fontFamily: 'Montserrat-Bold' }]}>Today's collection is received.</Text>
+            {/* <Text style={[styles.text1, { alignSelf: 'center', fontFamily: 'Montserrat-Bold' }]}>Today's collection is received.</Text> */}
+            {!route.params.collectionAllowed ? (
+              <Text style={[styles.text1, { alignSelf: 'center', fontFamily: 'Montserrat-Bold' }]}>The collection window has expired.</Text>
+            ) : (
+              <Text style={[styles.text1, { alignSelf: 'center', fontFamily: 'Montserrat-Bold' }]}>No collection required.</Text>
+            )}
           </View>
         )}
 
@@ -269,7 +350,6 @@ export default function UserProfile({ route, navigation }) {
               <Button style={{ width: '48%', marginTop: 5 }} mode="contained" labelStyle={{ fontSize: 16, fontFamily: 'Montserrat-Bold' }} onPress={handleSubmit} >Submit</Button>
               <Button style={{ width: '48%', marginTop: 5, borderColor: COLORS.primaryAccent }} labelStyle={{ fontSize: 16, fontFamily: 'Montserrat-Bold' }} mode="outlined" onPress={handleCancel} >Cancel</Button>
             </View>
-
           </View>
         </View>
       </Modal>
@@ -297,24 +377,24 @@ export default function UserProfile({ route, navigation }) {
                 <Text style={styles.text1}>Total Account Balance : </Text>
               </View>
               <View style={styles.right}>
-                <Text style={styles.text1}>{item[8]}</Text>
-                <Text style={styles.text1}>{item[0]}</Text>
-                <Text style={styles.text1}>{parseInt(item[9], 10).toString()}.00</Text>
+                <Text style={styles.text1}>{item.EnglishName}</Text>
+                <Text style={styles.text1}>{item.AccountNo}</Text>
+                <Text style={styles.text1}>{parseInt(item.ThisMthBal, 10).toString()}.00</Text>
                 <Text style={styles.text1}>{amount}.00</Text>
                 <Text style={styles.text1}>{newBalance ? newBalance : 0}.00</Text>
               </View>
             </View>
 
             <View style={[styles.buttonContainer, { marginTop: 50 }]}>
-              <Button style={{ width: '48%', marginTop: 5 }} mode="contained" labelStyle={{ fontSize: 16, fontFamily: 'Montserrat-Bold' }} onPress={handleSubmit2} >Okay</Button>
+              <Button style={{ width: '48%', marginTop: 5 }} mode="contained" labelStyle={{ fontSize: 16, fontFamily: 'Montserrat-Bold' }} onPress={handleSubmit2} >Close</Button>
               <Button icon={'printer'} style={{ width: '48%', marginTop: 5, borderColor: COLORS.primaryAccent }} labelStyle={{ fontSize: 16, fontFamily: 'Montserrat-Bold' }} mode="outlined" onPress={handleSubmit2} >Print</Button>
             </View>
-            <Button icon={'share-variant'} style={{ width: '48%', marginTop: 25, borderColor: COLORS.primaryAccent }} labelStyle={{ fontSize: 16, fontFamily: 'Montserrat-Bold' }} mode="outlined" onPress={handleSubmit2} >Share</Button>
+            {/* <Button icon={'whatsapp'} style={{ width: '48%', marginTop: 25, borderColor: 'transparent' }} labelStyle={{ fontSize: 16, fontFamily: 'Montserrat-Bold' }} mode="outlined" onPress={handleSubmit2} ></Button> */}
+            <MaterialCommunityIcons onPress={handleWhatsAppPress} style={{ marginTop: 20, backgroundColor: '#25D366', borderRadius: 15, padding: 5 }} name='whatsapp' color={COLORS.white} size={35} />
 
           </View>
         </View>
       </Modal>
-
     </View>
   )
 }

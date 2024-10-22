@@ -1,129 +1,109 @@
-import { View, Text, StyleSheet, ToastAndroid, ScrollView, StatusBar, Modal, Pressable, BackHandler, Keyboard, TouchableOpacity } from 'react-native'
-import React, { useEffect, useState } from 'react'
+import { View, Text, StyleSheet, ToastAndroid, ScrollView, StatusBar, Modal, Pressable, BackHandler, Keyboard, TouchableOpacity, ActivityIndicator, FlatList, Alert } from 'react-native'
+import React, { useCallback, useEffect, useState } from 'react'
 import { COLORS, windowHeight, windowWidth } from '../../../Common/Constants'
 import { Button, Searchbar } from 'react-native-paper'
 import DataCard from '../../Components/DataCard';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import MaterialCommunityIcons2 from 'react-native-vector-icons/FontAwesome5';
-import MaterialCommunityIcons3 from 'react-native-vector-icons/Ionicons';
-import { NativeModules } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { MockData } from '../../../Common/MockData';
-import TransactionCard from '../../Components/TransactionCard';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
+import axios from 'axios';
+import { XMLParser } from 'fast-xml-parser';
 import SearchPopup from '../../Components/SearchPopup';
-import { useIsFocused } from '@react-navigation/native';
-import { database } from '../../../data/database';
-import pigmyConfig from '../../../Common/DummyData.json'
-
-const { FtpModule } = NativeModules;
 
 export default function Dashboard({ navigation }) {
 
     const [dataAvailable, setDataAvailable] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [searchQuery, setSearchQuery] = React.useState('');
-    const [data, setData] = useState([]);
-    const [inputData, setInputData] = useState({});
-    const [filteredData, setFilteredData] = useState(null);
-    const [recentTransactions, setRecentTransactions] = useState(MockData.recentTransactions);
+    const [searchQuery, setSearchQuery] = useState('');
     const [searchedResults, setSearchedResults] = useState(false);
     const [backPressedOnce, setBackPressedOnce] = useState(false);
     const isFocused = useIsFocused();
-    const [totalAmount, setTotalAmount] = useState(0);
-    const weekday = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    const date = new Date();
-    let day = weekday[date.getDay()];
-    const [recordLineStart, setRecordLineStart] = useState(null);
-    const [pigmyConfigFile, setPigmyConfigFile] = useState(null);
-    const [header1Count, setHeader1Count] = useState(null);
-    const [header2Count, setHeader2Count] = useState(null);
-    const [header3Count, setHeader3Count] = useState(null);
-    const [headerTableData, setHeaderTableData] = useState(null);
-    const [headerTableDatatoCheck, setHeaderTableDatatoCheck] = useState(null);
-    const [MasterTableDatatoCheck, setMasterTableDatatoCheck] = useState(null);
-    const [masterTableData, setMasterTableData] = useState(null);
     const [mappedMasterData, setMappedMasterData] = useState([]);
-    const [mappedMasterData2, setMappedMasterData2] = useState(null);
-    const table1Mapping = [
-        "M_Field1", "Account number  ",
-        "M_Field2", "Name in English ",
-        "M_Field3", "Name in regional ",
-        "M_Field4", "Current Balance ",
-        "M_Field5", "Last Month Balance ",
-        "M_Field6", "ThisMonth Balance",
-        "M_Field7", "Maximum Installments",
-        "M_Field8", "Daily Expected Amount ",
-        "M_Field9", "One time Collection Limit  ",
-        "M_Field10", "Maximum Balance Allowed",
-        "M_Field11", "Acc Open Date  ",
-        "M_Field12", "Last Collection Date  ",
-        "M_Field13", "Lien GL Code  ",
-        "M_Field14", "Lien GL Text  ",
-        "M_Field15", "Lien Account No  ",
-        "M_Field16", "Lien Amount",
-        "M_Field17", "Mobile No"
-    ];
+    const [NoOfRecords, setNoOfRecords] = useState(null);
+    const [isDataValid, setIsDataValid] = useState(true);
+    const [LicenseValidUpto, setLicenseValidUpto] = useState('2028-10-13');
+    const [LicenseExpired, setLicenseExpired] = useState(false);
+    const [ClientName, setClientName] = useState(null);
+    const [BranchName, setBranchName] = useState(null);
+    const [BranchCode, setBranchCode] = useState(null);
+    const [AgentName, setAgentName] = useState(null);
+    const [IsActive, setIsActive] = useState(true);
+    const [fileCreatedDate, setFileCreatedDate] = useState(null);
+    const [noOfDaysAllowed, setNoOfDaysAllowed] = useState(null);
+    const [collectionAllowed, setCollectionAllowed] = useState(true);
+    const [totalAmount, setTotalAmount] = useState(0);
+    const [transactionTable, setTransactionTable] = useState([]);
 
-    // console.log("master table datas",  mappedMasterData);
-
-    // useEffect(async () => {
-    //     getData();
-    //     const storedData = await AsyncStorage.getItem('customerData');
-    //     // console.log("mapped master new data", JSON.parse(storedData));
-    //     // mapData();
-    //     // getFileContent()
-    //     // mapMasterData();
-    // }, [isFocused])
+    // console.log("collection allowed?", collectionAllowed);
 
     useEffect(() => {
-        setLoading(true);
-        ftpTest()
-        const checkAndSetData = async () => {
-            try {
-                const storedData = await AsyncStorage.getItem('customerData');
+        const checkLicenseValidity = () => {
+            const currentDate = new Date(); // Get current date
+            const expiryDate = new Date(LicenseValidUpto); // Parse expiry date from the state
+            const timeDiff = expiryDate.getTime() - currentDate.getTime(); // Get the difference in time (milliseconds)
+            const daysLeft = Math.ceil(timeDiff / (1000 * 3600 * 24)); // Convert time difference to days
 
-                if (storedData !== null) {
-                    const parsedData = JSON.parse(storedData);
-                    setMappedMasterData(parsedData);
-                    setLoading(false);
-                    setDataAvailable(true);
-                    //   console.log("Stored data loaded sx:", storedData);
-                } else {
-                    setLoading(false);
-                    console.log("No stored data found, fetching file content and mapping data...");
-                }
-            } catch (error) {
-                console.error("Error retrieving data:", error);
-            }
-        };
-        if (isFocused) {
-            checkAndSetData();
-        }
-    }, [isFocused]);
+            console.log("Days left until expiry:", daysLeft);
 
-    useEffect(() => {
-        const storeData = async () => {
-            try {
-                await AsyncStorage.setItem('customerData', JSON.stringify(mappedMasterData));
-
-            } catch (error) {
-                console.error("Error storing customer data:", error);
+            if (daysLeft <= 0) {
+                // If the current date is past the expiry date
+                Alert.alert('License expired!', 'Your license has expired. Please pay subscription.');
+                setLicenseExpired(true);
+            } else if (daysLeft <= 15) {
+                // If the current date is within 15 days of expiry
+                Alert.alert('License Reminder', `Your license is about to expire in ${daysLeft} day(s). Please renew it soon.`);
+            } else {
+                console.log("License is valid and more than 15 days away from expiry.");
             }
         };
 
-        if (mappedMasterData) { // Optional: Ensure data is available
-            storeData();
-        }
-    }, [mappedMasterData]);
+        checkLicenseValidity();
+
+        // Set up a daily check for the reminder
+        const interval = setInterval(checkLicenseValidity, 24 * 60 * 60 * 1000); // Check every 24 hours
+        return () => clearInterval(interval); // Cleanup the interval on component unmount
+    }, [LicenseValidUpto]);
 
     useEffect(() => {
-        const total = recentTransactions.reduce((sum, transaction) => {
-            const amount = parseFloat(transaction[getDay()]) || 0;
-            return sum + amount;
-        }, 0);
+        if (!IsActive) {
+            Alert.alert('Account Activation', 'Your account has not active. Please contact your branch.');
+            setLicenseExpired(true);
+        }
+    }, [LicenseValidUpto])
 
-        setTotalAmount(total);
-    }, [recentTransactions]);
+    useEffect(() => {
+        // Calculate the end date by adding noOfDaysAllowed to the fileCreatedDate
+        const fileDate = new Date(fileCreatedDate); // Convert to Date object
+        const endDate = new Date(fileDate);
+        endDate.setDate(fileDate.getDate() + parseInt(noOfDaysAllowed)); // Add allowed days
+
+        const currentDate = new Date(); // Get today's date
+
+        // Check if today's date is within the allowed date range
+        // console.log("dates checkng",currentDate,'****', fileDate,'****', endDate )
+        if (currentDate >= fileDate && currentDate <= endDate) {
+            setCollectionAllowed(true); // Collection is allowed
+            console.log("alloweded")
+        } else {
+            console.log("not alloweded")
+            setCollectionAllowed(false); // Collection is not allowed
+        }
+    }, [fileCreatedDate, noOfDaysAllowed]);
+
+    useEffect(() => {
+        let len1 = parseInt(mappedMasterData.length);
+        let len2 = parseInt(NoOfRecords);
+        if (len1 && len2) {
+            if (len1 != len2) {
+                setIsDataValid(false);
+                Alert.alert('Something went wrong while recieving data or data may be currupted please try again!')
+            }
+            else {
+                setIsDataValid(true);
+            }
+        }
+    }, [NoOfRecords, mappedMasterData.length])
 
     useEffect(() => {
         const handleBackPress = () => {
@@ -143,366 +123,140 @@ export default function Dashboard({ navigation }) {
         return () => backHandler.remove();
     }, [backPressedOnce]);
 
-    useEffect(() => {
-        const fetchTransactions = async () => {
-            try {
-                const storedData = await AsyncStorage.getItem('customerData');
-                let data = JSON.parse(storedData) || [];
-
-                const today = new Date();
-                const todayString = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getFullYear()).slice(-2)}`;
-
-                const todayTransactions = data.filter(transaction => {
-                    const dateTime = transaction[11]; // Assuming the 11th index contains the date
-                    return dateTime?.startsWith(todayString);
-                });
-
-                todayTransactions.sort((a, b) => {
-                    const timeA = a[11].split(' ')[1]; // Extract time from dateTime
-                    const timeB = b[11].split(' ')[1];
-                    return timeB?.localeCompare(timeA); // Compare time strings
-                });
-
-                setRecentTransactions(todayTransactions);
-            } catch (error) {
-                console.error('Failed to fetch transactions:', error);
-            }
-        };
-
-        fetchTransactions();
-    }, [isFocused]);
-
-    // useEffect(() => {
-    //     const checkAsyncStorageForData = async () => {
-    //         try {
-    //             const storedData = await AsyncStorage.getItem('customerData');
-    //             if (storedData !== null) {
-    //                 setDataAvailable(true);
-    //             }
-    //             else {
-    //                 setDataAvailable(false);
-    //             }
-    //         } catch (e) {
-    //             console.error('Failed to fetch data from AsyncStorage', e);
-    //         }
-    //         // getFileContent();
-    //     };
-
-    //     checkAsyncStorageForData();
-    // }, []);
-
-    useEffect(() => {
-        const checkDataFromDB = async () => {
-            try {
-                const headerRecords = await database.get('master_table').query().fetch();
-                const storedData = await AsyncStorage.getItem('customerData');
-                let data = JSON.parse(storedData) || [];
-
-                // console.log("from asyncstorag  se xd data", data)
-                if (headerRecords.length === 0) {
-                    setDataAvailable(false);
-                }
-                else {
-                    setDataAvailable(true);
-                }
-            } catch (e) {
-                console.error('Failed to fetch data from AsyncStorage', e);
-            }
-            // getFileContent();
-        };
-
-        checkDataFromDB();
-    }, []);
-
-    // useEffect(() => {
-    //     let pigmyFileConfig = JSON.parse(pigmyConfigFile)
-    //     const recordLineStartData = pigmyFileConfig["Pigmy Input Configuration"]["Record Start Line"];
-    //     setRecordLineStart(recordLineStartData);
-    //     const header1CountData = pigmyFileConfig["Pigmy Input Configuration"]["No of Header1 Fields"];
-    //     setHeader1Count(header1CountData);
-    //     const header2CountData = pigmyFileConfig["Pigmy Input Configuration"]["No of Header2 Fields"];
-    //     setHeader2Count(header2CountData);
-    //     const header3CountData = pigmyFileConfig["Pigmy Input Configuration"]["No of Header3 Fields"];
-    //     setHeader3Count(header3CountData);
-    //     const headerTableData = pigmyFileConfig["Pigmy Input Configuration"]["Table2 Mapping"];
-    //     setHeaderTableData(headerTableData);
-    //     const masterTableData = pigmyFileConfig["Pigmy Input Configuration"]["Table1 Mapping"];
-    //     setMasterTableData(masterTableData);
-
-    //     console.log("table maping in config file", masterTableData);
-    // }, [pigmyConfigFile])
-
-
-
-    // useEffect(() => {
-    //     let temp = JSON.parse(pigmyConfigFile)
-    //     console.log("new by file", temp["Pigmy Input Configuration"]["Record Start Line"]);
-    // }, [pigmyConfigFile])
-
-    const getDay = () => {
-        const dayMapping = {
-            "Sunday": 1,
-            "Monday": 2,
-            "Tuesday": 3,
-            "Wednesday": 4,
-            "Thursday": 5,
-            "Friday": 6,
-            "Saturday": 7
-        };
-
-        return dayMapping[day];
-    };
-
     const handleGetData = () => {
         setLoading(true);
         ToastAndroid.show('Getting latest data', ToastAndroid.SHORT);
         getFileContent();
     }
 
-    const ftpTest = async () => {
-        console.log("first")
-        try {
-            const content = await FtpModule.getFileContent(
-                'automatesystemsdataservice.in',
-                21,
-                'TESTFTP',
-                'Auto_1234',
-                '/TOPIG/PigmyInputConfigType.json'
-            );
-            // Assuming parseFileContent is a function that parses the content into an array
-            // const dataArray = parseFileContent(content);
-            console.log("FTP local", content);
-            setPigmyConfigFile(content);
-            mapConfigJsonFile(content);
-            // let slicedDataArray = dataArray.slice(1);
-        } catch (error) {
-            console.error(error);
-        }
-    }
-
-    const mapConfigJsonFile = (content) => {
-        const pigmyFileConfig = JSON.parse(content)
-        const recordLineStartData = pigmyFileConfig["Pigmy Input Configuration"]["Record Start Line"];
-        setRecordLineStart(recordLineStartData);
-        const header1CountData = pigmyFileConfig["Pigmy Input Configuration"]["No of Header1 Fields"];
-        setHeader1Count(header1CountData);
-        const header2CountData = pigmyFileConfig["Pigmy Input Configuration"]["No of Header2 Fields"];
-        setHeader2Count(header2CountData);
-        const header3CountData = pigmyFileConfig["Pigmy Input Configuration"]["No of Header3 Fields"];
-        setHeader3Count(header3CountData);
-        const headerTableData = pigmyFileConfig["Pigmy Input Configuration"]["Table2 Mapping"];
-        setHeaderTableData(headerTableData);
-        const masterTableData = pigmyFileConfig["Pigmy Input Configuration"]["Table1 Mapping"];
-        setMasterTableData(masterTableData);
-    }
-
     const getFileContent = async () => {
+        console.log("Checking for stored data...");
         try {
-            // const content = await FtpModule.getFileContent(
-            //     '192.168.1.155',
-            //     21,
-            //     'mipl',
-            //     'Mipl@123',
-            //     '/upload/PigmyInputConfigType1.json'
-            // );
-            // console.log("FTP local", content)
-            // Assuming parseFileContent is a function that parses the content into an array
-            // const dataArray = parseFileContent(content);
-            // let slicedDataArray = dataArray.slice(1);
-
-            const headerRecords = await database.get('master_table').query().fetch();
-            if (headerRecords.length === 0) {
-                const content = await FtpModule.getFileContent(
-                    'automatesystemsdataservice.in',
-                    21,
-                    'TESTFTP',
-                    'Auto_1234',
-                    '/TOPIG/InputFile_Type.txt'
-                );
-                // setDataAvailable(false);
-                const dataArray = parseFileContent(content);
-                let slicedDataArray = dataArray.slice(parseInt(recordLineStart) - 1);
-                setInputData(slicedDataArray); // Set input data for further processing
-                let slicedDataArrayHeader = dataArray.slice(0, parseInt(recordLineStart) - 1);
-                setData(slicedDataArrayHeader);
-                mapData(slicedDataArrayHeader);
-                mapMasterData(slicedDataArray);
-            }
-            // else {
-            //     const dataArray = parseFileContent(rawData);
-            //     let slicedDataArray = dataArray.slice(parseInt(recordLineStart) - 1);
-            //     setInputData(slicedDataArray); // Set input data for further processing
-            //     let slicedDataArrayHeader = dataArray.slice(0, parseInt(recordLineStart) - 1);
-            //     setData(slicedDataArrayHeader);
-            //     mapData(slicedDataArrayHeader);
-            //     mapMasterData(slicedDataArray);
-            // }
-
-            ToastAndroid.show('Data found!', ToastAndroid.SHORT);
-            setLoading(false);
-            setDataAvailable(true);
-        } catch (error) {
-            console.error(error);
-        }
-    };
-
-    const parseFileContent = (fileContent) => {
-        const lines = fileContent.trim().split('\n');
-        const parsedData = lines.map(line => {
-            const values = line.split(',');
-            return values.map(value => value.trim());
-        });
-        return parsedData;
-    };
-
-    const getData = () => {
-        const headersData = database.collections.get('master_table');
-        // console.log("fetched data mster table", headersData)
-        headersData.query().observe()?.forEach(item => {
-            let temp = [];
-            item?.forEach(data => {
-                temp.push(data._raw);
-            });
-            setMappedMasterData2(headersData);
-            // console.log("all items in master table  =>>>", temp)
-        })
-    }
-
-    const mapData = (slicedDataArrayHeader) => {
-        let headers = [];
-        headerTableData?.map((v, i) => {
-            headers.push({
-                column_name: v[i.toString()][0],
-                display_name: v[i.toString()][1],
-                index: parseInt(v[i.toString()][2].split('-')[1]) - 1,
-                header_number: (v[i.toString()][2].split('-')[0]).replace(/\D/g, '')
-            });
-        });
-        setHeaderTableDatatoCheck(headers);
-        mapDataValues(headers, slicedDataArrayHeader);
-    };
-
-    const mapDataValues = (headers, inputData) => {
-        const result = {};
-        const result2 = {};
-
-        headers.forEach(header => {
-            const headerIndex = parseInt(header.header_number) - 1;
-            if (inputData[headerIndex] && inputData[headerIndex][header?.index] !== undefined) {
-                result[header?.column_name] = inputData[headerIndex][header?.index];
+            // Step 1: Try to get data from AsyncStorage
+            const savedData = await AsyncStorage.getItem('dataObject');
+          
+            
+            if (savedData) {
+                // Step 2: If data is found in AsyncStorage, use it
+                console.log("Using saved data from AsyncStorage");
+                const dataObject = JSON.parse(savedData);
+    
+                // Set state using the saved data
+                setMappedMasterData(dataObject.MstrData?.MstrRecs);
+                setDataAvailable(true);
+                setNoOfRecords(dataObject.MstrData?.NoOfRecords);
+                setLicenseValidUpto(dataObject.MstrData?.LicenseValidUpto);
+                setClientName(dataObject.MstrData?.ClientName);
+                setBranchName(dataObject.MstrData?.BrNameE);
+                setBranchCode(dataObject.MstrData?.BrCode);
+                setAgentName(dataObject.MstrData?.AgNameE);
+                setIsActive(dataObject.MstrData?.IsActive ? true : false);
+                setFileCreatedDate(dataObject.MstrData?.FileCreateDate);
+                setNoOfDaysAllowed(30); // or set based on dataObject if required
+    
+                // ToastAndroid.show('Loaded data from local storage', ToastAndroid.SHORT);
+    
             } else {
-                result[header?.column_name] = null;
-            }
-        });
-        headers.forEach(header => {
-            const headerIndex = parseInt(header.header_number) - 1;
-            result2[header?.column_name] = header?.display_name;
-        });
-        // console.log("header mapping testibnf", result)
-        // console.log("header mapping result 2", result2)
-
-        insertMappedDataToDB(result);
-    };
-
-    const insertMappedDataToDB = async (mappedData) => {
-        const currentDate = new Date().toLocaleDateString();
-        const headerRecords = await database.get('header_table').query().fetch();
-
-        if (headerRecords.length === 0) {
-            await database.write(async () => {
-                await database.get('header_table').create(record => {
-                    Object.keys(mappedData).forEach(key => {
-                        record[key] = mappedData[key];  // Dynamically set values
+                // Step 3: If no data is found, hit the API
+                console.log("No saved data found, making API call...");
+                const mobileNumber = await AsyncStorage.getItem('mobileNumber');
+    
+                if (mobileNumber) {
+                    const url = `http://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/Test_Req?MobileNo=1234567890`;
+    
+                    const response = await axios.get(url, {
+                        headers: {
+                            'Content-Type': 'text/xml',
+                        },
                     });
-                    record.D_Field38 = currentDate;  // Add current date to D_Field38
-                });
-            });
-            console.log("Header Data successfully inserted into WatermelonDB.");
-        } else {
-            console.log("Header Data not inserted as header_table is not empty.");
-        }
-    };
-
-    const mapMasterData = (slicedDataArray) => {
-        let master = [];
-        masterTableData?.map((v, i) => {
-            master.push({
-                column_name: v[i.toString()][0],
-                display_name: v[i.toString()][1],
-                index: parseInt(v[i.toString()][2]) - 1,
-            });
-        });
-        // console.log("mapped masters data", master);
-        mapMasterDataValues(master, slicedDataArray)
-        setMasterTableDatatoCheck(master);
-    };
-
-    const mapMasterDataValues = async (masters, inputData) => {
-        const mappedDataArray = [];
-        const mappedDisplayColumnName = [];
-        for (const row of inputData) {
-            const mappedRow = {};
-            const mappedRow2 = {};
-            const mappedRow3 = {};
-            masters.forEach(master => {
-                const { column_name, index, display_name } = master;
-
-                if (index >= 0 && row[index] !== undefined) {
-                    mappedRow[column_name] = row[index];
-                    mappedRow2[display_name] = row[index];
-                    mappedRow3[display_name] = column_name;
+    
+                    const parser = new XMLParser();
+                    const jsonResponse = parser.parse(response.data);
+                    const jsonString = jsonResponse.string;
+                    const dataObject = JSON.parse(jsonString);
+    
+                    // Save the dataObject in AsyncStorage for future use
+                    await AsyncStorage.setItem('dataObject', JSON.stringify(dataObject));
+    
+                    // Set state using the API data
+                    setMappedMasterData(dataObject.MstrData?.MstrRecs);
+                    setDataAvailable(true);
+                    setNoOfRecords(dataObject.MstrData?.NoOfRecords);
+                    setLicenseValidUpto(dataObject.MstrData?.LicenseValidUpto);
+                    setClientName(dataObject.MstrData?.ClientName);
+                    setBranchName(dataObject.MstrData?.BrNameE);
+                    setBranchCode(dataObject.MstrData?.BrCode);
+                    setAgentName(dataObject.MstrData?.AgNameE);
+                    setIsActive(dataObject.MstrData?.IsActive ? true : false);
+                    setFileCreatedDate(dataObject.MstrData?.FileCreateDate);
+                    setNoOfDaysAllowed(30); // or set based on dataObject if required
+    
+                    ToastAndroid.show('API call successful and data saved!', ToastAndroid.SHORT);
                 } else {
-                    mappedRow[column_name] = null;
-                    mappedRow2[display_name] = null;
-                    mappedRow3[display_name] = null;
+                    console.warn('No mobile number found in AsyncStorage.');
+                    ToastAndroid.show('No mobile number found!', ToastAndroid.SHORT);
                 }
-            });
-
-            mappedDataArray.push(mappedRow2);
-            mappedDisplayColumnName.push(mappedRow3);
-
-            await insertMappedMasterDataToDB(mappedRow);
+            }
+        } catch (error) {
+            console.error('Error occurred:', error);
+            ToastAndroid.show('Error occurred!', ToastAndroid.SHORT);
+        } finally {
+            setLoading(false); // Set loading state to false
         }
-        setLoading(false);
-        setDataAvailable(true);
-        setMappedMasterData(prevData => [...(prevData || []), ...mappedDataArray]);
-        // let updatedData = prevData => [...(prevData || []), ...mappedDisplayColumnName];
-        // const stringifiedData = JSON.stringify(updatedData);
-        // const dataToStore = updatedData || []; // Default to an empty array if data is null or undefined
-        // const stringifiedData = JSON.stringify(dataToStore);
-        // await AsyncStorage.setItem('customerData', stringifiedData);
-        // setMappedMasterData2(prevData => [...(prevData || []), ...mappedDisplayColumnName]);
-        // console.log("Mapped Master Data for U I (Complete Array):", updatedData);
-        // console.log("Mapped Master Data json stringify", stringifiedData);
     };
+    
+    useFocusEffect(
+        useCallback(() => {
+            // Check if 'password' exists in AsyncStorage
+            const checkPasswordInStorage = async () => {
+                const password = await AsyncStorage.getItem('password');
+                if (password) {
+                    // If password exists, load data
+                    getFileContent();
+                } else {
+                    // If password does not exist, skip the API call
+                    console.log("No password found in AsyncStorage. Skipping data load.");
+                }
+            };
 
-    const insertMappedMasterDataToDB = async (mappedData) => {
-        const currentDate = new Date().toLocaleDateString();
-
-        // Insert the new record into the database
-        await database.write(async () => {
-            await database.get('master_table').create(record => {
-                Object.keys(mappedData).forEach(key => {
-                    record[key] = mappedData[key];  // Dynamically set values for each column
-                });
-            });
-        });
-
-        // console.log("Data successfully inserted into WatermelonDB.");
-    };
-
-    const fieldMapping = Object.fromEntries(
-        table1Mapping?.map(item => {
-            const [key, [fieldId, displayName]] = Object.entries(item)[0];
-            return [fieldId, displayName?.trim()]; // Remove any extra whitespace
-        })
+            checkPasswordInStorage();
+        }, []) // Empty dependency array means it only runs when screen is focused
     );
+
+    const renderItem = useCallback(
+        ({ item, index }) => (
+            <DataCard collectionAllowed={collectionAllowed} searchQuery={searchQuery} key={index} index={index} item={item} />
+        ),
+        [searchQuery, mappedMasterData]
+    );
+
+  useEffect(() => {
+    const fetchTransactionTable = async () => {
+      try {
+        const transactionTableData = await AsyncStorage.getItem('transactionTable');
+        if (transactionTableData) {
+          const parsedData = JSON.parse(transactionTableData);  // Parse the stored data
+          setTransactionTable(parsedData);
+
+          const total = parsedData.reduce((sum, transaction) => {
+            return sum + (parseFloat(transaction.collectionAmount) || 0);
+          }, 0);
+
+          setTotalAmount(total);
+        }
+      } catch (error) {
+        console.error('Error fetching transaction table from AsyncStorage:', error);
+      }
+    };
+
+    fetchTransactionTable();
+  }, []);
 
     return (
         <View style={styles.dashView}>
             <StatusBar backgroundColor={COLORS.primaryAccent} barStyle="light-content" />
 
-            {dataAvailable ? (
+            {dataAvailable && isDataValid ? (
                 <>
                     <View style={{ width: windowWidth * 1, height: windowHeight * 0.1, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly' }}>
                         <Searchbar
@@ -529,98 +283,56 @@ export default function Dashboard({ navigation }) {
                         </Pressable>
                     </View>
 
-                    <View style={{ height: windowHeight * 0.80 }}>
-                        <ScrollView >
-                            {mappedMasterData
-                                .filter(item => {
-                                    const name = item['Name in English ']?.toLowerCase() || '';
-                                    const accountNumber = item['Account number  ']?.toLowerCase() || '';
-                                    return (
-                                        name.includes(searchQuery.toLowerCase()) ||
-                                        accountNumber.includes(searchQuery.toLowerCase())
-                                    );
-                                })
-                                .map((item, index) => (
-                                    <DataCard searchQuery={searchQuery} key={index} index={index} item={item} />
-
-                                    // <View
-                                    //     key={index}
-                                    //     style={{ width: '80%', marginTop: 5, backgroundColor: 'lightgray', height: 'auto', alignSelf: 'center', padding: 10 }}
-                                    // >
-                                    //     {Object.entries(item).map(([key, value], subIndex) => (
-                                    //         value !== null && (
-                                    //             // <View key={subIndex} style={{ marginBottom: 5 }}>
-                                    //             //     <Text>{key}: {value}</Text>
-                                    //             // </View>
-                                    //             <DataCard key={key} value={value}/>
-                                    //         )
-                                    //     ))}
-                                    // </View>
-                                ))}
-                        </ScrollView>
-                    </View>
-
-                    {/* <ScrollView>
-                        {mappedMasterData2?.map((item, index) => (
-                            <View
-                                key={index}
-                                style={{ width: '80%', marginTop: 5, backgroundColor: 'lightgray', height: 'auto', alignSelf: 'center', padding: 10 }}
-                            >
-                                {Object.entries(item).map(([key, value], subIndex) => (
-                                    key.startsWith('M_Field') && value !== null && (
-                                        <View key={subIndex} style={{ marginBottom: 5 }}>
-                                            <Text>{fieldMapping[key]}: {value}</Text>
-                                        </View>
-                                    )
-                                ))}
-                            </View>
-                        ))}
-                    </ScrollView> */}
-
-
-
-                    {/* {searchedResults ? (
+                    {searchedResults ? (
                         <>
-                            <SearchPopup setSearchedResults={setSearchedResults} searchQuery={searchQuery} />
+                            <SearchPopup mappedMasterData={mappedMasterData} setSearchedResults={setSearchedResults} searchQuery={searchQuery} />
                         </>
                     ) : (
-                        <>
-                            <View style={{ width: windowWidth * 1, height: windowHeight * 0.18, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly' }}>
+                        <View style={{ height: windowHeight * 0.80 }}>
+                            <View style={[styles.dataInfoView, { width: windowWidth * 0.90, alignSelf: 'center', flexDirection: 'row', height: 50 }]}>
+                                <View>
+                                    {/* <Text style={styles.text}>Client Name</Text> */}
+                                    <Text style={[styles.text, { fontSize: 14, fontFamily: 'Montserrat-Bold' }]}>{ClientName} </Text>
+                                </View>
+                                <View>
+                                    <Text style={styles.text}>Branch</Text>
+                                    <Text style={[styles.text, { fontSize: 14, fontFamily: 'Montserrat-Bold' }]}>{BranchName} ({BranchCode}) </Text>
+                                </View>
+                            </View>
+
+                            <View>
+                                <Text style={[styles.text, { marginTop: 10, marginBottom: 0, marginLeft: 20 }]}>Agent Name: <Text style={[styles.text, { fontSize: 14, fontFamily: 'Montserrat-Bold' }]}>{AgentName} </Text></Text>
+                            </View>
+                            <View style={{ width: windowWidth * 1, height: windowHeight * 0.12, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly' }}>
                                 <View style={styles.dataInfoView}>
                                     <Text style={styles.text}>Total Receipts </Text>
-                                    <Text style={[styles.text, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>{searchQuery ? filteredData.length : recentTransactions.length} </Text>
+                                    <Text style={[styles.text, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>{NoOfRecords} </Text>
                                 </View>
-
                                 <View style={styles.dataInfoView}>
                                     <Text style={styles.text}>Total collected </Text>
                                     <Text style={[styles.text, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>₹{totalAmount}.00</Text>
                                 </View>
                             </View>
 
-                            <View style={styles.lineView}>
-                                <Text style={styles.lineText}>Recent transactions </Text>
-                            </View>
-
-                            {recentTransactions && recentTransactions.length > 0 &&
+                            {!collectionAllowed &&
                                 <View>
-                                    <Button icon={'arrow-up'} onPress={() => { console.log("Data sent"); ToastAndroid.show('Latest transactions has been sent successfully.', ToastAndroid.SHORT) }} labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }} style={{ marginTop: 30, width: '30%', alignSelf: 'flex-end', marginRight: 20 }} mode="contained">Send Data</Button>
+                                    <Text style={{color: '#CC5500', fontSize: 16, alignSelf: 'center', marginTop: 10, marginBottom: 10, fontFamily: 'Montserrat-Bold'}}>The collection window has expired.</Text>
                                 </View>
                             }
 
-                            <ScrollView style={{ marginTop: 20, marginBottom: 40 }}>
-                                <>
-                                    {recentTransactions && recentTransactions.length > 0 ? (
-                                        recentTransactions.map((item, index) => (
-                                            <TransactionCard searchQuery={searchQuery} item={item} key={index} index={index} />
-                                        ))
-                                    ) : (
-                                        <Text style={[styles.text1, { margin: 'auto', marginTop: 100 }]}>No transactions yet</Text>
-                                    )}
-                                </>
-
-                            </ScrollView>
-                        </>
-                    )} */}
+                            <FlatList
+                                data={mappedMasterData}
+                                renderItem={renderItem}
+                                keyExtractor={(item) => `${item.GLCode}-${item.AccountNo}`} // Concatenate values for a unique key
+                                initialNumToRender={10}  // Adjust based on testing
+                                maxToRenderPerBatch={10} // Specifies how many items should be rendered at a time
+                                windowSize={5}           // Number of items to keep in memory for the window
+                                onEndReachedThreshold={0.5} // Load more data when 50% of the content is visible
+                                ListEmptyComponent={<Text>No data available</Text>}
+                                ListFooterComponent={<ActivityIndicator />} // Loader for when more data is fetched
+                            />
+                        </View>
+                    )}
                 </>
             ) : (
                 <>
@@ -649,15 +361,33 @@ export default function Dashboard({ navigation }) {
                         </Pressable>
                     </View>
 
-                    <View style={styles.notFound}>
-                        <MaterialCommunityIcons name='cloud-off-outline' style={{ marginBottom: 20 }} color={COLORS.primary} size={50} />
-                        <Text style={styles.text1}>Data not found !</Text>
-                        <View style={styles.getData}>
-                            <Button loading={loading} disabled={loading} labelStyle={{ fontFamily: 'Montserrat-Bold', fontSize: 18 }} style={{ marginTop: 30, width: '50%' }} mode="contained" onPress={() => handleGetData()}>
-                                Get Data
-                            </Button>
+                    {!LicenseExpired ? (
+                        <View style={styles.notFound}>
+                            <MaterialCommunityIcons name='cloud-off-outline' style={{ marginBottom: 20 }} color={COLORS.primary} size={50} />
+                            <Text style={styles.text1}>Data not found !</Text>
+
+                            {/* Only show the Get Data button if IsActive is true */}
+                            {IsActive && (
+                                <View style={styles.getData}>
+                                    <Button
+                                        loading={loading}
+                                        disabled={loading}
+                                        labelStyle={{ fontFamily: 'Montserrat-Bold', fontSize: 18 }}
+                                        style={{ marginTop: 30, width: '50%' }}
+                                        mode="contained"
+                                        onPress={handleGetData}
+                                    >
+                                        Start collection
+                                    </Button>
+                                </View>
+                            )}
+
                         </View>
-                    </View>
+                    ) : (
+                        <View style={styles.notFound}>
+                            <Text style={styles.text1}>Your license has expired. Please pay subscription!</Text>
+                        </View>
+                    )}
                 </>
             )}
         </View>
@@ -694,7 +424,7 @@ const styles = StyleSheet.create({
     },
     dataInfoView: {
         width: '45%',
-        height: 120,
+        height: 80,
         borderRadius: 10,
         // alignSelf: 'center',
         // marginTop: 20,
