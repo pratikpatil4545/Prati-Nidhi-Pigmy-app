@@ -16,9 +16,43 @@ export default function UserProfile({ route, navigation }) {
   const [modalVisible2, setModalVisible2] = useState(false);
   const [amount, setAmount] = useState(item.DailyAmt);
   const [isTodayCollected, setisTodayCollected] = useState(true);
-  const [currentBalance, setCurrentBalance] = useState(item[9]);
+  const [updatedBalance, setupdatedBalance] = useState(null);
   const [newBalance, setNewBalance] = useState(null);
   const isFocused = useIsFocused();
+  const today = new Date().toLocaleDateString();
+  const [collectionMadeToday, setCollectionMadeToday] = useState(false);
+  const [transactionTableData, setTransactionTableData] = useState(null);
+
+  useEffect(() => {
+    const filteredTransactions = transactionTableData?.filter((transaction) => 
+      transaction.accNo === item.AccountNo && transaction.glCode === item.GLCode
+    );
+    // let temp = filteredTransactions[0];
+    if (filteredTransactions && filteredTransactions.length > 0) {
+      setupdatedBalance(filteredTransactions[0]?.openingBalance);
+    } else {
+      setupdatedBalance(null);
+    }
+    // setupdatedBalance(filteredTransactions[0]?.openingBalance ? filteredTransactions[0]?.openingBalance : null);
+      console.log("filtered data", transactionTableData);
+    const lastTransactionToday = transactionTableData?.some((transaction) => {
+      let item = route.params?.item;
+      const [day, month, year] = transaction.dateTimeCollected?.split(' ')[0]?.split('-');
+      const fullYear = year.length === 2 ? `20${year}` : year;
+      const collectionDate = new Date(`${fullYear}-${month}-${day}`);
+
+      return collectionDate.toLocaleDateString() === today
+        && transaction.accNo === item.AccountNo
+        && transaction.glCode === item.GLCode;
+    });
+
+    if (lastTransactionToday) {
+      setCollectionMadeToday(true);
+    } else {
+      // console.log("false");
+      setCollectionMadeToday(false);
+    }
+  }, [transactionTableData]);
 
   const handleWhatsAppPress = () => {
     // Define the message and phone number
@@ -46,15 +80,18 @@ export default function UserProfile({ route, navigation }) {
 
   const checkAsyncStorageForData = async () => {
     try {
-      const storedData = await AsyncStorage.getItem('customerData');
-      if (storedData !== null) {
-        let data = JSON.parse(storedData); // Ensure JSON parsing
-        console.log("data for refresh", data[index])
-        setItem(data[index]);
-        data.forEach(transaction => {
-          // console.log("9th index value:", transaction[9]);
-          setCurrentBalance(transaction.M_Field5);
-        });
+      const savedData = await AsyncStorage.getItem('transactionTable');
+      // const storedData = await AsyncStorage.getItem('customerData');
+      if (savedData) {
+        const dataObject = JSON.parse(savedData);
+        // let data = JSON.parse(storedData); // Ensure JSON parsing
+        // console.log("data for refresh", dataObject)
+        setTransactionTableData(dataObject);
+        // setItem(data[index]);
+        // data.forEach(transaction => {
+        //   // console.log("9th index value:", transaction[9]);
+        //   setCurrentBalance(transaction.M_Field5);
+        // });
       }
     } catch (e) {
       console.error('Failed to fetch data from AsyncStorage', e);
@@ -65,7 +102,7 @@ export default function UserProfile({ route, navigation }) {
     checkAsyncStorageForData();
   }, [isFocused]);
 
-  console.log("Current day is:", route.params.item)
+  // console.log("Current day is:", updatedBalance)
 
   const handlePress = () => {
     setModalVisible(true);
@@ -79,7 +116,7 @@ export default function UserProfile({ route, navigation }) {
     setModalVisible2(false);
   };
 
-  let transactionCount = 1; // This should be initialized based on previous transaction count stored
+  let transactionCount = 1;
 
   const generateReceiptNo = () => {
     const date = new Date();
@@ -87,9 +124,9 @@ export default function UserProfile({ route, navigation }) {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = date.getFullYear();
     const count = String(transactionCount).padStart(4, '0');
-  
+
     transactionCount++; // Increment for the next transaction
-  
+
     return `${day}${month}${year}${count}`;
   };
 
@@ -102,7 +139,7 @@ export default function UserProfile({ route, navigation }) {
     const ampm = hours >= 12 ? 'PM' : 'AM';
     hours = hours % 12 || 12; // Convert 24-hour to 12-hour format
     return `${day}-${month}-${year} ${hours}:${minutes} ${ampm}`;
-};
+  };
 
   const handleSubmit = async () => {
     let OneShotLmt = parseInt(item.OneShotLmt);
@@ -195,7 +232,7 @@ export default function UserProfile({ route, navigation }) {
       transactionTable.push(transactionData);
 
       await AsyncStorage.setItem('transactionTable', JSON.stringify(transactionTable));
-
+      setCollectionMadeToday(true);
       setModalVisible2(true);
     } catch (error) {
       console.error("Error while processing transaction:", error);
@@ -227,8 +264,8 @@ export default function UserProfile({ route, navigation }) {
       <View style={styles.profileView}>
         <MaterialCommunityIcons4 onPress={() => { navigation.navigate("DashboardStack") }} style={{ zIndex: 454 }} name='angle-left' color={COLORS.primaryAccent} size={40} />
         <View style={styles.profileName}>
-          <Text style={styles.text} >{item[8] ? item[8] : ''}</Text>
-          {/* <Text style={[styles.text, {fontFamily: 'Montserrat-Regular', fontSize: 14}]} >A/C No. : {item[0] ? item[0] : ''}</Text> */}
+          <Text style={styles.text} >{item.EnglishName ? item.EnglishName : ''}</Text>
+          {/* <Text style={[styles.text, {fontFamily: 'Montserrat-Regular', fontSize: 14}]} >A/C No. : {item.EnglishName ? item.EnglishName : ''}</Text> */}
           <Text style={[styles.text, { fontFamily: 'Montserrat-Regular', fontSize: 14 }]} >Address : Aundh, Pune</Text>
         </View>
         <View style={styles.profileIcon}>
@@ -239,14 +276,30 @@ export default function UserProfile({ route, navigation }) {
       <View style={styles.dataInfoView}>
         <View style={styles.left}>
           <Text style={[styles.text1, { color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>Account Number : </Text>
-          <Text style={[styles.text1, { color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>Branch Code : </Text>
-          <Text style={[styles.text1, { color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>Current Balance : </Text>
+          <Text style={[styles.text1, { color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>Name : </Text>
+          <Text style={[styles.text1, { color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>Branch : </Text>
+          <Text style={[styles.text1, { color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>Opening Balance : </Text>
+          {/* <Text style={[styles.text1, { color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>This Month Balance : </Text> */}
+          {parseInt(item.LastMthBal) != 0 &&
+            <Text style={[styles.text1, { color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>Last Month Balance : </Text>
+          }
+          {parseInt(item.LienAmt) != 0 &&
+            <Text style={[styles.text1, { color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>Lien Amount : </Text>
+          }
           <Text style={[styles.text1, { color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>A/C Opened date. : </Text>
         </View>
         <View style={styles.right}>
-          <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold' }]}>{item.AccountNo}</Text>
-          <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold' }]}>1</Text>
-          <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold' }]}>{item.ThisMthBal}.00</Text>
+          <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold' }]}>{(item.GLCode != 0) ? item.GLCode : ''}{item.AccountNo}</Text>
+          <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold' }]}>{item.EnglishName}</Text>
+          <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold' }]}>{route.params.BranchName} ({route.params.BranchCode})</Text>
+          <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold' }]}>{updatedBalance ? updatedBalance : item.ThisMthBal}.00</Text>
+          {/* <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold' }]}>{item.ThisMthBal}.00</Text> */}
+          {parseInt(item.LastMthBal) != 0 &&
+            <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold' }]}>{item.LastMthBal}.00</Text>
+          }
+          {parseInt(item.LienAmt) != 0 &&
+            <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold' }]}>{item.LienAmt}.00</Text>
+          }
           <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold' }]}>{item.AccOpenDt}</Text>
         </View>
       </View>
@@ -284,7 +337,8 @@ export default function UserProfile({ route, navigation }) {
       </>
 
       <View style={{ width: '95%', alignSelf: 'center' }}>
-        {(route.params.collectionAllowed === 'true' || Boolean(route.params.collectionAllowed)) ? (
+        {(route.params.collectionAllowed === 'true' || Boolean(route.params.collectionAllowed)) &&
+          (route.params.multipleCollection || !collectionMadeToday) ? (
           <Button
             style={{
               width: '80%',

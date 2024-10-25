@@ -32,6 +32,7 @@ export default function Dashboard({ navigation }) {
     const [fileCreatedDate, setFileCreatedDate] = useState(null);
     const [noOfDaysAllowed, setNoOfDaysAllowed] = useState(null);
     const [collectionAllowed, setCollectionAllowed] = useState(true);
+    const [multipleCollection, setMultipleCollection] = useState(false);
     const [totalAmount, setTotalAmount] = useState(0);
     const [transactionTable, setTransactionTable] = useState([]);
 
@@ -126,22 +127,28 @@ export default function Dashboard({ navigation }) {
     const handleGetData = () => {
         setLoading(true);
         ToastAndroid.show('Getting latest data', ToastAndroid.SHORT);
-        getFileContent();
+        // getFileContent();
+        getApi();
+    }
+
+    const getApi = async() => {
+        try {
+            const response = await fetch('http://postman-echo.com/get');
+            const jsonResponse = await response.json();
+            Alert.alert('Success API Response Parth sir', JSON.stringify(jsonResponse));
+          } catch (error) {
+            Alert.alert('Error, Parth sir', 'Something went wrong');
+          }
     }
 
     const getFileContent = async () => {
-        console.log("Checking for stored data...");
+        // console.log("Checking for stored data...");
         try {
-            // Step 1: Try to get data from AsyncStorage
             const savedData = await AsyncStorage.getItem('dataObject');
-          
-            
             if (savedData) {
-                // Step 2: If data is found in AsyncStorage, use it
-                console.log("Using saved data from AsyncStorage");
                 const dataObject = JSON.parse(savedData);
-    
-                // Set state using the saved data
+                // console.log("Using saved data from AsyncStorage", dataObject.MstrData?.AllowMultipleColln);
+                // setHeadersData
                 setMappedMasterData(dataObject.MstrData?.MstrRecs);
                 setDataAvailable(true);
                 setNoOfRecords(dataObject.MstrData?.NoOfRecords);
@@ -152,33 +159,39 @@ export default function Dashboard({ navigation }) {
                 setAgentName(dataObject.MstrData?.AgNameE);
                 setIsActive(dataObject.MstrData?.IsActive ? true : false);
                 setFileCreatedDate(dataObject.MstrData?.FileCreateDate);
-                setNoOfDaysAllowed(30); // or set based on dataObject if required
-    
-                // ToastAndroid.show('Loaded data from local storage', ToastAndroid.SHORT);
-    
+                setNoOfDaysAllowed(30);
+                setMultipleCollection((dataObject.MstrData?.AllowMultipleColln === 'True') ? true : false)
             } else {
-                // Step 3: If no data is found, hit the API
                 console.log("No saved data found, making API call...");
                 const mobileNumber = await AsyncStorage.getItem('mobileNumber');
-    
+
                 if (mobileNumber) {
                     const url = `http://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/Test_Req?MobileNo=1234567890`;
-    
-                    const response = await axios.get(url, {
+                    const response = await fetch(url, {
+                        method: 'GET',
                         headers: {
-                            'Content-Type': 'text/xml',
+                            'Content-Type': 'application/xml',
                         },
                     });
-    
-                    const parser = new XMLParser();
-                    const jsonResponse = parser.parse(response.data);
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    // Use response.text() to get the response body as a string
+                    const responseText = await response.text();
+                    console.log("responseText:", responseText);
+
+                    const parser = new XMLParser(); // Ensure this is imported correctly
+                    const jsonResponse = parser.parse(responseText); // Parse XML response
+
+                    // Assuming the relevant data is inside jsonResponse.string
                     const jsonString = jsonResponse.string;
                     const dataObject = JSON.parse(jsonString);
-    
-                    // Save the dataObject in AsyncStorage for future use
+
+
                     await AsyncStorage.setItem('dataObject', JSON.stringify(dataObject));
-    
-                    // Set state using the API data
+
                     setMappedMasterData(dataObject.MstrData?.MstrRecs);
                     setDataAvailable(true);
                     setNoOfRecords(dataObject.MstrData?.NoOfRecords);
@@ -189,8 +202,9 @@ export default function Dashboard({ navigation }) {
                     setAgentName(dataObject.MstrData?.AgNameE);
                     setIsActive(dataObject.MstrData?.IsActive ? true : false);
                     setFileCreatedDate(dataObject.MstrData?.FileCreateDate);
-                    setNoOfDaysAllowed(30); // or set based on dataObject if required
-    
+                    setNoOfDaysAllowed(30);
+                    setMultipleCollection((dataObject.MstrData?.AllowMultipleColln === 'True') ? true : false)
+
                     ToastAndroid.show('API call successful and data saved!', ToastAndroid.SHORT);
                 } else {
                     console.warn('No mobile number found in AsyncStorage.');
@@ -198,13 +212,37 @@ export default function Dashboard({ navigation }) {
                 }
             }
         } catch (error) {
+            // Capture error details
             console.error('Error occurred:', error);
+            let errorDetails = '';
+
+            if (error instanceof Error) {
+                errorDetails = `Error Message: ${error.message}\n`;
+                if (error.stack) {
+                    errorDetails += `Stack Trace: ${error.stack}\n`;
+                }
+            } else {
+                errorDetails = `Error: ${JSON.stringify(error)}\n`;
+            }
+
+            // Log response details (if available) and provide better feedback
+            if (error.response) {
+                errorDetails += `Response Status: ${error.response.status}\n`;
+                errorDetails += `Response Data: ${JSON.stringify(error.response.data)}\n`;
+            }
+
+            Alert.alert(
+                'Error',
+                `An error occurred while processing the request:\n${errorDetails}`
+            );
+            console.error('Error occurred:', error);
+            Alert.alert(`Error`, `Error: ${error}`)
             ToastAndroid.show('Error occurred!', ToastAndroid.SHORT);
         } finally {
-            setLoading(false); // Set loading state to false
+            setLoading(false);
         }
     };
-    
+
     useFocusEffect(
         useCallback(() => {
             // Check if 'password' exists in AsyncStorage
@@ -212,7 +250,7 @@ export default function Dashboard({ navigation }) {
                 const password = await AsyncStorage.getItem('password');
                 if (password) {
                     // If password exists, load data
-                    getFileContent();
+                    // getFileContent();
                 } else {
                     // If password does not exist, skip the API call
                     console.log("No password found in AsyncStorage. Skipping data load.");
@@ -225,32 +263,33 @@ export default function Dashboard({ navigation }) {
 
     const renderItem = useCallback(
         ({ item, index }) => (
-            <DataCard collectionAllowed={collectionAllowed} searchQuery={searchQuery} key={index} index={index} item={item} />
+            <DataCard BranchName={BranchName} BranchCode={BranchCode} collectionAllowed={collectionAllowed} multipleCollection={multipleCollection} searchQuery={searchQuery} key={index} index={index} item={item} />
         ),
         [searchQuery, mappedMasterData]
     );
 
-  useEffect(() => {
-    const fetchTransactionTable = async () => {
-      try {
-        const transactionTableData = await AsyncStorage.getItem('transactionTable');
-        if (transactionTableData) {
-          const parsedData = JSON.parse(transactionTableData);  // Parse the stored data
-          setTransactionTable(parsedData);
+    useEffect(() => {
+        const fetchTransactionTable = async () => {
+            try {
+                const transactionTableData = await AsyncStorage.getItem('transactionTable');
+                if (transactionTableData) {
+                    const parsedData = JSON.parse(transactionTableData);  // Parse the stored data
+                    setTransactionTable(parsedData);
 
-          const total = parsedData.reduce((sum, transaction) => {
-            return sum + (parseFloat(transaction.collectionAmount) || 0);
-          }, 0);
+                    const total = parsedData.reduce((sum, transaction) => {
+                        return sum + (parseFloat(transaction.collectionAmount) || 0);
+                    }, 0);
+                    console.log("No saved data found, making API call...", total);
 
-          setTotalAmount(total);
-        }
-      } catch (error) {
-        console.error('Error fetching transaction table from AsyncStorage:', error);
-      }
-    };
+                    setTotalAmount(total);
+                }
+            } catch (error) {
+                console.error('Error fetching transaction table from AsyncStorage:', error);
+            }
+        };
 
-    fetchTransactionTable();
-  }, []);
+        fetchTransactionTable();
+    }, []);
 
     return (
         <View style={styles.dashView}>
@@ -316,7 +355,7 @@ export default function Dashboard({ navigation }) {
 
                             {!collectionAllowed &&
                                 <View>
-                                    <Text style={{color: '#CC5500', fontSize: 16, alignSelf: 'center', marginTop: 10, marginBottom: 10, fontFamily: 'Montserrat-Bold'}}>The collection window has expired.</Text>
+                                    <Text style={{ color: '#CC5500', fontSize: 16, alignSelf: 'center', marginTop: 10, marginBottom: 10, fontFamily: 'Montserrat-Bold' }}>The collection window has expired.</Text>
                                 </View>
                             }
 
