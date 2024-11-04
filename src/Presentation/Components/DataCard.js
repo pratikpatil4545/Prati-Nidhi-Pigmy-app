@@ -34,8 +34,9 @@ export default function DataCard(props) {
     );
   };
 
+
   const HighlightedAccNo = ({ glCode, accNo, query, keyName }) => {
-    const combinedValue = glCode !== '0' ? `${glCode}${accNo}` : accNo; 
+    const combinedValue = glCode !== '0' ? `${glCode}${accNo}` : accNo;
 
     if (!query) {
       return (
@@ -71,26 +72,23 @@ export default function DataCard(props) {
             <Text style={[styles.text, { color: COLORS.white, alignSelf: 'center', fontFamily: 'Montserrat-Bold', fontSize: 16 }]}>
               {props.index + 1}
             </Text>
-            {/* {props.collectButton && (props.item?.IsAmtToBeAdded === 'True') &&
-              <Button
-                labelStyle={{ fontFamily: 'Montserrat-Bold', fontSize: 12 }}
-                // style={{ marginTop: 30, width: '50%' }}
-                mode="contained"
-              // onPress={handleGetData}
-              >
-                Collect Payment {props.item?.IsAmtToBeAdded}
-              </Button>
-            } */}
           </View>
           <View style={styles.right}>
             {Object.entries(props.item).map(([key, value], subIndex) => (
-              // Only render the item if the value is not empty, undefined, or '0'
               value !== '' && value !== undefined && value !== '0' && (
                 <View key={subIndex} style={{ marginBottom: 5 }}>
                   {key === 'EnglishName' ? (
                     <HighlightedText name={value} keyName={key} query={props.searchQuery} />
-                  ) : key === 'AccountNo' || key === 'GLCode' ? (
-                    // Pass both GLCode and AccountNo for highlighting
+                  ) : key === 'AccountNo' ? (
+                    props.item.GLCode && props.item.GLCode !== '0' ? null : (
+                      <HighlightedAccNo
+                        glCode="0"
+                        accNo={props.item.AccountNo}
+                        keyName="AccountNo"
+                        query={props.searchQuery}
+                      />
+                    )
+                  ) : key === 'GLCode' && props.item.GLCode !== '0' ? (
                     <HighlightedAccNo
                       glCode={props.item.GLCode}
                       accNo={props.item.AccountNo}

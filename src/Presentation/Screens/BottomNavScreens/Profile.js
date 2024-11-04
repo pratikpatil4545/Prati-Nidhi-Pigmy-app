@@ -1,15 +1,17 @@
-import { View, Text, StyleSheet, Image, StatusBar, Pressable, BackHandler, ScrollView } from 'react-native'
+import { View, Text, StyleSheet, Image, StatusBar, Pressable, BackHandler, ScrollView, Alert } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import { COLORS, windowHeight, windowWidth } from '../../../Common/Constants'
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import MaterialCommunityIcons2 from 'react-native-vector-icons/FontAwesome5';
-import MaterialCommunityIcons3 from 'react-native-vector-icons/MaterialIcons';
 import MaterialCommunityIcons4 from 'react-native-vector-icons/FontAwesome6';
-
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useIsFocused } from '@react-navigation/native';
 
-export default function Profile({ navigation }) {
 
+export default function Profile({ navigation, route }) {
+
+  const isFocused = useIsFocused();
+  const [transactionTable, setTransactionTable] = useState([]);
+  console.log("routes", route.params, transactionTable.length)
   useEffect(() => {
     const handleBackPress = () => {
       navigation.navigate('BottomTabs');
@@ -22,6 +24,34 @@ export default function Profile({ navigation }) {
   const handleLogout = () => {
     navigation.navigate('LogIn');
     AsyncStorage.clear();
+  }
+
+  useEffect(() => {
+    const fetchTransactionTable = async () => {
+      try {
+        const transactionTableData = await AsyncStorage.getItem('transactionTable');
+        if (transactionTableData) {
+          const parsedData = JSON.parse(transactionTableData);  // Parse the stored data
+          setTransactionTable(parsedData);
+        }
+        // console.log("transaction data", transactionTableData.length)
+      } catch (error) {
+        console.error('Error fetching transaction table from AsyncStorage:', error);
+      }
+    };
+
+    fetchTransactionTable();
+  }, [isFocused]);
+
+  const handleCloseCollection = () => {
+    // let validDay = route.params?.collectionAllowed;
+    // console.log("first", validDay) 
+    if(route.params?.collectionAllowed === true) {
+      Alert.alert('Closing collection', `You have collected ${transactionTable.length} reciepts out of ${route.params.count}. and total collected amount is Rs ${route.params.amount}.00/-`)
+    }
+    else if(route.params?.collectionAllowed == false){
+      Alert.alert('Cannot Close collection!', `Collection is not allowed, allowed day's are expired`)
+    }
   }
 
   return (
@@ -44,6 +74,19 @@ export default function Profile({ navigation }) {
           </View>
 
           <View style={styles.profileInfo}>
+
+            {/* {transactionTable && transactionTable.length > 0 ? (
+              <View style={{ display: 'flex', paddingLeft: 10, paddingRight: 10, backgroundColor: COLORS.white, borderRadius: 10, height: 70, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: '10%', marginBottom: 10 }}>
+                <Pressable style={{ width: '90%', height: '100%', display: 'flex', justifyContent: 'center' }} onPress={handleCloseCollection}>
+                  <View style={{ display: 'flex', flexDirection: 'row' }}>
+                    <MaterialCommunityIcons name='close-circle-multiple' color={COLORS.gray} size={25} />
+                    <Text style={{ fontFamily: 'Montserrat-Bold', color: COLORS.gray, alignSelf: 'center', fontSize: 16 }}> Close collection </Text>
+                  </View>
+                </Pressable>
+                <MaterialCommunityIcons name='chevron-right' color={COLORS.gray} size={30} />
+              </View>
+            ) : null} */}
+
 
             <View style={{ display: 'flex', paddingLeft: 10, paddingRight: 10, backgroundColor: COLORS.white, borderRadius: 10, height: 70, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: '10%', marginBottom: 10, }}>
               <Pressable style={{ width: '90%', height: '100%', display: 'flex', justifyContent: 'center' }} onPress={() => { navigation.navigate('AccountSetting') }}>

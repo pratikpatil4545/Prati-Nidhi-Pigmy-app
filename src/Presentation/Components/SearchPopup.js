@@ -56,7 +56,7 @@ export default function SearchPopup(props) {
     }, []);
 
     const renderItem = ({ item, index }) => (
-        <DataCard collectButton={true} searchQuery={searchQuery} item={item} key={index} index={index} />
+        <DataCard BranchName={props.BranchName} BranchCode={props.BranchCode} collectionAllowed={props.collectionAllowed} multipleCollection={props.multipleCollection} searchQuery={searchQuery} item={item} key={index} index={index} />
     );
 
     const loadMoreItems = () => {

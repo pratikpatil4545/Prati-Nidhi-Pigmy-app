@@ -7,11 +7,11 @@ import { useNavigation } from '@react-navigation/native';
 export default function TransactionCard(props) {
 
     const navigation = useNavigation();
-    // console.log("searchQuery", props.item)
+    console.log("searchQuery", props.item)
 
     const HighlightedText = ({ name, query }) => {
         if (!query) {
-            return <Text style={[styles.text, { color: COLORS.darkGrey }]}><Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>Name: </Text> {name}</Text>;
+            return <Text style={[styles.text, { color: COLORS.darkGrey }]}><Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>A/C No.: </Text> {name}</Text>;
         }
         const regex = new RegExp(`(${query})`, 'gi'); // Create a regex to match the query
         const parts = name.split(regex); // Split the name based on the query
@@ -49,13 +49,16 @@ export default function TransactionCard(props) {
     
     const dayIndex = getDay()
 
-    const dateTime = props.item[11]; 
-    const [CardDate, time] = dateTime.split(' ');
-    const [cardDay, month, year] = CardDate.split('/');
-  
-    // Convert month number to a three-letter abbreviation
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const monthIndex = parseInt(month, 10) - 1; // Convert month to zero-based index
+    const dateTime = props.item?.dateTimeCollected; 
+
+      const [CardDate, time, period] = dateTime.split(' ');
+      const [days, month, year] = CardDate.split('-');
+    
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const monthIndex = parseInt(month, 10) - 1;
+      const monthName = monthNames[monthIndex];
+      const cardDay = days;
+    
 
     return (
         <View style={styles.mainView}>
@@ -68,7 +71,7 @@ export default function TransactionCard(props) {
                             <View style={[styles.dateCardInner, {backgroundColor: '#6482AD',borderTopLeftRadius: 0, borderTopRightRadius: 0, borderBottomLeftRadius: 5, borderBottomRightRadius: 5,}]}></View>
                             <View style={{alignSelf: 'center',position: 'absolute'}}>
                                 <Text style={{ marginLeft: 'auto', marginRight: 'auto', fontFamily: 'Montserrat-Medium', color: COLORS.white}}>{cardDay}</Text>
-                                <Text style={{ fontFamily: 'Montserrat-Medium', color: COLORS.white}}>{monthNames[monthIndex]}</Text>
+                                <Text style={{ fontFamily: 'Montserrat-Medium', color: COLORS.white}}>{monthName}</Text>
                             </View>
                             <View style={{width: 6, height: 6, borderRadius: 20, backgroundColor: COLORS.white, position: 'absolute'}}/>
                             <View style={{width: 6, height: 6, borderRadius: 20, backgroundColor: COLORS.white, position: 'absolute', right: 0}}/>
@@ -83,15 +86,15 @@ export default function TransactionCard(props) {
                     <View style={styles.lineCurve1} /> */}
 
                     <View style={styles.right}>
-                        <HighlightedText name={props.item[8]} query={props.searchQuery} />
+                        <HighlightedText name={props.item.accNo} query={props.searchQuery} />
                         {/* <HighlightedAccNo name={props.item[3]} query={props.searchQuery} /> */}
                         <Text style={[styles.text, { color: COLORS.darkGrey }]}>
                             <Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>Today's Entry:  </Text>
-                              {props.item[dayIndex]}.00
+                              {props.item.collectionAmount}.00
                         </Text>
                         <Text style={[styles.text, { color: COLORS.darkGrey }]}>
                             <Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>Total balance:  </Text>
-                              {props.item[9]}.00
+                              {props.item.openingBalance}.00
                         </Text>
                     </View>
                 </View>

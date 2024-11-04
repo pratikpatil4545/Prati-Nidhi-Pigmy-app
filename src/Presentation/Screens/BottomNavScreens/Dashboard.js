@@ -10,8 +10,9 @@ import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import axios from 'axios';
 import { XMLParser } from 'fast-xml-parser';
 import SearchPopup from '../../Components/SearchPopup';
+import TransactionCard from '../../Components/TransactionCard';
 
-export default function Dashboard({ navigation }) {
+export default function Dashboard({ navigation, route }) {
 
     const [dataAvailable, setDataAvailable] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -35,8 +36,16 @@ export default function Dashboard({ navigation }) {
     const [multipleCollection, setMultipleCollection] = useState(false);
     const [totalAmount, setTotalAmount] = useState(0);
     const [transactionTable, setTransactionTable] = useState([]);
-
+    const [isAuth, setIsAuth] = useState(true);
     // console.log("collection allowed?", collectionAllowed);
+    // const [recentTransactions, setRecentTransactions] = useState(MockData.recentTransactions);
+
+    useEffect(() => {
+        if (route.params?.search === true) {
+            setSearchedResults(true);
+        }
+        setSearchQuery('');
+    }, [isFocused])
 
     useEffect(() => {
         const checkLicenseValidity = () => {
@@ -74,26 +83,24 @@ export default function Dashboard({ navigation }) {
     }, [LicenseValidUpto])
 
     useEffect(() => {
-        // Calculate the end date by adding noOfDaysAllowed to the fileCreatedDate
-        const fileDate = new Date(fileCreatedDate); // Convert to Date object
+        if (!fileCreatedDate || !noOfDaysAllowed) return;
+
+        const fileDate = new Date(fileCreatedDate);
         const endDate = new Date(fileDate);
-        endDate.setDate(fileDate.getDate() + parseInt(noOfDaysAllowed)); // Add allowed days
+        endDate.setDate(fileDate.getDate() + parseInt(noOfDaysAllowed));
 
-        const currentDate = new Date(); // Get today's date
+        const currentDate = new Date();
 
-        // Check if today's date is within the allowed date range
-        // console.log("dates checkng",currentDate,'****', fileDate,'****', endDate )
         if (currentDate >= fileDate && currentDate <= endDate) {
-            setCollectionAllowed(true); // Collection is allowed
-            console.log("alloweded")
+            setCollectionAllowed(true);
         } else {
-            console.log("not alloweded")
-            setCollectionAllowed(false); // Collection is not allowed
+            setCollectionAllowed(false);
         }
     }, [fileCreatedDate, noOfDaysAllowed]);
 
+
     useEffect(() => {
-        let len1 = parseInt(mappedMasterData.length);
+        let len1 = parseInt(mappedMasterData?.length);
         let len2 = parseInt(NoOfRecords);
         if (len1 && len2) {
             if (len1 != len2) {
@@ -104,7 +111,7 @@ export default function Dashboard({ navigation }) {
                 setIsDataValid(true);
             }
         }
-    }, [NoOfRecords, mappedMasterData.length])
+    }, [NoOfRecords, mappedMasterData?.length])
 
     useEffect(() => {
         const handleBackPress = () => {
@@ -125,24 +132,25 @@ export default function Dashboard({ navigation }) {
     }, [backPressedOnce]);
 
     const handleGetData = () => {
-        setLoading(true);
+        // setLoading(true);
         ToastAndroid.show('Getting latest data', ToastAndroid.SHORT);
-        // getFileContent();
-        getApi();
+        getFileContent();
+        // getApi();
     }
 
-    const getApi = async() => {
-        try {
-            const response = await fetch('http://postman-echo.com/get');
-            const jsonResponse = await response.json();
-            Alert.alert('Success API Response Parth sir', JSON.stringify(jsonResponse));
-          } catch (error) {
-            Alert.alert('Error, Parth sir', 'Something went wrong');
-          }
-    }
+    // const getApi = async() => {
+    //     try {
+    //         const response = await fetch('http://postman-echo.com/get');
+    //         const jsonResponse = await response.json();
+    //         Alert.alert('Success API Response Parth sir', JSON.stringify(jsonResponse));
+    //       } catch (error) {
+    //         Alert.alert('Error, Parth sir', 'Something went wrong');
+    //       }
+    // }
 
     const getFileContent = async () => {
         // console.log("Checking for stored data...");
+        setLoading(true);
         try {
             const savedData = await AsyncStorage.getItem('dataObject');
             if (savedData) {
@@ -159,14 +167,16 @@ export default function Dashboard({ navigation }) {
                 setAgentName(dataObject.MstrData?.AgNameE);
                 setIsActive(dataObject.MstrData?.IsActive ? true : false);
                 setFileCreatedDate(dataObject.MstrData?.FileCreateDate);
-                setNoOfDaysAllowed(30);
+                setNoOfDaysAllowed(dataObject.MstrData?.NoOfDaysAllowed);
+                // setMultipleCollection(false)
                 setMultipleCollection((dataObject.MstrData?.AllowMultipleColln === 'True') ? true : false)
+
             } else {
                 console.log("No saved data found, making API call...");
                 const mobileNumber = await AsyncStorage.getItem('mobileNumber');
 
                 if (mobileNumber) {
-                    const url = `http://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/Test_Req?MobileNo=1234567890`;
+                    const url = `http://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/RequestData_App?MobileNo=${mobileNumber}`;
                     const response = await fetch(url, {
                         method: 'GET',
                         headers: {
@@ -174,13 +184,8 @@ export default function Dashboard({ navigation }) {
                         },
                     });
 
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-
                     // Use response.text() to get the response body as a string
                     const responseText = await response.text();
-                    console.log("responseText:", responseText);
 
                     const parser = new XMLParser(); // Ensure this is imported correctly
                     const jsonResponse = parser.parse(responseText); // Parse XML response
@@ -188,55 +193,44 @@ export default function Dashboard({ navigation }) {
                     // Assuming the relevant data is inside jsonResponse.string
                     const jsonString = jsonResponse.string;
                     const dataObject = JSON.parse(jsonString);
+                    console.log("responseText:", dataObject.ResonseCode);
 
+                    if (dataObject.ResonseCode === '0000') {
+                        await AsyncStorage.setItem('dataObject', JSON.stringify(dataObject));
+                        setMappedMasterData(dataObject.MstrData?.MstrRecs);
+                        setDataAvailable(true);
+                        setNoOfRecords(dataObject.MstrData?.NoOfRecords);
+                        setLicenseValidUpto(dataObject.MstrData?.LicenseValidUpto);
+                        setClientName(dataObject.MstrData?.ClientName);
+                        setBranchName(dataObject.MstrData?.BrNameE);
+                        setBranchCode(dataObject.MstrData?.BrCode);
+                        setAgentName(dataObject.MstrData?.AgNameE);
+                        setIsActive(dataObject.MstrData?.IsActive ? true : false);
+                        setFileCreatedDate(dataObject.MstrData?.FileCreateDate);
+                        setNoOfDaysAllowed(dataObject.MstrData?.NoOfDaysAllowed);
+                        // setMultipleCollection(false)
+                        setMultipleCollection((dataObject.MstrData?.AllowMultipleColln === 'True') ? true : false)
+                        ToastAndroid.show('API call successful and data saved!', ToastAndroid.SHORT);
+                    }
+                    else {
+                        Alert.alert(
+                            'Unauthorized User',
+                            'This mobile number is not registered.'
+                        );
+                        setDataAvailable(false);
+                        setIsAuth(false);
+                    }
 
-                    await AsyncStorage.setItem('dataObject', JSON.stringify(dataObject));
-
-                    setMappedMasterData(dataObject.MstrData?.MstrRecs);
-                    setDataAvailable(true);
-                    setNoOfRecords(dataObject.MstrData?.NoOfRecords);
-                    setLicenseValidUpto(dataObject.MstrData?.LicenseValidUpto);
-                    setClientName(dataObject.MstrData?.ClientName);
-                    setBranchName(dataObject.MstrData?.BrNameE);
-                    setBranchCode(dataObject.MstrData?.BrCode);
-                    setAgentName(dataObject.MstrData?.AgNameE);
-                    setIsActive(dataObject.MstrData?.IsActive ? true : false);
-                    setFileCreatedDate(dataObject.MstrData?.FileCreateDate);
-                    setNoOfDaysAllowed(30);
-                    setMultipleCollection((dataObject.MstrData?.AllowMultipleColln === 'True') ? true : false)
-
-                    ToastAndroid.show('API call successful and data saved!', ToastAndroid.SHORT);
                 } else {
+                    setDataAvailable(false);
                     console.warn('No mobile number found in AsyncStorage.');
                     ToastAndroid.show('No mobile number found!', ToastAndroid.SHORT);
                 }
             }
         } catch (error) {
+            setDataAvailable(false);
             // Capture error details
             console.error('Error occurred:', error);
-            let errorDetails = '';
-
-            if (error instanceof Error) {
-                errorDetails = `Error Message: ${error.message}\n`;
-                if (error.stack) {
-                    errorDetails += `Stack Trace: ${error.stack}\n`;
-                }
-            } else {
-                errorDetails = `Error: ${JSON.stringify(error)}\n`;
-            }
-
-            // Log response details (if available) and provide better feedback
-            if (error.response) {
-                errorDetails += `Response Status: ${error.response.status}\n`;
-                errorDetails += `Response Data: ${JSON.stringify(error.response.data)}\n`;
-            }
-
-            Alert.alert(
-                'Error',
-                `An error occurred while processing the request:\n${errorDetails}`
-            );
-            console.error('Error occurred:', error);
-            Alert.alert(`Error`, `Error: ${error}`)
             ToastAndroid.show('Error occurred!', ToastAndroid.SHORT);
         } finally {
             setLoading(false);
@@ -250,7 +244,7 @@ export default function Dashboard({ navigation }) {
                 const password = await AsyncStorage.getItem('password');
                 if (password) {
                     // If password exists, load data
-                    // getFileContent();
+                    getFileContent();
                 } else {
                     // If password does not exist, skip the API call
                     console.log("No password found in AsyncStorage. Skipping data load.");
@@ -289,7 +283,16 @@ export default function Dashboard({ navigation }) {
         };
 
         fetchTransactionTable();
-    }, []);
+    }, [isFocused]);
+
+    const handleCloseCollection = () => {
+        if(collectionAllowed === true) {
+          Alert.alert('Closing collection', `You have collected ${transactionTable.length} reciepts out of ${NoOfRecords}. and total collected amount is Rs ${totalAmount}.00/-`)
+        }
+        else if(collectionAllowed == false){
+          Alert.alert('Cannot Close collection!', `Collection is not allowed, allowed day's are expired`)
+        }
+      }
 
     return (
         <View style={styles.dashView}>
@@ -317,14 +320,14 @@ export default function Dashboard({ navigation }) {
                                 elevation: 15,
                             }}
                         />
-                        <Pressable onPress={() => { navigation.navigate('Profile') }}>
+                        <Pressable onPress={() => { navigation.navigate('Profile', { count: NoOfRecords, amount: totalAmount, collectionAllowed: collectionAllowed }) }}>
                             <MaterialCommunityIcons2 name='user-circle' style={{ elevation: 5 }} elevation={5} color={COLORS.primary} size={45} />
                         </Pressable>
                     </View>
 
                     {searchedResults ? (
                         <>
-                            <SearchPopup mappedMasterData={mappedMasterData} setSearchedResults={setSearchedResults} searchQuery={searchQuery} />
+                            <SearchPopup BranchName={BranchName} BranchCode={BranchCode} collectionAllowed={collectionAllowed} multipleCollection={multipleCollection} mappedMasterData={mappedMasterData} setSearchedResults={setSearchedResults} searchQuery={searchQuery} />
                         </>
                     ) : (
                         <View style={{ height: windowHeight * 0.80 }}>
@@ -359,7 +362,7 @@ export default function Dashboard({ navigation }) {
                                 </View>
                             }
 
-                            <FlatList
+                            {/* <FlatList
                                 data={mappedMasterData}
                                 renderItem={renderItem}
                                 keyExtractor={(item) => `${item.GLCode}-${item.AccountNo}`} // Concatenate values for a unique key
@@ -369,7 +372,30 @@ export default function Dashboard({ navigation }) {
                                 onEndReachedThreshold={0.5} // Load more data when 50% of the content is visible
                                 ListEmptyComponent={<Text>No data available</Text>}
                                 ListFooterComponent={<ActivityIndicator />} // Loader for when more data is fetched
-                            />
+                            /> */}
+
+                            <View style={styles.lineView}>
+                                <Text style={styles.lineText}>Recent transactions </Text>
+                            </View>
+
+                            {transactionTable && transactionTable.length > 0 &&
+                                <View>
+                                    <Button icon={'arrow-up'} onPress={handleCloseCollection} labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }} style={{ marginTop: 30, alignSelf: 'flex-end', marginRight: 20 }} mode="contained">Close collection</Button>
+                                </View>
+                            }
+
+                            <ScrollView style={{ marginTop: 20, marginBottom: 40 }}>
+                                <>
+                                    {transactionTable && transactionTable.length > 0 ? (    
+                                        transactionTable.map((item, index) => (
+                                            <TransactionCard searchQuery={searchQuery} item={item} key={index} index={index} />
+                                        ))
+                                    ) : (
+                                        <Text style={[styles.text1, { margin: 'auto', marginTop: 100 }]}>No transactions yet</Text>
+                                    )}
+                                </>
+
+                            </ScrollView>
                         </View>
                     )}
                 </>
@@ -395,33 +421,53 @@ export default function Dashboard({ navigation }) {
                                 elevation: 15,
                             }}
                         />
-                        <Pressable onPress={() => { navigation.navigate('Profile') }}>
-                            <MaterialCommunityIcons2 name='user-circle' style={{ elevation: 5 }} elevation={5} color={COLORS.primary} size={45} />
+                        <Pressable onPress={() => { navigation.navigate('Profile', { count: NoOfRecords, amount: totalAmount, collectionAllowed: collectionAllowed }) }}>
+                            <MaterialCommunityIcons2 name='user-circle' styl={{ elevation: 5 }} elevation={5} color={COLORS.primary} size={45} />
                         </Pressable>
                     </View>
 
+                    {!isAuth &&
+                        <View>
+                            <Button
+                                labelStyle={{ fontFamily: 'Montserrat-Bold', fontSize: 14 }}
+                                style={{ marginTop: 10, width: '32%', alignSelf: 'flex-end' }}
+                                mode="outlined"
+                                icon={'logout'}
+                                contentStyle={{ flexDirection: 'row-reverse' }}
+                            >
+                                Logout
+                            </Button>
+                        </View>
+                    }
                     {!LicenseExpired ? (
-                        <View style={styles.notFound}>
-                            <MaterialCommunityIcons name='cloud-off-outline' style={{ marginBottom: 20 }} color={COLORS.primary} size={50} />
-                            <Text style={styles.text1}>Data not found !</Text>
+                        <>
+                            {loading ? (
+                                <View style={styles.loaderContainer}>
+                                    <ActivityIndicator size="large" color={COLORS.primary} />
+                                </View>
+                            ) : (
+                                <View style={styles.notFound}>
+                                    <MaterialCommunityIcons name='cloud-off-outline' style={{ marginBottom: 20 }} color={COLORS.primary} size={50} />
+                                    <Text style={styles.text1}>Data not found!</Text>
 
-                            {/* Only show the Get Data button if IsActive is true */}
-                            {IsActive && (
-                                <View style={styles.getData}>
-                                    <Button
-                                        loading={loading}
-                                        disabled={loading}
-                                        labelStyle={{ fontFamily: 'Montserrat-Bold', fontSize: 18 }}
-                                        style={{ marginTop: 30, width: '50%' }}
-                                        mode="contained"
-                                        onPress={handleGetData}
-                                    >
-                                        Start collection
-                                    </Button>
+                                    {IsActive && (
+                                        <View style={styles.getData}>
+                                            <Button
+                                                loading={loading}
+                                                disabled={loading}
+                                                labelStyle={{ fontFamily: 'Montserrat-Bold', fontSize: 18 }}
+                                                style={{ marginTop: 30, width: '50%' }}
+                                                mode="contained"
+                                                onPress={handleGetData}
+                                            >
+                                                Start collection
+                                            </Button>
+                                        </View>
+                                    )}
                                 </View>
                             )}
+                        </>
 
-                        </View>
                     ) : (
                         <View style={styles.notFound}>
                             <Text style={styles.text1}>Your license has expired. Please pay subscription!</Text>
@@ -434,6 +480,11 @@ export default function Dashboard({ navigation }) {
 }
 
 const styles = StyleSheet.create({
+    loaderContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     dashView: {
         width: windowWidth * 1,
         height: windowHeight * 1,

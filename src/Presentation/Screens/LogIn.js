@@ -5,6 +5,7 @@ import { database } from '../../data/database';
 import { useIsFocused } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import SimCardsManagerModule from 'react-native-sim-cards-manager';
+import { COLORS } from '../../Common/Constants';
 export default function Login({ navigation }) {
 
   const [number, setNumber] = useState(null);
@@ -28,6 +29,7 @@ export default function Login({ navigation }) {
           setNewUser(false); // User exists, set them to login mode
           setNumber(storedMobileNumber); // Set the stored phone number
         } else {
+          fetchPhoneNumber(); // Call the function to fetch the phone number
           setNewUser(true); // No user found, set them as a new user
         }
       } catch (error) {
@@ -63,9 +65,7 @@ export default function Login({ navigation }) {
     };
 
     checkAuthentication();
-    fetchPhoneNumber(); // Call the function to fetch the phone number
   }, []);
-
 
   const handleNext = async () => {
     // navigation.navigate('BottomTabs');
@@ -84,9 +84,11 @@ export default function Login({ navigation }) {
       setTimeout(async () => {
         setLoading(false);
         try {
-          const storedPassword = await AsyncStorage.getItem('password'); // Fetch stored password
+          const storedPassword = await AsyncStorage.getItem('password');
+          const storedNumber = await AsyncStorage.getItem('mobileNumber');
+
   
-          if (password === storedPassword) {
+          if ((password === storedPassword) && (storedNumber === number)) {
             // If entered password matches stored password, log in
             setVerificationText('Verified');
             ToastAndroid.show('Authentication Successful!', ToastAndroid.SHORT);
@@ -104,7 +106,6 @@ export default function Login({ navigation }) {
       }, 2000);
     }
   };
-  
 
   const handleSubmit = async () => {
     if (password === confirmPassword) {
@@ -123,8 +124,16 @@ export default function Login({ navigation }) {
       ToastAndroid.show('Passwords did not match!', ToastAndroid.SHORT);
     }
   };
-  
 
+  const handleWhatsAppPress = () => {
+    const phoneNumber = '+917887760491'; 
+    const message = 'Hi, I would like to get in touch with you!';
+
+    const url = `whatsapp://send?text=${encodeURIComponent(message)}&phone=${phoneNumber}`;
+
+    Linking.openURL(url);
+  };
+  
   return (
     <View style={styles.flex}>
       {!showSetPassword ? (
@@ -181,6 +190,10 @@ export default function Login({ navigation }) {
                 <Text style={styles.verificationText}>{verificationText}</Text>
               </>
             )}
+
+            <View style={{width: '95%', alignSelf: 'center'}}>
+              <Text style={{color: COLORS.primary, alignSelf: 'flex-end', textDecorationLine: 'underline'}}>Forgot Password?</Text>
+            </View>
 
             <View style={styles.buttonContainer}>
               <Button icon="login" contentStyle={{ flexDirection: 'row-reverse' }} onPress={handleNext} disabled={loading} style={{ backgroundColor: "#8ABCF9" }} labelStyle={{ fontWeight: 'bold', fontSize: 16 }} mode="contained">
@@ -255,7 +268,6 @@ export default function Login({ navigation }) {
         </View>
 
       )}
-
     </View>
   )
 }
