@@ -39,7 +39,6 @@ export default function Login({ navigation }) {
 
     const fetchPhoneNumber = async () => {
       try {
-        // Request permissions and fetch SIM card info
         const simCards = await SimCardsManagerModule.getSimCards({
           title: 'App Permission',
           message: 'Custom message',
@@ -47,12 +46,16 @@ export default function Login({ navigation }) {
           buttonNegative: 'Not OK',
           buttonPositive: 'OK',
         });
-
+    
         if (simCards && simCards.length > 0) {
-          // Access the phone number from the first SIM card
-          const phoneNumber = simCards[0].phoneNumber;
+          let phoneNumber = simCards[0].phoneNumber;
+    
           if (phoneNumber) {
-            setNumber(phoneNumber); // Set the phone number in state
+            // Remove +91 if it is present at the beginning of the phone number
+            if (phoneNumber.startsWith('+91')) {
+              phoneNumber = phoneNumber.slice(3);
+            }
+            setNumber(phoneNumber);
           } else {
             console.log('Phone number is not available');
           }
@@ -63,6 +66,7 @@ export default function Login({ navigation }) {
         console.error('Error fetching phone number:', error);
       }
     };
+    
 
     checkAuthentication();
   }, []);

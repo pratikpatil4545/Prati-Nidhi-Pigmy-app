@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, ToastAndroid, ScrollView, StatusBar, Modal, Pressable, BackHandler, Keyboard, TouchableOpacity, ActivityIndicator, FlatList, Alert } from 'react-native'
 import React, { useCallback, useEffect, useState } from 'react'
 import { COLORS, windowHeight, windowWidth } from '../../../Common/Constants'
-import { Button, Searchbar } from 'react-native-paper'
+import { Button, Searchbar, TextInput } from 'react-native-paper'
 import DataCard from '../../Components/DataCard';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import MaterialCommunityIcons2 from 'react-native-vector-icons/FontAwesome5';
@@ -21,6 +21,7 @@ export default function Dashboard({ navigation, route }) {
     const [backPressedOnce, setBackPressedOnce] = useState(false);
     const isFocused = useIsFocused();
     const [mappedMasterData, setMappedMasterData] = useState([]);
+    const [headerLastAccNo, setHeaderLastAccNo] = useState(null);
     const [NoOfRecords, setNoOfRecords] = useState(null);
     const [isDataValid, setIsDataValid] = useState(true);
     const [LicenseValidUpto, setLicenseValidUpto] = useState('2028-10-13');
@@ -30,14 +31,22 @@ export default function Dashboard({ navigation, route }) {
     const [BranchCode, setBranchCode] = useState(null);
     const [AgentName, setAgentName] = useState(null);
     const [IsActive, setIsActive] = useState(true);
+    const [AllowNewUser, setAllowNewUser] = useState(true);
     const [fileCreatedDate, setFileCreatedDate] = useState(null);
     const [noOfDaysAllowed, setNoOfDaysAllowed] = useState(null);
+    const [InputFileType, setInputFileType] = useState(null);
+    const [ClientID, setClientId] = useState(null);
+    const [BrCode, setBrCode] = useState(null);
+    const [AgCode, setAgCode] = useState(null);
+    const [BrAgCode, setBrAgCode] = useState(null);
+    const [FileCreateDate, setFileCreateDate] = useState(null);
+    const [GlLastAcc, setGlLastAcc] = useState(null);
     const [collectionAllowed, setCollectionAllowed] = useState(true);
     const [multipleCollection, setMultipleCollection] = useState(false);
     const [totalAmount, setTotalAmount] = useState(0);
     const [transactionTable, setTransactionTable] = useState([]);
     const [isAuth, setIsAuth] = useState(true);
-    // console.log("collection allowed?", collectionAllowed);
+    // console.log("Last acc number?", (parseInt(GlLastAcc[0]) + 1));
     // const [recentTransactions, setRecentTransactions] = useState(MockData.recentTransactions);
 
     useEffect(() => {
@@ -64,7 +73,7 @@ export default function Dashboard({ navigation, route }) {
                 // If the current date is within 15 days of expiry
                 Alert.alert('License Reminder', `Your license is about to expire in ${daysLeft} day(s). Please renew it soon.`);
             } else {
-                console.log("License is valid and more than 15 days away from expiry.");
+                // console.log("License is valid and more than 15 days away from expiry.");
             }
         };
 
@@ -97,7 +106,6 @@ export default function Dashboard({ navigation, route }) {
             setCollectionAllowed(false);
         }
     }, [fileCreatedDate, noOfDaysAllowed]);
-
 
     useEffect(() => {
         let len1 = parseInt(mappedMasterData?.length);
@@ -152,80 +160,91 @@ export default function Dashboard({ navigation, route }) {
         // console.log("Checking for stored data...");
         setLoading(true);
         try {
-            const savedData = await AsyncStorage.getItem('dataObject');
-            if (savedData) {
-                const dataObject = JSON.parse(savedData);
-                // console.log("Using saved data from AsyncStorage", dataObject.MstrData?.AllowMultipleColln);
-                // setHeadersData
-                setMappedMasterData(dataObject.MstrData?.MstrRecs);
-                setDataAvailable(true);
-                setNoOfRecords(dataObject.MstrData?.NoOfRecords);
-                setLicenseValidUpto(dataObject.MstrData?.LicenseValidUpto);
-                setClientName(dataObject.MstrData?.ClientName);
-                setBranchName(dataObject.MstrData?.BrNameE);
-                setBranchCode(dataObject.MstrData?.BrCode);
-                setAgentName(dataObject.MstrData?.AgNameE);
-                setIsActive(dataObject.MstrData?.IsActive ? true : false);
-                setFileCreatedDate(dataObject.MstrData?.FileCreateDate);
-                setNoOfDaysAllowed(dataObject.MstrData?.NoOfDaysAllowed);
-                // setMultipleCollection(false)
-                setMultipleCollection((dataObject.MstrData?.AllowMultipleColln === 'True') ? true : false)
+            // const savedData = await AsyncStorage.getItem('dataObject');
+            // if (savedData) {
+            //     const dataObject = JSON.parse(savedData);
+            //     // console.log("Using saved data from AsyncStorage", dataObject.MstrData.HdrLastAcNo);
+            //     // setHeadersData
+            //     setHeaderLastAccNo(dataObject.MstrData?.HdrLastAcNo);
+            //     setMappedMasterData(dataObject.MstrData?.MstrRecs);
+            //     setDataAvailable(true);
+            //     setNoOfRecords(dataObject.MstrData?.NoOfRecords);
+            //     setLicenseValidUpto(dataObject.MstrData?.LicenseValidUpto);
+            //     setClientName(dataObject.MstrData?.ClientName);
+            //     setBranchName(dataObject.MstrData?.BrNameE);
+            //     setBranchCode(dataObject.MstrData?.BrCode);
+            //     setAgentName(dataObject.MstrData?.AgNameE);
+            //     setIsActive(dataObject.MstrData?.IsActive ? true : false);
+            //     setAllowNewUser((dataObject.MstrData?.NewAcOpenAllowed === 'True') ? true : false);
+            //     setFileCreatedDate(dataObject.MstrData?.FileCreateDate);
+            //     setNoOfDaysAllowed(dataObject.MstrData?.NoOfDaysAllowed);
+            //     // setMultipleCollection(false)
+            //     setMultipleCollection((dataObject.MstrData?.AllowMultipleColln === 'True') ? true : false)
+
+            // } else {
+            console.log("No saved data found, making API call...");
+            const mobileNumber = await AsyncStorage.getItem('mobileNumber');
+
+            if (mobileNumber) {
+                const url = `http://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/RequestData_App?MobileNo=${mobileNumber}`;
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/xml',
+                    },
+                });
+
+                // Use response.text() to get the response body as a string
+                const responseText = await response.text();
+
+                const parser = new XMLParser(); // Ensure this is imported correctly
+                const jsonResponse = parser.parse(responseText); // Parse XML response
+
+                // Assuming the relevant data is inside jsonResponse.string
+                const jsonString = jsonResponse.string;
+                const dataObject = JSON.parse(jsonString);
+                // console.log("responseText:", dataObject.ResonseCode);
+
+                if (dataObject.ResonseCode === '0000') {
+                    await AsyncStorage.setItem('dataObject', JSON.stringify(dataObject));
+                    setMappedMasterData(dataObject.MstrData?.MstrRecs);
+                    setHeaderLastAccNo(dataObject.MstrData?.HdrLastAcNo);
+                    setDataAvailable(true);
+                    setNoOfRecords(dataObject.MstrData?.NoOfRecords);
+                    setLicenseValidUpto(dataObject.MstrData?.LicenseValidUpto);
+                    setClientName(dataObject.MstrData?.ClientName);
+                    setBranchName(dataObject.MstrData?.BrNameE);
+                    setBranchCode(dataObject.MstrData?.BrCode);
+                    setAgentName(dataObject.MstrData?.AgNameE);
+                    setIsActive(dataObject.MstrData?.IsActive ? true : false);
+                    setAllowNewUser((dataObject.MstrData?.NewAcOpenAllowed === 'True') ? true : false);
+                    setFileCreatedDate(dataObject.MstrData?.FileCreateDate);
+                    setNoOfDaysAllowed(dataObject.MstrData?.NoOfDaysAllowed);
+                    setClientId(dataObject.MstrData?.ClientID);
+                    setAgCode(dataObject.MstrData?.AgCode);
+                    setBrCode(dataObject.MstrData?.BrCode);
+                    setBrAgCode(dataObject.MstrData?.BrAgCode);
+                    setFileCreateDate(dataObject.MstrData?.FileCreateDate);
+                    setInputFileType(dataObject.MstrData?.InputFileType);
+                    setGlLastAcc(dataObject.MstrData?.GLLastAc);
+                    // setMultipleCollection(false)
+                    setMultipleCollection((dataObject.MstrData?.AllowMultipleColln === 'True') ? true : false)
+                    // ToastAndroid.show('API call successful and data saved!', ToastAndroid.SHORT);
+                }
+                else {
+                    Alert.alert(
+                        'Unauthorized User',
+                        'This mobile number is not registered.'
+                    );
+                    setDataAvailable(false);
+                    setIsAuth(false);
+                }
 
             } else {
-                console.log("No saved data found, making API call...");
-                const mobileNumber = await AsyncStorage.getItem('mobileNumber');
-
-                if (mobileNumber) {
-                    const url = `http://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/RequestData_App?MobileNo=${mobileNumber}`;
-                    const response = await fetch(url, {
-                        method: 'GET',
-                        headers: {
-                            'Content-Type': 'application/xml',
-                        },
-                    });
-
-                    // Use response.text() to get the response body as a string
-                    const responseText = await response.text();
-
-                    const parser = new XMLParser(); // Ensure this is imported correctly
-                    const jsonResponse = parser.parse(responseText); // Parse XML response
-
-                    // Assuming the relevant data is inside jsonResponse.string
-                    const jsonString = jsonResponse.string;
-                    const dataObject = JSON.parse(jsonString);
-                    console.log("responseText:", dataObject.ResonseCode);
-
-                    if (dataObject.ResonseCode === '0000') {
-                        await AsyncStorage.setItem('dataObject', JSON.stringify(dataObject));
-                        setMappedMasterData(dataObject.MstrData?.MstrRecs);
-                        setDataAvailable(true);
-                        setNoOfRecords(dataObject.MstrData?.NoOfRecords);
-                        setLicenseValidUpto(dataObject.MstrData?.LicenseValidUpto);
-                        setClientName(dataObject.MstrData?.ClientName);
-                        setBranchName(dataObject.MstrData?.BrNameE);
-                        setBranchCode(dataObject.MstrData?.BrCode);
-                        setAgentName(dataObject.MstrData?.AgNameE);
-                        setIsActive(dataObject.MstrData?.IsActive ? true : false);
-                        setFileCreatedDate(dataObject.MstrData?.FileCreateDate);
-                        setNoOfDaysAllowed(dataObject.MstrData?.NoOfDaysAllowed);
-                        // setMultipleCollection(false)
-                        setMultipleCollection((dataObject.MstrData?.AllowMultipleColln === 'True') ? true : false)
-                        ToastAndroid.show('API call successful and data saved!', ToastAndroid.SHORT);
-                    }
-                    else {
-                        Alert.alert(
-                            'Unauthorized User',
-                            'This mobile number is not registered.'
-                        );
-                        setDataAvailable(false);
-                        setIsAuth(false);
-                    }
-
-                } else {
-                    setDataAvailable(false);
-                    console.warn('No mobile number found in AsyncStorage.');
-                    ToastAndroid.show('No mobile number found!', ToastAndroid.SHORT);
-                }
+                setDataAvailable(false);
+                console.warn('No mobile number found in AsyncStorage.');
+                ToastAndroid.show('No mobile number found!', ToastAndroid.SHORT);
+                // }
             }
         } catch (error) {
             setDataAvailable(false);
@@ -262,37 +281,229 @@ export default function Dashboard({ navigation, route }) {
         [searchQuery, mappedMasterData]
     );
 
-    useEffect(() => {
-        const fetchTransactionTable = async () => {
-            try {
-                const transactionTableData = await AsyncStorage.getItem('transactionTable');
-                if (transactionTableData) {
-                    const parsedData = JSON.parse(transactionTableData);  // Parse the stored data
-                    setTransactionTable(parsedData);
+    const fetchTransactionTable = async () => {
+        try {
+            const transactionTableData = await AsyncStorage.getItem('transactionTable');
+            if (transactionTableData) {
+                const parsedData = JSON.parse(transactionTableData);  // Parse the stored data
+                setTransactionTable(parsedData);
 
-                    const total = parsedData.reduce((sum, transaction) => {
-                        return sum + (parseFloat(transaction.collectionAmount) || 0);
-                    }, 0);
-                    console.log("No saved data found, making API call...", total);
+                const total = parsedData.reduce((sum, transaction) => {
+                    return sum + (parseFloat(transaction.Collection) || 0);
+                }, 0);
+                // console.log("No saved data found, making API call...", total);
 
-                    setTotalAmount(total);
-                }
-            } catch (error) {
-                console.error('Error fetching transaction table from AsyncStorage:', error);
+                setTotalAmount(total);
             }
-        };
+        } catch (error) {
+            console.error('Error fetching transaction table from AsyncStorage:', error);
+        }
+    };
 
+    useEffect(() => {
         fetchTransactionTable();
     }, [isFocused]);
 
     const handleCloseCollection = () => {
-        if(collectionAllowed === true) {
-          Alert.alert('Closing collection', `You have collected ${transactionTable.length} reciepts out of ${NoOfRecords}. and total collected amount is Rs ${totalAmount}.00/-`)
+        if (collectionAllowed === true) {
+            Alert.alert('Closing collection', `You have collected ${transactionTable.length} reciepts out of ${NoOfRecords}. and total collected amount is Rs ${totalAmount}.00/-`)
         }
-        else if(collectionAllowed == false){
-          Alert.alert('Cannot Close collection!', `Collection is not allowed, allowed day's are expired`)
+        else if (collectionAllowed == false) {
+            Alert.alert('Cannot Close collection!', `Collection is not allowed, allowed day's are expired`)
         }
-      }
+    }
+
+    const [modalVisible, setModalVisible] = useState(false);
+    const [amount, setAmount] = useState(null);
+    const [name, setName] = useState(null);
+    const [mobileNumber, setmobileNumber] = useState(null);
+
+    const handleCancel = () => {
+        setModalVisible(false);
+    };
+    let transactionCount = 1;
+
+    const generateReceiptNo = () => {
+        const date = new Date();
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        const count = String(transactionCount).padStart(4, '0');
+
+        transactionCount++; // Increment for the next transaction
+
+        return `${day}${month}${year}${count}`;
+    };
+
+    const formatDateTime = (date) => {
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0'); // Month is 0-based
+        const year = String(date.getFullYear()).slice(-2); // Last two digits of the year
+        let hours = date.getHours();
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12 || 12; // Convert 24-hour to 12-hour format
+        return `${day}-${month}-${year} ${hours}:${minutes} ${ampm}`;
+    };
+
+    const formatDateTime1 = (date) => {
+        const year = date.getFullYear();
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const day = date.getDate().toString().padStart(2, '0');
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        const seconds = date.getSeconds().toString().padStart(2, '0');
+
+        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    }
+
+    // const handleSubmit = async () => {
+    //     let newAccNo = parseInt(headerLastAccNo) + 1;
+    //     const newAccNo2 = newAccNo.toString().slice(1);
+    //     setHeaderLastAccNo(newAccNo);
+    //     console.log("handle submit called", headerLastAccNo, newAccNo, parseInt(newAccNo2), )
+
+    //     const receiptNo = generateReceiptNo();
+
+    //     try {
+    //         let transactionTable = await AsyncStorage.getItem('transactionTable');
+    //         transactionTable = transactionTable ? JSON.parse(transactionTable) : [];
+
+    //         let transactionData = {
+    //             receiptNo: receiptNo,
+    //             GLCode: 2,
+    //             AccountNo: parseInt(newAccNo2),
+    //             EnglishName: name,
+    //             OpeningBal: 0,
+    //             Collection: amount,
+    //             ClosingBal: amount,
+    //             IsAmtAdd: "1",
+    //             IsitNew: 'True',
+    //             CollDateTime: formatDateTime(new Date()),
+    //             MobileNo: mobileNumber
+    //         };
+    //         console.log("new user array", transactionData)
+    //         transactionTable.push(transactionData);
+
+    //         await AsyncStorage.setItem('transactionTable', JSON.stringify(transactionTable));
+    //         setModalVisible(false);
+    //     } catch (error) {
+    //         console.error("Error while processing transaction:", error);
+    //         Alert.alert('Error', 'An error occurred while processing your transaction. Please try again.');
+    //     }
+    // };
+
+    const handleSubmit = async () => {
+        let newAccNo;
+
+        try {
+            let transactionTable = await AsyncStorage.getItem('transactionTable');
+            transactionTable = transactionTable ? JSON.parse(transactionTable) : [];
+
+            const newAccounts = transactionTable.filter(item => item.IsitNew === 'True');
+
+            if (newAccounts.length > 0) {
+                const maxAccountNo = Math.max(...newAccounts.map(item => parseInt(item.AccountNo, 10)));
+                newAccNo = maxAccountNo + 1;
+            } else {
+                if (InputFileType === '1' || InputFileType === '3') {
+                    newAccNo = parseInt(headerLastAccNo, 10) + 1;
+                }
+                else if (InputFileType === '2') {
+                    let glAcc = parseInt(GlLastAcc[0]);
+                    if (glAcc === 999999) {
+                        if (newAccounts.length > 0) {
+                            const maxAccountNo = Math.max(...newAccounts.map(item => parseInt(item.AccountNo, 10)));
+                            newAccNo = maxAccountNo + 1;
+                        }
+                        else {
+                            newAccNo = 1;
+                        }
+                    }
+                    else {
+                        if (newAccounts.length > 0) {
+                            const maxAccountNo = Math.max(...newAccounts.map(item => parseInt(item.AccountNo, 10)));
+                            newAccNo = maxAccountNo + 1;
+                        }
+                        else {
+                            newAccNo = glAcc + 1;
+                        }
+                    }
+                }
+            }
+
+            setHeaderLastAccNo(newAccNo);
+
+            const receiptNo = generateReceiptNo();
+
+            const transactionData = {
+                // receiptNo: receiptNo,
+                GLCode: '0',
+                AccountNo: newAccNo,
+                EnglishName: name,
+                OpeningBal: '0',
+                Collection: amount.toString(),
+                ClosingBal: amount.toString(),
+                CollDateTime: formatDateTime1(new Date()),
+                IsAmtAdd: "1",
+                IsitNew: 'True',
+                MobileNo: mobileNumber
+            };
+
+            const newArray = {
+                ClientID: ClientID,
+                BrCode: BrCode,
+                AgCode: AgCode,
+                BrAgCode: BrAgCode,
+                FileCreateDate: FileCreateDate,
+                InputFileType: InputFileType,
+                NoOfRecords: '1',
+                CollectionData: [
+                    transactionData
+                ]
+            };
+
+            console.log("new user array", transactionData);
+            const agentmobileNumber = await AsyncStorage.getItem('mobileNumber');
+
+            if (agentmobileNumber) {
+                const newArrayString = JSON.stringify(newArray);
+
+                const url = `http://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp`;
+
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: new URLSearchParams({ DataFromApp: newArrayString }).toString(),
+                    });
+
+                    const responseData = await response.text();
+                    console.log("Response:", responseData);
+                } catch (error) {
+                    console.error("Error during API call:", error);
+                }
+            }
+
+            transactionTable.push(transactionData);
+            await AsyncStorage.setItem('transactionTable', JSON.stringify(transactionTable));
+            setModalVisible(false);
+            setName(null);
+            setmobileNumber(null);
+            setAmount(null);
+            fetchTransactionTable();
+
+        } catch (error) {
+            console.error("Error while processing transaction:", error);
+            Alert.alert('Error', 'An error occurred while processing your transaction. Please try again.');
+        }
+    };
+
+    const addNewUser = () => {
+        setModalVisible(true);
+    }
 
     return (
         <View style={styles.dashView}>
@@ -348,13 +559,19 @@ export default function Dashboard({ navigation, route }) {
                             <View style={{ width: windowWidth * 1, height: windowHeight * 0.12, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly' }}>
                                 <View style={styles.dataInfoView}>
                                     <Text style={styles.text}>Total Receipts </Text>
-                                    <Text style={[styles.text, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>{NoOfRecords} </Text>
+                                    <Text style={[styles.text, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>{transactionTable.length} </Text>
                                 </View>
                                 <View style={styles.dataInfoView}>
                                     <Text style={styles.text}>Total collected </Text>
                                     <Text style={[styles.text, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>₹{totalAmount}.00</Text>
                                 </View>
                             </View>
+
+                            {AllowNewUser &&
+                                <View>
+                                    <Button icon={'plus'} onPress={addNewUser} labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }} style={{ marginTop: 5, marginBottom: -5, alignSelf: 'flex-end', marginRight: 20 }} mode="contained">Add new user</Button>
+                                </View>
+                            }
 
                             {!collectionAllowed &&
                                 <View>
@@ -386,13 +603,20 @@ export default function Dashboard({ navigation, route }) {
 
                             <ScrollView style={{ marginTop: 20, marginBottom: 40 }}>
                                 <>
-                                    {transactionTable && transactionTable.length > 0 ? (    
-                                        transactionTable.map((item, index) => (
-                                            <TransactionCard searchQuery={searchQuery} item={item} key={index} index={index} />
-                                        ))
+                                    {transactionTable && transactionTable.length > 0 ? (
+                                        transactionTable
+                                            .sort((a, b) => {
+                                                const dateA = new Date(a.CollDateTime); // Convert to Date object
+                                                const dateB = new Date(b.CollDateTime); // Convert to Date object
+                                                return dateB - dateA; // Sort from latest (newer) to oldest (older)
+                                            })
+                                            .map((item, index) => (
+                                                <TransactionCard searchQuery={searchQuery} item={item} key={index} index={index} />
+                                            ))
                                     ) : (
                                         <Text style={[styles.text1, { margin: 'auto', marginTop: 100 }]}>No transactions yet</Text>
                                     )}
+
                                 </>
 
                             </ScrollView>
@@ -475,6 +699,67 @@ export default function Dashboard({ navigation, route }) {
                     )}
                 </>
             )}
+
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={modalVisible}
+                onRequestClose={handleCancel}
+            >
+                <StatusBar
+                    barStyle={'light-content'}
+                    backgroundColor={'rgba(0, 0, 0, 0.5)'}
+                />
+                <View style={styles.modalContainer}>
+                    <View style={styles.modalView11}>
+                        <Text style={styles.text}>New account Collection </Text>
+                        <TextInput
+                            label="Enter customer name"
+                            mode='outlined'
+                            outlineColor='#8ABCF9'
+                            autoFocus={true}
+                            // ref={textInputRef} 
+                            value={name}
+                            // keyboardType='numeric'
+                            onChangeText={text => setName(text)}
+                            style={{ width: "100%", marginBottom: 10, fontSize: 18, marginTop: 10, backgroundColor: COLORS.white }}
+                            outlineStyle={{ borderRadius: 15, fontSize: 18, color: COLORS.darkGrey, fontFamily: "Montserrat-Bold", }}
+                            contentStyle={{ fontFamily: "Montserrat-SemiBold", }}
+                        />
+                        <TextInput
+                            label="Enter mobile number"
+                            mode='outlined'
+                            outlineColor='#8ABCF9'
+                            // autoFocus={true}
+                            // ref={textInputRef} 
+                            value={mobileNumber}
+                            keyboardType='numeric'
+                            onChangeText={text => setmobileNumber(text)}
+                            style={{ width: "100%", marginBottom: 10, fontSize: 18, marginTop: 10, backgroundColor: COLORS.white }}
+                            outlineStyle={{ borderRadius: 15, fontSize: 18, color: COLORS.darkGrey, fontFamily: "Montserrat-Bold", }}
+                            contentStyle={{ fontFamily: "Montserrat-SemiBold", }}
+                        />
+
+                        <TextInput
+                            label="Enter amount"
+                            mode='outlined'
+                            outlineColor='#8ABCF9'
+                            // autoFocus={true}
+                            // ref={textInputRef} 
+                            value={amount}
+                            keyboardType='numeric'
+                            onChangeText={text => setAmount(text)}
+                            style={{ width: "100%", marginBottom: 10, fontSize: 18, marginTop: 10, backgroundColor: COLORS.white }}
+                            outlineStyle={{ borderRadius: 15, fontSize: 18, color: COLORS.darkGrey, fontFamily: "Montserrat-Bold", }}
+                            contentStyle={{ fontFamily: "Montserrat-SemiBold", }}
+                        />
+                        <View style={styles.buttonContainer}>
+                            <Button style={{ width: '48%', marginTop: 5 }} mode="contained" labelStyle={{ fontSize: 16, fontFamily: 'Montserrat-Bold' }} onPress={handleSubmit} >Submit</Button>
+                            <Button style={{ width: '48%', marginTop: 5, borderColor: COLORS.primaryAccent }} labelStyle={{ fontSize: 16, fontFamily: 'Montserrat-Bold' }} mode="outlined" onPress={handleCancel} >Cancel</Button>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </View>
     )
 }
@@ -568,6 +853,32 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.25,
         shadowRadius: 4,
         elevation: 5,
+    },
+    modalContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    modalView11: {
+        width: '90%',
+        padding: 30,
+        paddingBottom: 50,
+        paddingTop: 30,
+        backgroundColor: 'white',
+        borderRadius: 10,
+        alignItems: 'center',
+    },
+    buttonContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        width: '100%',
+    },
+    modalButton: {
+        flex: 1,
+        marginHorizontal: 5,
+        marginVertical: 5,
+        borderColor: COLORS.primaryAccent,
     },
     modalTitle: {
         fontSize: 20,

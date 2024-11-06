@@ -7,7 +7,7 @@ import { useNavigation } from '@react-navigation/native';
 export default function TransactionCard(props) {
 
     const navigation = useNavigation();
-    console.log("searchQuery", props.item)
+    // console.log("searchQuery", props.item)
 
     const HighlightedText = ({ name, query }) => {
         if (!query) {
@@ -35,71 +35,61 @@ export default function TransactionCard(props) {
 
     const getDay = () => {
         const dayMapping = {
-          "Sunday": 1,
-          "Monday": 2,
-          "Tuesday": 3,
-          "Wednesday": 4,
-          "Thursday": 5,
-          "Friday": 6,
-          "Saturday": 7
+            "Sunday": 1,
+            "Monday": 2,
+            "Tuesday": 3,
+            "Wednesday": 4,
+            "Thursday": 5,
+            "Friday": 6,
+            "Saturday": 7
         };
-    
+
         return dayMapping[day];
-      };
-    
+    };
+
     const dayIndex = getDay()
 
-    const dateTime = props.item?.dateTimeCollected; 
+    const dateTime = props.item?.CollDateTime;
 
-      const [CardDate, time, period] = dateTime.split(' ');
-      const [days, month, year] = CardDate.split('-');
-    
-      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-      const monthIndex = parseInt(month, 10) - 1;
-      const monthName = monthNames[monthIndex];
-      const cardDay = days;
-    
+    const [CardDate, time, period] = dateTime.split(' ');
+    const [ year,  month, days] = CardDate.split('-');
+
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthIndex = parseInt(month, 10) - 1;
+    const monthName = monthNames[monthIndex];
+    const cardDay = days;
+
 
     return (
         <View style={styles.mainView}>
-
             <Pressable key={props.index} style={styles.card}>
                 <View style={styles.cardView}>
                     <View style={styles.left}>
                         <View style={styles.dateCard}>
                             <View style={styles.dateCardInner}></View>
-                            <View style={[styles.dateCardInner, {backgroundColor: '#6482AD',borderTopLeftRadius: 0, borderTopRightRadius: 0, borderBottomLeftRadius: 5, borderBottomRightRadius: 5,}]}></View>
-                            <View style={{alignSelf: 'center',position: 'absolute'}}>
-                                <Text style={{ marginLeft: 'auto', marginRight: 'auto', fontFamily: 'Montserrat-Medium', color: COLORS.white}}>{cardDay}</Text>
-                                <Text style={{ fontFamily: 'Montserrat-Medium', color: COLORS.white}}>{monthName}</Text>
+                            <View style={[styles.dateCardInner, { backgroundColor: '#6482AD', borderTopLeftRadius: 0, borderTopRightRadius: 0, borderBottomLeftRadius: 5, borderBottomRightRadius: 5, }]}></View>
+                            <View style={{ alignSelf: 'center', position: 'absolute' }}>
+                                <Text style={{ marginLeft: 'auto', marginRight: 'auto', fontFamily: 'Montserrat-Medium', color: COLORS.white }}>{cardDay}</Text>
+                                <Text style={{ fontFamily: 'Montserrat-Medium', color: COLORS.white }}>{monthName}</Text>
                             </View>
-                            <View style={{width: 6, height: 6, borderRadius: 20, backgroundColor: COLORS.white, position: 'absolute'}}/>
-                            <View style={{width: 6, height: 6, borderRadius: 20, backgroundColor: COLORS.white, position: 'absolute', right: 0}}/>
+                            <View style={{ width: 6, height: 6, borderRadius: 20, backgroundColor: COLORS.white, position: 'absolute' }} />
+                            <View style={{ width: 6, height: 6, borderRadius: 20, backgroundColor: COLORS.white, position: 'absolute', right: 0 }} />
                         </View>
-                        {/* <Text style={{ fontFamily: 'Montserrat-Medium', color: COLORS.white, alignSelf: 'center'}}>{time}</Text> */}
-
-                        {/* <Text style={[styles.text, { color: COLORS.white, alignSelf: 'center', fontFamily: 'Montserrat-Bold', fontSize: 16, }]}> {props.index + 1}</Text>
-                        <Text style={[styles.text, { color: COLORS.white, alignSelf: 'center', fontFamily: 'Montserrat-Bold', fontSize: 16 }]}> {props.item[11]}</Text> */}
                     </View>
-            
-                    {/* <View style={styles.lineCurve} />
-                    <View style={styles.lineCurve1} /> */}
 
                     <View style={styles.right}>
-                        <HighlightedText name={props.item.accNo} query={props.searchQuery} />
-                        {/* <HighlightedAccNo name={props.item[3]} query={props.searchQuery} /> */}
+                        <HighlightedText name={props.item.AccountNo} query={props.searchQuery} />
                         <Text style={[styles.text, { color: COLORS.darkGrey }]}>
                             <Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>Today's Entry:  </Text>
-                              {props.item.collectionAmount}.00
+                            {props.item.Collection}.00
                         </Text>
                         <Text style={[styles.text, { color: COLORS.darkGrey }]}>
-                            <Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>Total balance:  </Text>
-                              {props.item.openingBalance}.00
+                            <Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>Closing balance:  </Text>
+                            {props.item.ClosingBal}.00
                         </Text>
                     </View>
                 </View>
             </Pressable>
-
         </View>
     )
 }
@@ -143,7 +133,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: "center",
         // backgroundColor: COLORS.primary,
-
     },
     dateCard: {
         width: 50,
@@ -194,31 +183,28 @@ const styles = StyleSheet.create({
         // alignItems: 'center'
     },
     lineCurve: {
-        width: 20, 
-        height:20,
+        width: 20,
+        height: 20,
         backgroundColor: COLORS.white,
         // borderBottomLeftRadius:15,
         // borderRadius: 15,
-        borderBottomRightRadius:15,
-        position:'absolute',
+        borderBottomRightRadius: 15,
+        position: 'absolute',
         left: 0,
-        top:0 ,
+        top: 0,
         // elevation:15
-    },  
+    },
     lineCurve1: {
-        width: 20, 
-        height:20,
+        width: 20,
+        height: 20,
         backgroundColor: COLORS.white,
         // borderBottomLeftRadius:15,
         // borderRadius: 15,
-        borderTopRightRadius:15,
-        position:'absolute',
+        borderTopRightRadius: 15,
+        position: 'absolute',
         left: 0,
-        bottom:0 ,
+        bottom: 0,
     },
-
-
-
     modalContainer: {
         flex: 1,
         justifyContent: 'center',

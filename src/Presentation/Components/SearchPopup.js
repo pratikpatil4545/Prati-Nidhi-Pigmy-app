@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import DataCard from './DataCard';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
 import SkeletonPlaceholder from 'react-native-skeleton-placeholder';
+import { XMLParser } from 'fast-xml-parser';
 
 export default function SearchPopup(props) {
     const { modalVisible, setModalVisible, searchQuery } = props;
@@ -13,7 +14,8 @@ export default function SearchPopup(props) {
     const [loading, setLoading] = useState(true);
     const [visibleItemsCount, setVisibleItemsCount] = useState(10); // Initially render 10 items
     const isFocused = useIsFocused();
-
+    const [refreshData, setRefreshData] = useState(false);
+    // console.log("propss ", props)
     useEffect(() => {
         const query = searchQuery.toLowerCase();
         const filtered = data.filter((item) => {
@@ -34,18 +36,47 @@ export default function SearchPopup(props) {
         }
     }, [data]);
 
-    useEffect(() => {
-        const getMasterData = async () => {
-            try {
-                setData(props.mappedMasterData);
-                setFilteredData(props.mappedMasterData);
-                setLoading(false);
-            } catch (e) {
-                console.error('Failed to fetch data from AsyncStorage', e);
+    const getMasterData = async () => {
+        try {
+            const mobileNumber = await AsyncStorage.getItem('mobileNumber');
+
+            if (mobileNumber) {
+                const url = `http://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/RequestData_App?MobileNo=${mobileNumber}`;
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/xml',
+                    },
+                });
+
+                // Use response.text() to get the response body as a string
+                const responseText = await response.text();
+
+                const parser = new XMLParser(); // Ensure this is imported correctly
+                const jsonResponse = parser.parse(responseText); // Parse XML response
+
+                // Assuming the relevant data is inside jsonResponse.string
+                const jsonString = jsonResponse.string;
+                const dataObject = JSON.parse(jsonString);
+                // console.log("responseText:", dataObject.ResonseCode);
+
+                if (dataObject.ResonseCode === '0000') {
+                    await AsyncStorage.setItem('dataObject', JSON.stringify(dataObject));
+                    // setMappedMasterData(dataObject.MstrData?.MstrRecs);
+                    setData(dataObject.MstrData?.MstrRecs);
+                    setFilteredData(dataObject.MstrData?.MstrRecs);
+                    setLoading(false);
+                }
             }
-        };
+        } catch (e) {
+            setLoading(false);
+            console.error('Failed to fetch data from AsyncStorage', e);
+        }
+    };
+
+    useEffect(() => {
         getMasterData();
-    }, [isFocused]);
+    }, [isFocused, refreshData]);
 
     useEffect(() => {
         const handleBackPress = () => {
@@ -56,7 +87,7 @@ export default function SearchPopup(props) {
     }, []);
 
     const renderItem = ({ item, index }) => (
-        <DataCard BranchName={props.BranchName} BranchCode={props.BranchCode} collectionAllowed={props.collectionAllowed} multipleCollection={props.multipleCollection} searchQuery={searchQuery} item={item} key={index} index={index} />
+        <DataCard setRefreshData={setRefreshData} BranchName={props.BranchName} BranchCode={props.BranchCode} collectionAllowed={props.collectionAllowed} multipleCollection={props.multipleCollection} searchQuery={searchQuery} item={item} key={index} index={index} />
     );
 
     const loadMoreItems = () => {
