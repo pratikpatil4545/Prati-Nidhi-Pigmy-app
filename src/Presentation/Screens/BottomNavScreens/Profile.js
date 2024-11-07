@@ -43,13 +43,13 @@ export default function Profile({ navigation, route }) {
     fetchTransactionTable();
   }, [isFocused]);
 
-  const handleCloseCollection = () => {
+  const handleCollectionHistory = () => {
     // let validDay = route.params?.collectionAllowed;
     // console.log("first", validDay) 
-    if(route.params?.collectionAllowed === true) {
+    if (route.params?.collectionAllowed === true) {
       Alert.alert('Closing collection', `You have collected ${transactionTable.length} reciepts out of ${route.params.count}. and total collected amount is Rs ${route.params.amount}.00/-`)
     }
-    else if(route.params?.collectionAllowed == false){
+    else if (route.params?.collectionAllowed == false) {
       Alert.alert('Cannot Close collection!', `Collection is not allowed, allowed day's are expired`)
     }
   }
@@ -75,20 +75,17 @@ export default function Profile({ navigation, route }) {
 
           <View style={styles.profileInfo}>
 
-            {/* {transactionTable && transactionTable.length > 0 ? (
-              <View style={{ display: 'flex', paddingLeft: 10, paddingRight: 10, backgroundColor: COLORS.white, borderRadius: 10, height: 70, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: '10%', marginBottom: 10 }}>
-                <Pressable style={{ width: '90%', height: '100%', display: 'flex', justifyContent: 'center' }} onPress={handleCloseCollection}>
-                  <View style={{ display: 'flex', flexDirection: 'row' }}>
-                    <MaterialCommunityIcons name='close-circle-multiple' color={COLORS.gray} size={25} />
-                    <Text style={{ fontFamily: 'Montserrat-Bold', color: COLORS.gray, alignSelf: 'center', fontSize: 16 }}> Close collection </Text>
-                  </View>
-                </Pressable>
-                <MaterialCommunityIcons name='chevron-right' color={COLORS.gray} size={30} />
-              </View>
-            ) : null} */}
+            <View style={{ display: 'flex', paddingLeft: 10, paddingRight: 10, backgroundColor: COLORS.white, borderRadius: 10, height: 70, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: '10%', marginBottom: 10 }}>
+              <Pressable style={{ width: '90%', height: '100%', display: 'flex', justifyContent: 'center' }} onPress={() => { navigation.navigate('CollectionHistory') }}>
+                <View style={{ display: 'flex', flexDirection: 'row' }}>
+                  <MaterialCommunityIcons name='history' color={COLORS.gray} size={25} />
+                  <Text style={{ fontFamily: 'Montserrat-Bold', color: COLORS.gray, alignSelf: 'center', fontSize: 16 }}>   Collection History </Text>
+                </View>
+              </Pressable>
+              <MaterialCommunityIcons name='chevron-right' color={COLORS.gray} size={30} />
+            </View>
 
-
-            <View style={{ display: 'flex', paddingLeft: 10, paddingRight: 10, backgroundColor: COLORS.white, borderRadius: 10, height: 70, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: '10%', marginBottom: 10, }}>
+            <View style={{ display: 'flex', paddingLeft: 10, paddingRight: 10, backgroundColor: COLORS.white, borderRadius: 10, height: 70, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: '0%', marginBottom: 10, }}>
               <Pressable style={{ width: '90%', height: '100%', display: 'flex', justifyContent: 'center' }} onPress={() => { navigation.navigate('AccountSetting') }}>
                 <View style={{ display: 'flex', flexDirection: 'row' }}>
                   <MaterialCommunityIcons name='account-cog-outline' color={COLORS.gray} size={25} />

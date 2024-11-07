@@ -1,14 +1,9 @@
-
-import { View, Text, StyleSheet, ScrollView, Pressable, Modal, ToastAndroid, StatusBar } from 'react-native'
-import React, { useEffect, useState } from 'react'
+import { View, Text, StyleSheet, Pressable } from 'react-native'
+import React from 'react'
 import { COLORS, windowHeight, windowWidth } from '../../Common/Constants';
-import { useNavigation } from '@react-navigation/native';
 
-export default function TransactionCard(props) {
-
-    const navigation = useNavigation();
-    // console.log("searchQuery", props.item.IsitNew)
-
+export default function HistoryCards(props) {
+    // console.log("props in histury", props)
     const HighlightedText = ({ name, query }) => {
         if (!query) {
             return <Text style={[styles.text, { color: COLORS.darkGrey }]}><Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>A/C No.: </Text> {name}</Text>;
@@ -29,43 +24,48 @@ export default function TransactionCard(props) {
         );
     };
 
-    const weekday = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    const date = new Date();
-    let day = weekday[date.getDay()];
+    // const weekday = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    // const date = new Date();
+    // let day = weekday[date.getDay()];
 
-    const getDay = () => {
-        const dayMapping = {
-            "Sunday": 1,
-            "Monday": 2,
-            "Tuesday": 3,
-            "Wednesday": 4,
-            "Thursday": 5,
-            "Friday": 6,
-            "Saturday": 7
-        };
+    // const getDay = () => {
+    //     const dayMapping = {
+    //         "Sunday": 1,
+    //         "Monday": 2,
+    //         "Tuesday": 3,
+    //         "Wednesday": 4,
+    //         "Thursday": 5,
+    //         "Friday": 6,
+    //         "Saturday": 7
+    //     };
 
-        return dayMapping[day];
-    };
+    //     return dayMapping[day];
+    // };
 
-    const dayIndex = getDay()
+    // const dayIndex = getDay()
 
-    const dateTime = props.item?.CollDateTime;
-
-    const [CardDate, time, period] = dateTime.split(' ');
-    const [year, month, days] = CardDate.split('-');
+    const dateTime = props.item?.CollDateTime ? props.item?.CollDateTime : '2024-11-05 11:27:31';
+    console.log("props item date", dateTime)
+    const [CardDate, time, period] = dateTime?.split(' ');
+    const [year, month, days] = CardDate?.split('-');
 
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const monthIndex = parseInt(month, 10) - 1;
     const monthName = monthNames[monthIndex];
     const cardDay = days;
 
-
+    const cardDate = `${days}-${monthName}-${year}`;
+    
+    const showDateHeader = props.previousDate !== cardDate;
     return (
         <View style={styles.mainView}>
+            {/* {showDateHeader && (
+                <Text style={styles.dateHeader}>{cardDate}</Text>
+            )} */}
             <Pressable key={props.index} style={styles.card}>
                 <View style={styles.cardView}>
                     <View style={styles.left}>
-                        {props.item.IsitNew === 'True' &&
+                    {props.item.IsitNew === 'True' &&
                         <View style={{position: 'absolute', width: '100%', height: '20%', top: 0, display: 'flex',alignItems: 'center', justifyContent: 'center', backgroundColor: '#7FA1C3'}}>
                             <Text style={{ fontSize: 12, fontFamily: 'Montserrat-Regular', color: COLORS.white, }}>
                                 New Account
@@ -85,10 +85,17 @@ export default function TransactionCard(props) {
                     </View>
 
                     <View style={styles.right}>
-                        
                         <HighlightedText name={props.item.AccountNo} query={props.searchQuery} />
                         <Text style={[styles.text, { color: COLORS.darkGrey }]}>
-                            <Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>Today's Entry:  </Text>
+                            <Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>Collected Time: {'\n'} </Text>
+                            {dateTime}
+                        </Text>
+                        <Text style={[styles.text, { color: COLORS.darkGrey }]}>
+                            <Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>Name: {'\n'} </Text>
+                            {props.item.EnglishName}
+                        </Text>
+                        <Text style={[styles.text, { color: COLORS.darkGrey }]}>
+                            <Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>Collected Amount: {'\n'} </Text>
                             {props.item.Collection}.00
                         </Text>
                         <Text style={[styles.text, { color: COLORS.darkGrey }]}>
@@ -109,7 +116,7 @@ const styles = StyleSheet.create({
     },
     mainView: {
         width: windowWidth * 1,
-        height: windowHeight * 0.15,
+        height: windowHeight * 0.25,
         // backgroundColor: 'green',
         display: 'flex',
         alignItems: 'center',
@@ -117,7 +124,7 @@ const styles = StyleSheet.create({
     },
     card: {
         width: windowWidth * 0.85,
-        height: windowHeight * 0.13,
+        height: windowHeight * 0.22,
         display: "flex",
         // flexDirection: 'row',
         backgroundColor: COLORS.white,

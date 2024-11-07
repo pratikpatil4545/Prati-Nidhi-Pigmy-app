@@ -37,6 +37,7 @@ import Profile from './src/Presentation/Screens/BottomNavScreens/Profile';
 import AccountSetting from './src/Presentation/Screens/SettingScreens/AccountSetting';
 import BankDetails from './src/Presentation/Screens/SettingScreens/BankDetails';
 import GeneralSetting from './src/Presentation/Screens/SettingScreens/GeneralSetting';
+import CollectionHistory from './src/Presentation/Screens/SettingScreens/CollectionHistory';
 
 type SectionProps = PropsWithChildren<{
   title: string;
@@ -136,6 +137,7 @@ function App(): React.JSX.Element {
             <Stack.Screen name="AccountSetting" component={AccountSetting} options={{ headerShown: false }}  />
             <Stack.Screen name="BankDetails" component={BankDetails} options={{ headerShown: false }}  />
             <Stack.Screen name="GeneralSetting" component={GeneralSetting} options={{ headerShown: false }}  />
+            <Stack.Screen name="CollectionHistory" component={CollectionHistory} options={{ headerShown: false }}  />
             {/* <Stack.Screen name="Dashboard" component={Dashboard} options={{ headerShown: false }}  /> */}
             <Stack.Screen 
               name="BottomTabs" 
