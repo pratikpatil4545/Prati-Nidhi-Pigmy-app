@@ -279,7 +279,7 @@ export default function Dashboard({ navigation, route }) {
             'Close Collection',
             'Do you really want to close the collection?',
             [
-                { text: 'Cancel', style: 'cancel' },
+                { text: 'Cancel', style: 'cancel' , onPress: () => setButtonLoading(false)},
                 {
                     text: 'Yes',
                     onPress: async () => {
@@ -302,7 +302,7 @@ export default function Dashboard({ navigation, route }) {
                             const numberAfterHyphen = responseString.split('-')[1]?.trim();
 
                             console.log("Number after hyphen:", numberAfterHyphen, transactionTable.length);
-                            let tempCount = parseInt(transactionTable.length) + 15;
+                            let tempCount = parseInt(transactionTable.length);
                             if (parseInt(numberAfterHyphen) != parseInt(tempCount)) {
                                 Alert.alert('Cannot Close collection!', `You have collected ${transactionTable.length} reciepts out of ${NoOfRecords}. and total collected amount is Rs ${totalAmount}.00/-`)
                                 setButtonLoading(false);
@@ -315,7 +315,7 @@ export default function Dashboard({ navigation, route }) {
                                 if (agentmobileNumber) {
 
                                     const url = `http://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/CloseCollection_FromApp`;
-                                    let tempCount = parseInt(transactionTable.length) + 15;
+                                    let tempCount = parseInt(transactionTable.length);
                                     try {
                                         const response = await fetch(url, {
                                             method: 'POST',
@@ -370,6 +370,8 @@ export default function Dashboard({ navigation, route }) {
                                             // Step 5: Clear transactionTable after moving its contents
                                             await AsyncStorage.removeItem('transactionTable');
                                             setLoading(true);
+                                            setTransactionTable([]);
+                                            setTotalAmount(0);
                                             fetchTransactionTable();
                                             setButtonLoading(false);
                                         }
@@ -394,79 +396,6 @@ export default function Dashboard({ navigation, route }) {
             ]
         );
     };
-
-    // const handleCloseCollection = async () => {
-    //     if (collectionAllowed === true) {
-    //         const mobileNumber = await AsyncStorage.getItem('mobileNumber');
-
-    //         if (mobileNumber) {
-    //             const url = `http://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/ConfirmData_FromApp?MobileNo=${mobileNumber}&Fdate=${FileCreateDate}`;
-    //             const response = await fetch(url, {
-    //                 method: 'GET',
-    //                 headers: {
-    //                     'Content-Type': 'application/xml',
-    //                 },
-    //             });
-    //             const responseText = await response.text();
-    //             const parser = new XMLParser();
-    //             const jsonResponse = parser.parse(responseText);
-    //             const jsonString = jsonResponse.string;
-    //             const dataObject = JSON.parse(jsonString);
-    //             const responseString = dataObject.ResponseString;
-    //             const numberAfterHyphen = responseString.split('-')[1]?.trim(); // Trim any extra spaces
-
-    //             console.log("Number after hyphen:", numberAfterHyphen);
-
-    //             if (numberAfterHyphen === transactionTable.length) {
-    //                 Alert.alert('Cannot Close collection!', `You have collected ${transactionTable.length} reciepts out of ${NoOfRecords}. and total collected amount is Rs ${totalAmount}.00/-`)
-    //             }
-
-    //             else {
-
-    //                 const agentmobileNumber = await AsyncStorage.getItem('mobileNumber');
-
-    //                 if (agentmobileNumber) {
-
-    //                     const url = `http://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/CloseCollection_FromApp`;
-
-    //                     try {
-    //                         const response = await fetch(url, {
-    //                             method: 'POST',
-    //                             headers: {
-    //                                 'Content-Type': 'application/x-www-form-urlencoded',
-    //                             },
-    //                             body: new URLSearchParams({
-    //                                 MobileNo: agentmobileNumber,
-    //                                 Fdate: FileCreateDate,
-    //                                 NoofRecs: 12
-    //                             }).toString(),
-    //                         });
-
-    //                         const responseText = await response.text();
-    //                         const parser = new XMLParser();
-    //                         const jsonResponse = parser.parse(responseText);
-    //                         const jsonString = jsonResponse.string;
-    //                         const dataObject = JSON.parse(jsonString);
-    //                         const responseString = dataObject.ResonseCode;
-
-    //                         if (responseString === '0000') {
-    //                             ToastAndroid.show("Successfully closed Collections", ToastAndroid.LONG)
-    //                         }
-
-    //                         console.log("Response closed collection:", responseString);
-    //                     } catch (error) {
-    //                         ToastAndroid.show("Failed to close Collections. Please try again", ToastAndroid.LONG)
-    //                         console.error("Error during API call:", error);
-    //                     }
-    //                 }
-    //                 console.log(" response for closing", dataObject.ResponseString)
-    //             }
-    //         }
-    //     }
-    //     else if (collectionAllowed == false) {
-    //         Alert.alert('Cannot Close collection!', `Collection is not allowed, allowed day's are expired`)
-    //     }
-    // }
 
     const handleCancel = () => {
         setModalVisible(false);

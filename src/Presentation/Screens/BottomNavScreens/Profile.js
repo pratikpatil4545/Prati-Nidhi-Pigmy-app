@@ -122,12 +122,13 @@ export default function Profile({ navigation, route }) {
                   <Text style={{ fontFamily: 'Montserrat-Bold', color: COLORS.gray, alignSelf: 'center', fontSize: 16, }}>   Sign out   </Text>
                 </View>
               </Pressable>
-              {/* <MaterialCommunityIcons name={'chevron-right'} color={COLORS.gray} size={30} /> */}
             </View>
+
 
           </View>
         </View>
       </ScrollView>
+            <Text style={{ position: 'absolute', bottom: '5%', fontFamily: 'Montserrat-Bold', color: COLORS.gray, alignSelf: 'center', fontSize: 16, }}>   Version - 1.1   </Text>
 
     </View>
   )
