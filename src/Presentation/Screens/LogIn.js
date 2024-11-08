@@ -6,6 +6,8 @@ import { useIsFocused } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import SimCardsManagerModule from 'react-native-sim-cards-manager';
 import { COLORS } from '../../Common/Constants';
+import { XMLParser } from 'fast-xml-parser';
+
 export default function Login({ navigation }) {
 
   const [number, setNumber] = useState(null);
@@ -24,7 +26,7 @@ export default function Login({ navigation }) {
       try {
         const storedMobileNumber = await AsyncStorage.getItem('mobileNumber');
         const storedPassword = await AsyncStorage.getItem('password');
-  
+
         if (storedMobileNumber && storedPassword) {
           setNewUser(false); // User exists, set them to login mode
           setNumber(storedMobileNumber); // Set the stored phone number
@@ -37,6 +39,36 @@ export default function Login({ navigation }) {
       }
     };
 
+    // const fetchPhoneNumber = async () => {
+    //   try {
+    //     const simCards = await SimCardsManagerModule.getSimCards({
+    //       title: 'App Permission',
+    //       message: 'Custom message',
+    //       buttonNeutral: 'Not now',
+    //       buttonNegative: 'Not OK',
+    //       buttonPositive: 'OK',
+    //     });
+
+    //     if (simCards && simCards.length > 0) {
+    //       let phoneNumber = simCards[0].phoneNumber;
+
+    //       if (phoneNumber) {
+    //         // Remove +91 if it is present at the beginning of the phone number
+    //         if (phoneNumber.startsWith('+91')) {
+    //           phoneNumber = phoneNumber.slice(3);
+    //         }
+    //         setNumber(phoneNumber);
+    //       } else {
+    //         console.log('Phone number is not available');
+    //       }
+    //     } else {
+    //       console.log('No SIM card information available');
+    //     }
+    //   } catch (error) {
+    //     console.error('Error fetching phone number:', error);
+    //   }
+    // };
+
     const fetchPhoneNumber = async () => {
       try {
         const simCards = await SimCardsManagerModule.getSimCards({
@@ -46,16 +78,24 @@ export default function Login({ navigation }) {
           buttonNegative: 'Not OK',
           buttonPositive: 'OK',
         });
-    
+
         if (simCards && simCards.length > 0) {
           let phoneNumber = simCards[0].phoneNumber;
-    
+          console.log("pjone number is", simCards, phoneNumber)
           if (phoneNumber) {
-            // Remove +91 if it is present at the beginning of the phone number
-            if (phoneNumber.startsWith('+91')) {
-              phoneNumber = phoneNumber.slice(3);
+            // Remove any non-digit characters
+            phoneNumber = phoneNumber.replace(/\D/g, '');
+
+            // Ensure the phone number is exactly 10 digits
+            if (phoneNumber.length > 10) {
+              phoneNumber = phoneNumber.slice(-10); // Take the last 10 digits
             }
-            setNumber(phoneNumber);
+
+            if (phoneNumber.length === 10) {
+              setNumber(phoneNumber);
+            } else {
+              console.log('Phone number is not valid (should be exactly 10 digits without symbols or country code)');
+            }
           } else {
             console.log('Phone number is not available');
           }
@@ -66,7 +106,6 @@ export default function Login({ navigation }) {
         console.error('Error fetching phone number:', error);
       }
     };
-    
 
     checkAuthentication();
   }, []);
@@ -75,39 +114,94 @@ export default function Login({ navigation }) {
     // navigation.navigate('BottomTabs');
     setLoading(true);
     setVerificationText('Verifying...');
-  
+
     if (newUser) {
       // New user flow (sign up)
-      setTimeout(() => {
-        setLoading(false);
-        setVerificationText('Verified');
-        setShowSetPassword(true); // Show password setup screen for new users
-      }, 2000);
-    } else {
-      // Existing user login flow (logging in)
-      setTimeout(async () => {
-        setLoading(false);
-        try {
-          const storedPassword = await AsyncStorage.getItem('password');
-          const storedNumber = await AsyncStorage.getItem('mobileNumber');
+      // setTimeout(() => {
+      //   setLoading(false);
+      //   setVerificationText('Verified');
+      //   setShowSetPassword(true); // Show password setup screen for new users
+      // }, 2000);
 
-  
-          if ((password === storedPassword) && (storedNumber === number)) {
-            // If entered password matches stored password, log in
-            setVerificationText('Verified');
-            ToastAndroid.show('Authentication Successful!', ToastAndroid.SHORT);
-            navigation.navigate('BottomTabs'); // Navigate to main app screen
-          } else {
-            // If password doesn't match
-            setVerificationText('Invalid credentials');
-            ToastAndroid.show('Invalid Credentials', ToastAndroid.SHORT);
-          }
-        } catch (error) {
-          console.error('Error accessing stored password:', error);
-          setVerificationText('Error logging in');
-          ToastAndroid.show('Error logging in', ToastAndroid.SHORT);
+      try {
+        const url = `http://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/RequestData_App?MobileNo=${number}`;
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/xml',
+          },
+        });
+
+        const responseText = await response.text();
+        const parser = new XMLParser();
+        const jsonResponse = parser.parse(responseText);
+
+        const jsonString = jsonResponse.string;
+        const dataObject = JSON.parse(jsonString);
+        console.log("responseText:", dataObject.ResonseCode);
+
+        if (dataObject.ResonseCode === "0000") {
+          setLoading(false);
+          setVerificationText('Verified');
+          setShowSetPassword(true); // Show password setup screen for new users
+        } else {
+          setLoading(false);
+          setVerificationText('Unauthorized');
+          ToastAndroid.show('Unauthorized user', ToastAndroid.SHORT);
         }
-      }, 2000);
+      } catch (error) {
+        setLoading(false);
+        setVerificationText('Error fetching data');
+        console.error('Error fetching data:', error);
+      }
+
+    } else {
+
+      // setTimeout(async () => {
+      //   setLoading(false);
+      //   try {
+      //     const storedPassword = await AsyncStorage.getItem('password');
+      //     const storedNumber = await AsyncStorage.getItem('mobileNumber');
+
+      //     if ((password === storedPassword) && (storedNumber === number)) {
+      //       // If entered password matches stored password, log in
+      //       setVerificationText('Verified');
+      //       ToastAndroid.show('Authentication Successful!', ToastAndroid.SHORT);
+      //       navigation.navigate('BottomTabs'); // Navigate to main app screen
+      //     } else {
+      //       // If password doesn't match
+      //       setVerificationText('Invalid credentials');
+      //       ToastAndroid.show('Invalid Credentials', ToastAndroid.SHORT);
+      //     }
+      //   } catch (error) {
+      //     console.error('Error accessing stored password:', error);
+      //     setVerificationText('Error logging in');
+      //     ToastAndroid.show('Error logging in', ToastAndroid.SHORT);
+      //   }
+      // }, 2000);
+
+      try {
+        const storedPassword = await AsyncStorage.getItem('password');
+        const storedNumber = await AsyncStorage.getItem('mobileNumber');
+
+        if (password === storedPassword && storedNumber === number) {
+          // If entered password matches stored password, log in
+          setVerificationText('Verified');
+          ToastAndroid.show('Authentication Successful!', ToastAndroid.SHORT);
+          navigation.navigate('BottomTabs'); // Navigate to main app screen
+        } else {
+          // If password doesn't match
+          setVerificationText('Invalid credentials');
+          ToastAndroid.show('Invalid Credentials', ToastAndroid.SHORT);
+        }
+      } catch (error) {
+        console.error('Error accessing stored password:', error);
+        setVerificationText('Error logging in');
+        ToastAndroid.show('Error logging in', ToastAndroid.SHORT);
+      } finally {
+        setLoading(false);
+      }
+
     }
   };
 
@@ -130,14 +224,14 @@ export default function Login({ navigation }) {
   };
 
   const handleWhatsAppPress = () => {
-    const phoneNumber = '+917887760491'; 
+    const phoneNumber = '+917887760491';
     const message = 'Hi, I would like to get in touch with you!';
 
     const url = `whatsapp://send?text=${encodeURIComponent(message)}&phone=${phoneNumber}`;
 
     Linking.openURL(url);
   };
-  
+
   return (
     <View style={styles.flex}>
       {!showSetPassword ? (
@@ -156,6 +250,7 @@ export default function Login({ navigation }) {
               keyboardType="numeric"
               onChangeText={(text) => setNumber(text)}
               style={styles.input}
+              disabled
               theme={{
                 colors: { primary: '#3B5998', underlineColor: 'transparent' },
               }}
@@ -195,9 +290,11 @@ export default function Login({ navigation }) {
               </>
             )}
 
-            <View style={{width: '95%', alignSelf: 'center'}}>
-              <Text style={{color: COLORS.primary, alignSelf: 'flex-end', textDecorationLine: 'underline'}}>Forgot Password?</Text>
-            </View>
+            {!newUser &&
+              <View style={{ width: '95%', alignSelf: 'center' }}>
+                <Text style={{ color: COLORS.primary, alignSelf: 'flex-end', textDecorationLine: 'underline' }}>Forgot Password?</Text>
+              </View>
+            }
 
             <View style={styles.buttonContainer}>
               <Button icon="login" contentStyle={{ flexDirection: 'row-reverse' }} onPress={handleNext} disabled={loading} style={{ backgroundColor: "#8ABCF9" }} labelStyle={{ fontWeight: 'bold', fontSize: 16 }} mode="contained">

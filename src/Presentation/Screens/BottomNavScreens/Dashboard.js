@@ -1,10 +1,11 @@
-import { View, Text, StyleSheet, ToastAndroid, ScrollView, StatusBar, Modal, Pressable, BackHandler, Keyboard, TouchableOpacity, ActivityIndicator, FlatList, Alert } from 'react-native'
+import { View, Text, StyleSheet, ToastAndroid, ScrollView, StatusBar, Modal, Pressable, BackHandler, Keyboard, TouchableOpacity, ActivityIndicator, FlatList, Alert, Linking } from 'react-native'
 import React, { useCallback, useEffect, useState } from 'react'
 import { COLORS, windowHeight, windowWidth } from '../../../Common/Constants'
 import { Button, Searchbar, TextInput } from 'react-native-paper'
 import DataCard from '../../Components/DataCard';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import MaterialCommunityIcons2 from 'react-native-vector-icons/FontAwesome5';
+import MaterialCommunityIcons3 from 'react-native-vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import axios from 'axios';
@@ -51,6 +52,10 @@ export default function Dashboard({ navigation, route }) {
     const [name, setName] = useState(null);
     const [mobileNumber, setmobileNumber] = useState(null);
     const [buttonLoading, setButtonLoading] = useState(false);
+    const [modalVisible2, setModalVisible2] = useState(false);
+    const [isFirstLogin, setIsFirstLogin] = useState(false);
+    // console.log("states checking", dataAvailable, isDataValid, isFirstLogin)
+
     // console.log("Last acc number?", (parseInt(GlLastAcc[0]) + 1));
     // const [recentTransactions, setRecentTransactions] = useState(MockData.recentTransactions);
 
@@ -144,10 +149,12 @@ export default function Dashboard({ navigation, route }) {
         return () => backHandler.remove();
     }, [backPressedOnce]);
 
-    const handleGetData = () => {
+    const handleGetData = async () => {
         // setLoading(true);
         ToastAndroid.show('Getting latest data', ToastAndroid.SHORT);
         getFileContent();
+        await AsyncStorage.setItem('firstLoginComplete', 'true');
+        setIsFirstLogin(false);
         // getApi();
     }
 
@@ -226,23 +233,35 @@ export default function Dashboard({ navigation, route }) {
         }
     };
 
-    useFocusEffect(
-        useCallback(() => {
-            // Check if 'password' exists in AsyncStorage
-            const checkPasswordInStorage = async () => {
-                const password = await AsyncStorage.getItem('password');
-                if (password) {
-                    // If password exists, load data
-                    getFileContent();
-                } else {
-                    // If password does not exist, skip the API call
-                    console.log("No password found in AsyncStorage. Skipping data load.");
-                }
-            };
+    useEffect(() => {
+        const checkFirstLogin = async () => {
+            const firstLoginComplete = await AsyncStorage.getItem('firstLoginComplete');
+            if (!firstLoginComplete) {
+                setIsFirstLogin(true);  // Show "Start collection" button
+            } else {
+                getFileContent();  // Automatically load data if not first login
+            }
+        };
+        checkFirstLogin();
+    }, []);
 
-            checkPasswordInStorage();
-        }, []) // Empty dependency array means it only runs when screen is focused
-    );
+    // useFocusEffect(
+    //     useCallback(() => {
+    //         // Check if 'password' exists in AsyncStorage
+    //         const checkPasswordInStorage = async () => {
+    //             const password = await AsyncStorage.getItem('password');
+    //             if (password) {
+    //                 // If password exists, load data
+    //                 // getFileContent();
+    //             } else {
+    //                 // If password does not exist, skip the API call
+    //                 console.log("No password found in AsyncStorage. Skipping data load.");
+    //             }
+    //         };
+
+    //         checkPasswordInStorage();
+    //     }, []) // Empty dependency array means it only runs when screen is focused
+    // );
 
     const fetchTransactionTable = async () => {
         try {
@@ -279,7 +298,7 @@ export default function Dashboard({ navigation, route }) {
             'Close Collection',
             'Do you really want to close the collection?',
             [
-                { text: 'Cancel', style: 'cancel' , onPress: () => setButtonLoading(false)},
+                { text: 'Cancel', style: 'cancel', onPress: () => setButtonLoading(false) },
                 {
                     text: 'Yes',
                     onPress: async () => {
@@ -364,16 +383,15 @@ export default function Dashboard({ navigation, route }) {
                                                 transactionHistoryTable.push(transaction);
                                             });
 
-                                            // Step 4: Save the updated transaction history back to AsyncStorage
                                             await AsyncStorage.setItem('transactionHistoryTable', JSON.stringify(transactionHistoryTable));
-
-                                            // Step 5: Clear transactionTable after moving its contents
                                             await AsyncStorage.removeItem('transactionTable');
-                                            setLoading(true);
+                                            // setLoading(true);
                                             setTransactionTable([]);
                                             setTotalAmount(0);
                                             fetchTransactionTable();
                                             setButtonLoading(false);
+                                            setDataAvailable(false);
+                                            // setIsDataValid(false);
                                         }
                                         else {
                                             setButtonLoading(false);
@@ -427,6 +445,8 @@ export default function Dashboard({ navigation, route }) {
 
     const handleSubmit = async () => {
         let newAccNo;
+        setModalVisible2(true);
+
 
         try {
             let transactionTable = await AsyncStorage.getItem('transactionTable');
@@ -521,10 +541,11 @@ export default function Dashboard({ navigation, route }) {
 
             transactionTable.push(transactionData);
             await AsyncStorage.setItem('transactionTable', JSON.stringify(transactionTable));
-            setModalVisible(false);
-            setName(null);
-            setmobileNumber(null);
-            setAmount(null);
+            // setModalVisible(false);
+            // setName(null);
+            // setmobileNumber(null);
+            // setAmount(null);
+            setModalVisible2(true);
             fetchTransactionTable();
 
         } catch (error) {
@@ -537,11 +558,80 @@ export default function Dashboard({ navigation, route }) {
         setModalVisible(true);
     }
 
+    const handleCancel2 = () => {
+        setModalVisible2(false);
+    };
+
+    const formatDateTime = (date) => {
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0'); // Month is 0-based
+        const year = String(date.getFullYear()).slice(-2); // Last two digits of the year
+        let hours = date.getHours();
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12 || 12; // Convert 24-hour to 12-hour format
+        return `${day}-${month}-${year} ${hours}:${minutes} ${ampm}`;
+    };
+
+    const handleWhatsAppPress = async () => {
+        const savedData = await AsyncStorage.getItem('dataObject');
+        const dataObject = JSON.parse(savedData);
+
+        // Define the message and phone number
+        const getNumber = mobileNumber;
+        const phoneNumber = `+91${getNumber}`; // Replace with the actual phone number (with country code)
+        const message = `Hi, the amount has been successfully collected. Here is your receipt:
+    
+    Name: *${name}*
+    Account No.: *${headerLastAccNo}*
+    Opening Balance: *0.00*
+    Amount Collected: *${amount}.00*
+    Closing Balance: *${amount}.00*
+    Agent Name: *${dataObject.MstrData?.AgNameE}*
+    Collected date and time: ${formatDateTime(new Date())}`;
+
+
+        // Create the WhatsApp URL with the correct format
+        const url = `whatsapp://send?text=${encodeURIComponent(message)}&phone=${phoneNumber}`;
+
+        Linking.openURL(url);
+
+    };
+
+    const handleSmsPress = async () => {
+        const savedData = await AsyncStorage.getItem('dataObject');
+        const dataObject = JSON.parse(savedData);
+
+        const getNumber = mobileNumber;
+        const phoneNumber = `+91${getNumber}`;
+        const message = `Hi, the amount has been successfully collected. Here is your receipt:
+      
+      Name: ${name}
+      Account No.: ${headerLastAccNo}
+      Opening Balance: 0.00
+      Amount Collected: ${amount}.00
+      Closing Balance: ${amount}.00
+      Agent Name: ${dataObject.MstrData?.AgNameE}
+      Collected date and time: ${formatDateTime(new Date())}`;
+
+        const smsUrl = `sms:${phoneNumber}?body=${encodeURIComponent(message)}`;
+        try {
+            await Linking.openURL(smsUrl);
+        } catch (error) {
+            Alert.alert("Error", "Unable to open SMS app.");
+        }
+    };
+
+    const handleSubmit2 = () => {
+        setModalVisible(false);
+        setModalVisible2(false);
+    }
+
     return (
         <View style={styles.dashView}>
             <StatusBar backgroundColor={COLORS.primaryAccent} barStyle="light-content" />
 
-            {dataAvailable && isDataValid ? (
+            {dataAvailable && !isFirstLogin && isDataValid ? (
                 <>
                     <View style={{ width: windowWidth * 1, height: windowHeight * 0.1, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly' }}>
                         <Searchbar
@@ -549,6 +639,7 @@ export default function Dashboard({ navigation, route }) {
                             onChangeText={setSearchQuery}
                             // loading={true}
                             value={searchQuery}
+                            disabled
                             autoFocus={searchedResults}
                             onIconPress={() => { setSearchedResults(false), setSearchQuery(''), Keyboard.dismiss() }}
                             icon={searchedResults ? 'arrow-left-thin' : 'magnify'}
@@ -611,27 +702,15 @@ export default function Dashboard({ navigation, route }) {
                                 </View>
                             }
 
-                            {/* <FlatList
-                                data={mappedMasterData}
-                                renderItem={renderItem}
-                                keyExtractor={(item) => `${item.GLCode}-${item.AccountNo}`} // Concatenate values for a unique key
-                                initialNumToRender={10}  // Adjust based on testing
-                                maxToRenderPerBatch={10} // Specifies how many items should be rendered at a time
-                                windowSize={5}           // Number of items to keep in memory for the window
-                                onEndReachedThreshold={0.5} // Load more data when 50% of the content is visible
-                                ListEmptyComponent={<Text>No data available</Text>}
-                                ListFooterComponent={<ActivityIndicator />} // Loader for when more data is fetched
-                            /> */}
-
                             <View style={styles.lineView}>
                                 <Text style={styles.lineText}>Recent transactions </Text>
                             </View>
 
-                            {transactionTable && transactionTable.length > 0 &&
-                                <View>
-                                    <Button icon={'arrow-up'} loading={buttonLoading} disabled={buttonLoading} onPress={handleCloseCollection} labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }} style={{ marginTop: 30, alignSelf: 'flex-end', marginRight: 20 }} mode="contained">Close collection</Button>
-                                </View>
-                            }
+                            {/* {transactionTable && transactionTable.length > 0 && */}
+                            <View>
+                                <Button icon={'arrow-up'} loading={buttonLoading} disabled={buttonLoading} onPress={handleCloseCollection} labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }} style={{ marginTop: 30, alignSelf: 'flex-end', marginRight: 20 }} mode="contained">Close collection</Button>
+                            </View>
+                            {/*  } */}
 
                             <ScrollView style={{ marginTop: 20, marginBottom: 40 }}>
                                 <>
@@ -648,16 +727,14 @@ export default function Dashboard({ navigation, route }) {
                                     ) : (
                                         <Text style={[styles.text1, { margin: 'auto', marginTop: 100 }]}>No transactions yet</Text>
                                     )}
-
                                 </>
-
                             </ScrollView>
                         </View>
                     )}
                 </>
             ) : (
                 <>
-                    <View style={{ width: windowWidth * 1, height: windowHeight * 0.1, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly' }}>
+                    {/* <View style={{ width: windowWidth * 1, height: windowHeight * 0.1, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly' }}>
                         <Searchbar
                             placeholder="Search by Name or A/C No"
                             onChangeText={setSearchQuery}
@@ -680,9 +757,9 @@ export default function Dashboard({ navigation, route }) {
                         <Pressable onPress={() => { navigation.navigate('Profile', { count: NoOfRecords, amount: totalAmount, collectionAllowed: collectionAllowed }) }}>
                             <MaterialCommunityIcons2 name='user-circle' styl={{ elevation: 5 }} elevation={5} color={COLORS.primary} size={45} />
                         </Pressable>
-                    </View>
+                    </View> */}
 
-                    {!isAuth &&
+                    {/* {!isAuth &&
                         <View>
                             <Button
                                 labelStyle={{ fontFamily: 'Montserrat-Bold', fontSize: 14 }}
@@ -694,7 +771,7 @@ export default function Dashboard({ navigation, route }) {
                                 Logout
                             </Button>
                         </View>
-                    }
+                    } */}
                     {!LicenseExpired ? (
                         <>
                             {loading ? (
@@ -712,7 +789,7 @@ export default function Dashboard({ navigation, route }) {
                                                 loading={loading}
                                                 disabled={loading}
                                                 labelStyle={{ fontFamily: 'Montserrat-Bold', fontSize: 18 }}
-                                                style={{ marginTop: 30, width: '50%' }}
+                                                style={{ marginTop: 30, width: '80%' }}
                                                 mode="contained"
                                                 onPress={handleGetData}
                                             >
@@ -788,6 +865,109 @@ export default function Dashboard({ navigation, route }) {
                         <View style={styles.buttonContainer}>
                             <Button style={{ width: '48%', marginTop: 5 }} mode="contained" labelStyle={{ fontSize: 16, fontFamily: 'Montserrat-Bold' }} onPress={handleSubmit} >Submit</Button>
                             <Button style={{ width: '48%', marginTop: 5, borderColor: COLORS.primaryAccent }} labelStyle={{ fontSize: 16, fontFamily: 'Montserrat-Bold' }} mode="outlined" onPress={handleCancel} >Cancel</Button>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={modalVisible2}
+                onRequestClose={handleCancel2}
+            >
+                <StatusBar
+                    barStyle={'light-content'}
+                    backgroundColor={'rgba(0, 0, 0, 0.5)'}
+                />
+                <View style={{
+                    flex: 1,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                }}>
+                    <View style={{
+                        width: '90%',
+                        padding: 30,
+                        paddingBottom: 50,
+                        paddingTop: 30,
+                        backgroundColor: 'white',
+                        borderRadius: 10,
+                        alignItems: 'center',
+                    }}>
+                        <MaterialCommunityIcons3 name='cloud-done' color={COLORS.primary} size={100} />
+                        <View style={{
+                            width: windowWidth * 0.85,
+                            // height: 120,
+                            borderRadius: 10,
+                            alignSelf: 'center',
+                            marginTop: 20,
+                            paddingTop: 10,
+                            paddingBottom: 10,
+                            // justifyContent: 'center',
+                            // alignItems: 'center',
+                            display: 'flex',
+                            flexDirection: 'row',
+                            backgroundColor: '#eef2fa',
+                            elevation: 1
+                        }}>
+                            <View style={styles.left}>
+                                <Text style={styles.text1}>Name : </Text>
+                                <Text style={[styles.text1, { marginHorizontal: 25 }]}>{name}</Text>
+                                <Text style={styles.text1}>Account Number : </Text>
+                                <Text style={[styles.text1, { marginHorizontal: 25 }]}>{headerLastAccNo}</Text>
+                                <Text style={styles.text1}>Opeing Balance : </Text>
+                                <Text style={[styles.text1, { marginHorizontal: 25 }]}>0.00</Text>
+                                <Text style={styles.text1}>Amount Collected : </Text>
+                                <Text style={[styles.text1, { marginHorizontal: 25 }]}>{amount}.00</Text>
+                                <Text style={styles.text1}>Closing Balance : </Text>
+                                <Text style={[styles.text1, { marginHorizontal: 25 }]}>{amount}.00</Text>
+                            </View>
+                        </View>
+
+                        <View style={[styles.buttonContainer, { marginTop: 30 }]}>
+                            <Button
+                                style={styles.modalButton}
+                                mode="contained"
+                                labelStyle={styles.buttonLabel}
+                                onPress={handleSubmit2}
+                            >
+                                Close
+                            </Button>
+                            <Button
+                                icon={'printer'}
+                                style={styles.modalButton}
+                                mode="outlined"
+                                labelStyle={styles.buttonLabel}
+                                onPress={() => { Alert.alert("Printing") }}
+                            >
+                                Print
+                            </Button>
+                        </View>
+
+                        <View style={[styles.buttonContainer, { marginTop: 10, justifyContent: 'space-evenly' }]}>
+                            {/* <Button
+                style={styles.modalButton}
+                mode="contained"
+                labelStyle={styles.buttonLabel}
+                onPress={handleNext}
+              >
+                Next
+              </Button> */}
+                            <MaterialCommunityIcons
+                                onPress={handleWhatsAppPress}
+                                style={styles.whatsappIcon}
+                                name='whatsapp'
+                                color={COLORS.white}
+                                size={35}
+                            />
+                            <MaterialCommunityIcons
+                                onPress={handleSmsPress}
+                                style={styles.smsIcon}
+                                name='android-messages'
+                                color={COLORS.white}
+                                size={35}
+                            />
                         </View>
                     </View>
                 </View>
@@ -926,4 +1106,22 @@ const styles = StyleSheet.create({
     cloudIcon: {
         marginBottom: 20,
     },
+    buttonLabel: {
+        fontSize: 16,
+        fontFamily: 'Montserrat-Bold',
+    },
+    whatsappIcon: {
+        marginHorizontal: 5,
+        marginVertical: 5,
+        backgroundColor: '#25D366',
+        borderRadius: 15,
+        padding: 5,
+    },
+    smsIcon: {
+        marginHorizontal: 5,
+        marginVertical: 5,
+        backgroundColor: COLORS.primary,
+        borderRadius: 15,
+        padding: 5,
+    }
 })

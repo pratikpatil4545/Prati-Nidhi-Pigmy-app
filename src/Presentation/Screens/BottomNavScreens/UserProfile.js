@@ -129,6 +129,30 @@ Collected date and time: ${formatDateTime(new Date())}`;
 
   };
 
+  const handleSmsPress = async () => {
+    const savedData = await AsyncStorage.getItem('dataObject');
+    const dataObject = JSON.parse(savedData);
+  
+    const getNumber = mobileInputVisible ? mobileNumber : parseInt(route.params.item.Mobile1);
+    const phoneNumber = `+91${getNumber}`;
+    const message = `Hi, the amount has been successfully collected. Here is your receipt:
+  
+  Name: ${item.EnglishName}
+  Account No.: ${item.AccountNo}
+  Opening Balance: ${(updatedBalances || updatedBalances === 0) ? updatedBalances : item.ThisMthBal}.00
+  Amount Collected: ${amount}.00
+  Closing Balance: ${newBalance ? newBalance : 0}.00
+  Agent Name: ${dataObject.MstrData?.AgNameE}
+  Collected date and time: ${formatDateTime(new Date())}`;
+  
+    const smsUrl = `sms:${phoneNumber}?body=${encodeURIComponent(message)}`;
+    try {
+      await Linking.openURL(smsUrl);
+    } catch (error) {
+      Alert.alert("Error", "Unable to open SMS app.");
+    }
+  };
+
   const checkAsyncStorageForData = async () => {
     try {
       const savedData = await AsyncStorage.getItem('transactionTable');
@@ -212,6 +236,22 @@ Collected date and time: ${formatDateTime(new Date())}`;
     const seconds = date.getSeconds().toString().padStart(2, '0');
 
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  };
+
+  const comfirmCheck = () => {
+    const message = `
+    Name: ${item.EnglishName}
+Account Number: ${item.AccountNo}
+Old Account Balance: ${(updatedBalances || updatedBalances === 0) ? updatedBalances : item.ThisMthBal}.00
+Amount Collected: ${amount}.00
+Total Account Balance: ${newBalance ? newBalance : 0}.00
+  `;
+
+    // setModalVisible2(true);
+    Alert.alert(
+      'Please Confirm Collection',
+      message.trim()
+    );
   }
 
   const handleSubmit = async () => {
@@ -222,6 +262,16 @@ Collected date and time: ${formatDateTime(new Date())}`;
     let updatedBalance = currentBalance + amountValue;
     let dailyAmount = parseInt(item.DailyAmt);
     let maxInstalled = parseInt(item.MaxInstal);
+
+    if (!mobileNumber) {
+      Alert.alert('Warning', `Plese enter customer's Mobile Number`);
+      return;
+    }
+    console.log(mobileNumber.length)
+    if (mobileNumber.length !== 10 || /\D/.test(mobileNumber)) {
+      Alert.alert('Warning', `Please enter a valid 10-digit mobile number`);
+      return;
+    }
 
     if (OneShotLmt != 0) {
       if (amountValue >= OneShotLmt) {
@@ -267,58 +317,25 @@ Collected date and time: ${formatDateTime(new Date())}`;
     const receiptNo = generateReceiptNo();
 
     try {
-      // let transactionTable = await AsyncStorage.getItem('transactionTable');
-      // transactionTable = transactionTable ? JSON.parse(transactionTable) : [];
-
-      // // let existingTransaction = transactionTable.find(
-      // //   (entry) => entry.accNo === item.AccountNo && entry.glCode === item.GLCode
-      // // );
-      // let existingTransaction = transactionTable.find(
-      //   (entry) => entry.AccountNo === item.AccountNo && entry.GLCode === item.GLCode
-      // );
-
-      // let openingBalance;
-
-      // console.log("opeing balancce from existing", existingTransaction)
-      // if (existingTransaction) {
-      //   openingBalance = parseFloat(existingTransaction.OpeningBal);
-      //   if (isNaN(openingBalance)) {
-      //     openingBalance = 0;
-      //   }
-
-      //   if (item.IsAmtToBeAdded === 'True') {
-      //     openingBalance += amountValue;
-      //   } else if (openingBalance >= amountValue) {
-      //     openingBalance -= amountValue;
-      //   } else {
-      //     Alert.alert('Error', 'Insufficient balance.');
-      //     return;
-      //   }
-      // } else {
-      //   openingBalance = updatedBalance;
-      // }
-
       let transactionTable = await AsyncStorage.getItem('transactionTable');
       transactionTable = transactionTable ? JSON.parse(transactionTable) : [];
-     
+
       const filteredTransactions = transactionTable.filter(
         (entry) => entry.AccountNo === item.AccountNo && entry.GLCode === item.GLCode
       );
-     
+
       filteredTransactions.sort((a, b) => new Date(b.CollDateTime) - new Date(a.CollDateTime));
-    
-      // If there are matching transactions, take the most recent one
+ 
       let openingBalance = 0;
       if (filteredTransactions.length > 0) {
-        const latestTransaction = filteredTransactions[0]; // The most recent transaction
+        const latestTransaction = filteredTransactions[0]; 
         console.log("Opening balance from latest transaction:", latestTransaction);
         openingBalance = parseFloat(latestTransaction.OpeningBal);
-        
+
         if (isNaN(openingBalance)) {
           openingBalance = 0;
         }
-    
-        // Adjust the opening balance based on the transaction type
+ 
         if (item.IsAmtToBeAdded === 'True') {
           openingBalance += amountValue;
         } else if (openingBalance >= amountValue) {
@@ -327,12 +344,11 @@ Collected date and time: ${formatDateTime(new Date())}`;
           Alert.alert('Error', 'Insufficient balance.');
           return;
         }
-      } else {
-        // If no matching transactions exist, fallback to updatedBalance
+      } else { 
         openingBalance = updatedBalance;
       }
 
-console.log("opeing balanc below", openingBalance)
+      console.log("opeing balanc below", openingBalance)
 
       setNewBalance(openingBalance);
       let agentsPhn = await AsyncStorage.getItem('mobileNumber');
@@ -400,6 +416,131 @@ console.log("opeing balanc below", openingBalance)
       Alert.alert('Error', 'An error occurred while processing your transaction. Please try again.');
     }
   };
+
+  // const confirmCheck = async () => {
+  //   let OneShotLmt = parseInt(item.OneShotLmt);
+  //   let maxBalance = parseInt(item.MaxBalance);
+  //   let currentBalance = parseFloat(item.ThisMthBal) || 0;
+  //   let amountValue = parseFloat(amount) || 0;
+  //   let updatedBalance = currentBalance + amountValue;
+  //   let dailyAmount = parseInt(item.DailyAmt);
+  //   let maxInstalled = parseInt(item.MaxInstal);
+  
+  //   if (!mobileNumber) {
+  //     Alert.alert('Warning', `Please enter the customer's mobile number`);
+  //     return;
+  //   }
+  //   if (mobileNumber.length !== 10 || /\D/.test(mobileNumber)) {
+  //     Alert.alert('Warning', `Please enter a valid 10-digit mobile number`);
+  //     return;
+  //   }
+  
+  //   if (OneShotLmt !== 0 && amountValue >= OneShotLmt) {
+  //     Alert.alert('Warning', 'Amount entered exceeds the one-shot limit. Please re-enter.');
+  //     return;
+  //   }
+  
+  //   if (maxBalance !== 0 && updatedBalance >= maxBalance) {
+  //     Alert.alert('Warning', 'Amount entered exceeds the maximum balance. Please re-enter.');
+  //     return;
+  //   }
+  
+  //   if (maxInstalled !== 0 && dailyAmount !== 0) {
+  //     if (amountValue !== dailyAmount) {
+  //       Alert.alert('Warning', 'Amount entered does not match the daily amount. Please re-enter.');
+  //       return;
+  //     }
+  //     if (amountValue % dailyAmount !== 0 || amountValue > maxInstalled) {
+  //       Alert.alert('Warning', `Please enter an amount that is a multiple of ${dailyAmount} and does not exceed ${maxInstalled}.`);
+  //       return;
+  //     }
+  //   }
+  
+  //   if (updatedBalance === 0 && item.IsAmtToBeAdded === 'False') {
+  //     Alert.alert('Warning', 'Opening balance for this account is 0. No further collection allowed.');
+  //     setModalVisible(false);
+  //     return;
+  //   }
+  
+  //   const message = `
+  //     Name: ${item.EnglishName}
+  //     Account Number: ${item.AccountNo}
+  //     Old Account Balance: ${(updatedBalances || updatedBalances === 0) ? updatedBalances : item.ThisMthBal}.00
+  //     Amount Collected: ${amount}.00
+  //     Total Account Balance: ${newBalance ? newBalance : 0}.00
+  //   `;
+    
+  //   Alert.alert(
+  //     'Please Confirm Collection',
+  //     message.trim(),
+  //     [
+  //       { text: 'Cancel', style: 'cancel' },
+  //       { text: 'Confirm', onPress: handleSubmit }
+  //     ]
+  //   );
+  // };
+
+ 
+
+  // const handleSubmit = async () => {
+  //   const receiptNo = generateReceiptNo();
+  //   try {
+  //     let transactionTable = await AsyncStorage.getItem('transactionTable');
+  //     transactionTable = transactionTable ? JSON.parse(transactionTable) : [];
+  
+  //     const transactionData = {
+  //       GLCode: item.GLCode,
+  //       AccountNo: item.AccountNo,
+  //       EnglishName: item.EnglishName,
+  //       OpeningBal: updatedBalance.toString(),
+  //       Collection: amountValue.toString(),
+  //       ClosingBal: updatedBalance.toString(),
+  //       CollDateTime: formatDateTime1(new Date()),
+  //       IsitNew: 'false',
+  //       IsAmtAdd: item.IsAmtToBeAdded === 'True' ? "1" : "0",
+  //       MobileNo: mobileInputVisible ? mobileNumber : parseInt(route.params.item.Mobile1)
+  //     };
+  
+  //     const newArray = {
+  //       ClientID: ClientID,
+  //       BrCode: BrCode,
+  //       AgCode: AgCode,
+  //       BrAgCode: BrAgCode,
+  //       FileCreateDate: FileCreateDate,
+  //       InputFileType: InputFileType,
+  //       NoOfRecords: '1',
+  //       CollectionData: [transactionData]
+  //     };
+  
+  //     const agentmobileNumber = await AsyncStorage.getItem('mobileNumber');
+  //     if (agentmobileNumber) {
+  //       const newArrayString = JSON.stringify(newArray);
+  //       const url = `http://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp`;
+  
+  //       const response = await fetch(url, {
+  //         method: 'POST',
+  //         headers: {
+  //           'Content-Type': 'application/x-www-form-urlencoded',
+  //         },
+  //         body: new URLSearchParams({ DataFromApp: newArrayString }).toString(),
+  //       });
+  
+  //       const responseData = await response.text();
+  //       console.log("Response:", responseData);
+  //     }
+  
+  //     transactionTable.push(transactionData);
+  //     await AsyncStorage.setItem('transactionTable', JSON.stringify(transactionTable));
+  //     setCollectionMadeToday(true);
+  //     setModalVisible2(true);
+  //     route.params.setRefreshData(true);
+  //   } catch (error) {
+  //     console.error("Error while processing transaction:", error);
+  //     Alert.alert('Error', 'An error occurred while processing your transaction. Please try again.');
+  //   }
+  // };
+
+ 
 
   // const handleSubmit = async () => {
   //   let OneShotLmt = parseInt(item.OneShotLmt);
@@ -753,15 +894,15 @@ console.log("opeing balanc below", openingBalance)
               </Button>
             </View>
 
-            <View style={[styles.buttonContainer, { marginTop: 10 }]}>
-              <Button
+            <View style={[styles.buttonContainer, { marginTop: 10, justifyContent: 'space-evenly' }]}>
+              {/* <Button
                 style={styles.modalButton}
                 mode="contained"
                 labelStyle={styles.buttonLabel}
                 onPress={handleNext}
               >
                 Next
-              </Button>
+              </Button> */}
               <MaterialCommunityIcons
                 onPress={handleWhatsAppPress}
                 style={styles.whatsappIcon}
@@ -770,7 +911,7 @@ console.log("opeing balanc below", openingBalance)
                 size={35}
               />
               <MaterialCommunityIcons
-                onPress={handleWhatsAppPress}
+                onPress={handleSmsPress}
                 style={styles.smsIcon}
                 name='android-messages'
                 color={COLORS.white}
