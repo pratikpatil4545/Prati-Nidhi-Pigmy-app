@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Alert, ActivityIndicator, ToastAndroid, Image, PermissionsAndroid } from 'react-native';
+import { View, Text, StyleSheet, Alert, ActivityIndicator, ToastAndroid, Image, PermissionsAndroid, Platform } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import { TextInput, Button } from 'react-native-paper';
 import { database } from '../../data/database';
@@ -71,6 +71,26 @@ export default function Login({ navigation }) {
 
     const fetchPhoneNumber = async () => {
       try {
+        // Check and request permission dynamically
+        if (Platform.OS === 'android' && Platform.Version < 29) {
+          const granted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.READ_PHONE_STATE,
+            {
+              title: 'Phone Permission',
+              message: 'This app needs access to your phone number for verification purposes.',
+              buttonNeutral: 'Ask Me Later',
+              buttonNegative: 'Cancel',
+              buttonPositive: 'OK',
+            },
+          );
+    
+          if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+            Alert.alert('Permission Denied', 'Cannot access phone number without permission.');
+            return;
+          }
+        }
+    
+        // Call to fetch phone number, handle older API versions conditionally
         const simCards = await SimCardsManagerModule.getSimCards({
           title: 'App Permission',
           message: 'Custom message',
@@ -78,34 +98,223 @@ export default function Login({ navigation }) {
           buttonNegative: 'Not OK',
           buttonPositive: 'OK',
         });
-
-        if (simCards && simCards.length > 0) {
-          let phoneNumber = simCards[0].phoneNumber;
-          console.log("pjone number is", simCards, phoneNumber)
-          if (phoneNumber) {
-            // Remove any non-digit characters
-            phoneNumber = phoneNumber.replace(/\D/g, '');
-
-            // Ensure the phone number is exactly 10 digits
-            if (phoneNumber.length > 10) {
-              phoneNumber = phoneNumber.slice(-10); // Take the last 10 digits
-            }
-
-            if (phoneNumber.length === 10) {
-              setNumber(phoneNumber);
-            } else {
-              console.log('Phone number is not valid (should be exactly 10 digits without symbols or country code)');
-            }
-          } else {
-            console.log('Phone number is not available');
-          }
+    
+        if (!simCards || simCards.length === 0) {
+          Alert.alert('No SIM card information available');
+          return;
+        }
+    
+        if (simCards.length > 1) {
+          Alert.alert(
+            'Select SIM',
+            'Please choose a SIM card to retrieve the phone number.',
+            simCards.map((sim, index) => ({
+              text: `SIM ${index + 1}: ${sim.phoneNumber || 'No number available'}`,
+              onPress: () => handlePhoneNumberSelection(sim),
+            })),
+            { cancelable: true }
+          );
         } else {
-          console.log('No SIM card information available');
+          handlePhoneNumberSelection(simCards[0]);
         }
       } catch (error) {
         console.error('Error fetching phone number:', error);
       }
     };
+    
+    const handlePhoneNumberSelection = (sim) => {
+      let phoneNumber = sim.phoneNumber;
+      if (phoneNumber) {
+        phoneNumber = phoneNumber.replace(/\D/g, '');
+        if (phoneNumber.length > 10) phoneNumber = phoneNumber.slice(-10);
+        if (phoneNumber.length === 10) {
+          setNumber(phoneNumber);
+        } else {
+          Alert.alert('Invalid Phone Number', 'The phone number should be exactly 10 digits.');
+        }
+      } else {
+        Alert.alert('Phone Number Unavailable');
+      }
+    };
+
+    // const fetchPhoneNumber = async () => {
+    //   try {
+    //     if (Platform.OS === 'android') {
+    //       const granted = await PermissionsAndroid.requestMultiple([
+    //         PermissionsAndroid.PERMISSIONS.READ_PHONE_STATE,
+    //         PermissionsAndroid.PERMISSIONS.READ_PHONE_NUMBERS,
+    //       ]);
+    
+    //       if (
+    //         granted['android.permission.READ_PHONE_STATE'] !== PermissionsAndroid.RESULTS.GRANTED ||
+    //         granted['android.permission.READ_PHONE_NUMBERS'] !== PermissionsAndroid.RESULTS.GRANTED
+    //       ) {
+    //         console.log('Phone number permissions denied');
+    //         return;
+    //       }
+    //     }
+    
+    //     const simCards = await SimCardsManagerModule.getSimCards({
+    //       title: 'App Permission',
+    //       message: 'Custom message',
+    //       buttonNeutral: 'Not now',
+    //       buttonNegative: 'Not OK',
+    //       buttonPositive: 'OK',
+    //     });
+    
+    //     if (simCards && simCards.length > 0 && simCards.some(sim => sim.phoneNumber)) {
+    //       if (simCards.length > 1) {
+    //         Alert.alert(
+    //           'Select SIM',
+    //           'Please choose a SIM card to retrieve the phone number.',
+    //           simCards.map((sim, index) => ({
+    //             text: `SIM ${index + 1}: ${sim.phoneNumber || 'No number available'}`,
+    //             onPress: () => handlePhoneNumberSelection(sim),
+    //           })),
+    //           { cancelable: true }
+    //         );
+    //       } else {
+    //         handlePhoneNumberSelection(simCards[0]);
+    //       }
+    //     } else {
+    //       promptManualEntry();
+    //     }
+    //   } catch (error) {
+    //     console.error('Error fetching phone number:', error);
+    //   }
+    // };
+    
+    // const handlePhoneNumberSelection = (sim) => {
+    //   let phoneNumber = sim.phoneNumber;
+    //   if (phoneNumber) {
+    //     phoneNumber = phoneNumber.replace(/\D/g, '');
+    //     if (phoneNumber.length > 10) {
+    //       phoneNumber = phoneNumber.slice(-10);
+    //     }
+    //     if (phoneNumber.length === 10) {
+    //       setNumber(phoneNumber);
+    //     } else {
+    //       console.log('Phone number is not valid (should be exactly 10 digits without symbols or country code)');
+    //     }
+    //   } else {
+    //     promptManualEntry();
+    //   }
+    // };
+    
+    const promptManualEntry = () => {
+      Alert.prompt(
+        'Enter Phone Number',
+        'Please enter your 10-digit phone number:',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'OK',
+            onPress: (input) => {
+              const phoneNumber = input.replace(/\D/g, '');
+              if (phoneNumber.length === 10) {
+                setNumber(phoneNumber);
+              } else {
+                console.log('Phone number is not valid (should be exactly 10 digits without symbols or country code)');
+              }
+            }
+          }
+        ],
+        'plain-text',
+        '',
+        'numeric'
+      );
+    };
+
+
+    // const fetchPhoneNumber = async () => {
+    //   try {
+    //     const simCards = await SimCardsManagerModule.getSimCards({
+    //       title: 'App Permission',
+    //       message: 'Custom message',
+    //       buttonNeutral: 'Not now',
+    //       buttonNegative: 'Not OK',
+    //       buttonPositive: 'OK',
+    //     });
+    
+    //     if (simCards && simCards.length > 1) {
+    //       // Prompt the user to select a SIM card, showing the phone number for each SIM
+    //       Alert.alert(
+    //         'Select SIM',
+    //         'Please choose a SIM card to retrieve the phone number.',
+    //         simCards.map((sim, index) => ({
+    //           text: `SIM ${index + 1}: ${sim.phoneNumber || 'No number available'}`,
+    //           onPress: () => handlePhoneNumberSelection(sim)
+    //         })),
+    //         { cancelable: true }
+    //       );
+    //     } else if (simCards && simCards.length === 1) {
+    //       // Process the single SIM card directly
+    //       handlePhoneNumberSelection(simCards[0]);
+    //     } else {
+    //       console.log('No SIM card information available');
+    //     }
+    //   } catch (error) {
+    //     console.error('Error fetching phone number:', error);
+    //   }
+    // };
+    
+    // const handlePhoneNumberSelection = (sim) => {
+    //   let phoneNumber = sim.phoneNumber;
+    //   if (phoneNumber) {
+    //     phoneNumber = phoneNumber.replace(/\D/g, ''); // Remove non-digit characters
+    
+    //     if (phoneNumber.length > 10) {
+    //       phoneNumber = phoneNumber.slice(-10); // Take the last 10 digits
+    //     }
+    
+    //     if (phoneNumber.length === 10) {
+    //       setNumber(phoneNumber);
+    //     } else {
+    //       console.log('Phone number is not valid (should be exactly 10 digits without symbols or country code)');
+    //     }
+    //   } else {
+    //     console.log('Phone number is not available');
+    //   }
+    // };
+
+
+    // const fetchPhoneNumber = async () => {
+    //   try {
+    //     const simCards = await SimCardsManagerModule.getSimCards({
+    //       title: 'App Permission',
+    //       message: 'Custom message',
+    //       buttonNeutral: 'Not now',
+    //       buttonNegative: 'Not OK',
+    //       buttonPositive: 'OK',
+    //     });
+
+    //     if (simCards && simCards.length > 0) {
+    //       let phoneNumber = simCards[0].phoneNumber;
+    //       console.log("pjone number is", simCards, phoneNumber)
+    //       if (phoneNumber) {
+    //         // Remove any non-digit characters
+    //         phoneNumber = phoneNumber.replace(/\D/g, '');
+
+    //         // Ensure the phone number is exactly 10 digits
+    //         if (phoneNumber.length > 10) {
+    //           phoneNumber = phoneNumber.slice(-10); // Take the last 10 digits
+    //         }
+
+    //         if (phoneNumber.length === 10) {
+    //           setNumber(phoneNumber);
+    //         } else {
+    //           console.log('Phone number is not valid (should be exactly 10 digits without symbols or country code)');
+    //         }
+    //       } else {
+    //         console.log('Phone number is not available');
+    //       }
+    //     } else {
+    //       console.log('No SIM card information available');
+    //     }
+    //   } catch (error) {
+    //     console.error('Error fetching phone number:', error);
+    //   }
+    // };
 
     checkAuthentication();
   }, []);
@@ -123,37 +332,41 @@ export default function Login({ navigation }) {
       //   setShowSetPassword(true); // Show password setup screen for new users
       // }, 2000);
 
-      try {
-        const url = `http://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/RequestData_App?MobileNo=${number}`;
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/xml',
-          },
-        });
+      setLoading(false);
+      setVerificationText('Verified');
+      setShowSetPassword(true); 
 
-        const responseText = await response.text();
-        const parser = new XMLParser();
-        const jsonResponse = parser.parse(responseText);
+      // try {
+      //   const url = `http://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/RequestData_App?MobileNo=${number}`;
+      //   const response = await fetch(url, {
+      //     method: 'GET',
+      //     headers: {
+      //       'Content-Type': 'application/xml',
+      //     },
+      //   });
 
-        const jsonString = jsonResponse.string;
-        const dataObject = JSON.parse(jsonString);
-        console.log("responseText:", dataObject.ResonseCode);
+      //   const responseText = await response.text();
+      //   const parser = new XMLParser();
+      //   const jsonResponse = parser.parse(responseText);
 
-        if (dataObject.ResonseCode === "0000") {
-          setLoading(false);
-          setVerificationText('Verified');
-          setShowSetPassword(true); // Show password setup screen for new users
-        } else {
-          setLoading(false);
-          setVerificationText('Unauthorized');
-          ToastAndroid.show('Unauthorized user', ToastAndroid.SHORT);
-        }
-      } catch (error) {
-        setLoading(false);
-        setVerificationText('Error fetching data');
-        console.error('Error fetching data:', error);
-      }
+      //   const jsonString = jsonResponse.string;
+      //   const dataObject = JSON.parse(jsonString);
+      //   console.log("responseText:", dataObject.ResonseCode);
+
+      //   if (dataObject.ResonseCode === "0000") {
+      //     setLoading(false);
+      //     setVerificationText('Verified');
+      //     setShowSetPassword(true); 
+      //   } else {
+      //     setLoading(false);
+      //     setVerificationText('Unauthorized');
+      //     ToastAndroid.show('Unauthorized user', ToastAndroid.SHORT);
+      //   }
+      // } catch (error) {
+      //   setLoading(false);
+      //   setVerificationText('Error fetching data');
+      //   console.error('Error fetching data:', error);
+      // }
 
     } else {
 

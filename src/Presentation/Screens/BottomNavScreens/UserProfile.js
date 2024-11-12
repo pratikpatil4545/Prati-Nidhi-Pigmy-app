@@ -31,8 +31,11 @@ export default function UserProfile({ route, navigation }) {
   const [BrAgCode, setBrAgCode] = useState(null);
   const [FileCreateDate, setFileCreateDate] = useState(null);
   const [InputFileType, setInputFileType] = useState(null);
+  const [isFocusedInput, setIsFocusedInput] = useState(false);
+  const [hasCleared, setHasCleared] = useState(false);
+  const [buttonLoading, setButtonLoading] = useState(false);
 
-  // console.log("routes", route.params.setRefreshData)
+  // console.log("routes", item)
 
   useEffect(() => {
     if (route.params.item.Mobile1 === '0' || !route.params.item.Mobile1) {
@@ -40,6 +43,7 @@ export default function UserProfile({ route, navigation }) {
     }
     else {
       setmobileInputVisible(false);
+      setmobileNumber(route.params.item.Mobile1)
     }
   }, [route.params.item])
 
@@ -48,19 +52,34 @@ export default function UserProfile({ route, navigation }) {
     let amountValue = parseFloat(amount) || 0;
 
     if (item.IsAmtToBeAdded === 'False' && currentBalance < amountValue) {
-      // console.log("old amount vs  xxnew amount  ss", currentBalance, amountValue)
       let temp = parseFloat(amountValue) - parseFloat(currentBalance);
-      // console.log("minus value", temp)
       setAmount(temp.toString());
-    }
-    else if (item.IsAmtToBeAdded === 'False' && updatedBalances === 0) {
+    } else if (item.IsAmtToBeAdded === 'False' && updatedBalances === 0) {
       setAmount(null);
       setCollectionMadeToday(true);
-    }
-    else {
+    } else {
       setAmount(item.DailyAmt);
     }
-  }, [item, modalVisible])
+  }, [item, modalVisible]);
+
+  // useEffect(() => {
+  //   let currentBalance = parseFloat(item.ThisMthBal) || 0;
+  //   let amountValue = parseFloat(amount) || 0;
+
+  //   if (item.IsAmtToBeAdded === 'False' && currentBalance < amountValue) {
+  //     // console.log("old amount vs  xxnew amount  ss", currentBalance, amountValue)
+  //     let temp = parseFloat(amountValue) - parseFloat(currentBalance);
+  //     // console.log("minus value", temp)
+  //     setAmount(temp.toString());
+  //   }
+  //   else if (item.IsAmtToBeAdded === 'False' && updatedBalances === 0) {
+  //     setAmount(null);
+  //     setCollectionMadeToday(true);
+  //   }
+  //   else {
+  //     setAmount(item.DailyAmt);
+  //   }
+  // }, [item, modalVisible])
 
   useEffect(() => {
     // setLoading(true);
@@ -70,7 +89,7 @@ export default function UserProfile({ route, navigation }) {
     // let temp = filteredTransactions[0];
     if (filteredTransactions && filteredTransactions.length > 0) {
       const latestTransaction = filteredTransactions[filteredTransactions.length - 1];
-      console.log("updated balance", latestTransaction)
+      // console.log("updated balance", latestTransaction)
 
       setupdatedBalance(latestTransaction?.OpeningBal);
       setLoading(false);
@@ -132,7 +151,7 @@ Collected date and time: ${formatDateTime(new Date())}`;
   const handleSmsPress = async () => {
     const savedData = await AsyncStorage.getItem('dataObject');
     const dataObject = JSON.parse(savedData);
-  
+
     const getNumber = mobileInputVisible ? mobileNumber : parseInt(route.params.item.Mobile1);
     const phoneNumber = `+91${getNumber}`;
     const message = `Hi, the amount has been successfully collected. Here is your receipt:
@@ -144,7 +163,7 @@ Collected date and time: ${formatDateTime(new Date())}`;
   Closing Balance: ${newBalance ? newBalance : 0}.00
   Agent Name: ${dataObject.MstrData?.AgNameE}
   Collected date and time: ${formatDateTime(new Date())}`;
-  
+
     const smsUrl = `sms:${phoneNumber}?body=${encodeURIComponent(message)}`;
     try {
       await Linking.openURL(smsUrl);
@@ -242,180 +261,398 @@ Collected date and time: ${formatDateTime(new Date())}`;
     const message = `
     Name: ${item.EnglishName}
 Account Number: ${item.AccountNo}
-Old Account Balance: ${(updatedBalances || updatedBalances === 0) ? updatedBalances : item.ThisMthBal}.00
+Opeing Balance: ${(updatedBalances || updatedBalances === 0) ? updatedBalances : item.ThisMthBal}.00
 Amount Collected: ${amount}.00
 Total Account Balance: ${newBalance ? newBalance : 0}.00
   `;
 
-    // setModalVisible2(true);
+
     Alert.alert(
       'Please Confirm Collection',
-      message.trim()
+      message.trim(),
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Confirm', onPress: () => { setModalVisible2(true) } }
+      ]
     );
+
+    // Alert.alert(
+    //   'Please Confirm Collection',
+    //   message.trim()
+    // );
   }
 
+  // const handleSubmit = async () => {
+  //   setButtonLoading(true);
+  //   let OneShotLmt = parseInt(item.OneShotLmt);
+  //   let maxBalance = parseInt(item.MaxBalance);
+  //   let currentBalance = parseFloat(item.ThisMthBal) || 0;
+  //   let amountValue = parseFloat(amount) || 0;
+  //   let updatedBalance = currentBalance + amountValue;
+  //   let dailyAmount = parseInt(item.DailyAmt);
+  //   let maxInstalled = parseInt(item.MaxInstal);
+
+  //   if (!mobileNumber) {
+  //     Alert.alert('Warning', `Plese enter customer's Mobile Number`);
+  //     setButtonLoading(false);
+  //     return;
+  //   }
+  //   console.log(mobileNumber.length)
+  //   if (mobileNumber.length !== 10 || /\D/.test(mobileNumber)) {
+  //     Alert.alert('Warning', `Please enter a valid 10-digit mobile number`);
+  //     setButtonLoading(false);
+  //     return;
+  //   }
+
+  //   if (OneShotLmt != 0) {
+  //     if (amountValue >= OneShotLmt) {
+  //       Alert.alert('Warning', 'Amount inputed is greater than one shot limit, please re-input amount less than one shot limit.');
+  //       setButtonLoading(false);
+  //       return;
+  //     }
+  //   }
+
+  //   if (maxBalance != 0) {
+  //     if (updatedBalance >= maxBalance) {
+  //       Alert.alert('Warning', 'Amount inputed is greater than maximum balance, please re-input amount less than maximum balance.');
+  //       setButtonLoading(false);
+  //       return;
+  //     }
+  //   }
+
+  //   if (maxInstalled != 0 && dailyAmount != 0) {
+  //     if (amountValue != dailyAmount) {
+  //       Alert.alert('Warning', 'Amount inputed is not equal to daily amount, please re-input amount which is equal to daily amount.');
+  //       setButtonLoading(false);
+  //       return;
+  //     }
+  //   }
+
+  //   if (maxInstalled != 0 && dailyAmount != 0) {
+  //     if (amountValue % dailyAmount === 0 && amountValue <= maxInstalled) {
+  //       console.log('Valid amount entered');
+  //     } else {
+  //       if (amountValue % dailyAmount !== 0) {
+  //         Alert.alert('Warning', `Please enter an amount that is a multiple of ${dailyAmount}.`);
+  //         setButtonLoading(false);
+  //         return;
+  //       } else if (amountValue > maxInstalled) {
+  //         Alert.alert('Amount Exceeds Maximum', `The entered amount exceeds the maximum allowed: ${maxInstalled}.`);
+  //         setButtonLoading(false);
+  //         return;
+  //       }
+  //     }
+  //   }
+
+  //   if (updatedBalance === 0 && item.IsAmtToBeAdded === 'False') {
+  //     Alert.alert('Warning', `Opening balance for this lien account is '0' so cannot take any further collection.`);
+  //     setModalVisible(false);
+  //     setButtonLoading(false);
+  //     return;
+  //   }
+
+  //   if (amountValue <= 0) {
+  //     Alert.alert('Warning', 'Please enter amount.');
+  //     setButtonLoading(false);
+  //     return;
+  //   }
+
+  //   const receiptNo = generateReceiptNo();
+
+  //   try {
+  //     let transactionTable = await AsyncStorage.getItem('transactionTable');
+  //     transactionTable = transactionTable ? JSON.parse(transactionTable) : [];
+
+  //     const filteredTransactions = transactionTable.filter(
+  //       (entry) => entry.AccountNo === item.AccountNo && entry.GLCode === item.GLCode
+  //     );
+
+  //     filteredTransactions.sort((a, b) => new Date(b.CollDateTime) - new Date(a.CollDateTime));
+
+  //     let openingBalance = 0;
+  //     if (filteredTransactions.length > 0) {
+  //       const latestTransaction = filteredTransactions[0];
+  //       console.log("Opening balance from latest transaction:", latestTransaction);
+  //       openingBalance = parseFloat(latestTransaction.OpeningBal);
+
+  //       if (isNaN(openingBalance)) {
+  //         openingBalance = 0;
+  //       }
+
+  //       if (item.IsAmtToBeAdded === 'True') {
+  //         openingBalance += amountValue;
+  //       } else if (openingBalance >= amountValue) {
+  //         openingBalance -= amountValue;
+  //       } else {
+  //         Alert.alert('Error', 'Insufficient balance.');
+  //         setButtonLoading(false);
+  //         return;
+  //       }
+  //     } else {
+  //       openingBalance = updatedBalance;
+  //     }
+
+  //     // console.log("opeing balanc below", openingBalance)
+
+  //     setNewBalance(openingBalance);
+  //     let agentsPhn = await AsyncStorage.getItem('mobileNumber');
+
+  //     let transactionData = {
+  //       // receiptNo: receiptNo,
+  //       GLCode: item.GLCode,
+  //       AccountNo: item.AccountNo,
+  //       EnglishName: item.EnglishName,
+  //       OpeningBal: openingBalance.toString(),
+  //       Collection: amountValue?.toString(),
+  //       ClosingBal: openingBalance?.toString(),
+  //       CollDateTime: formatDateTime1(new Date()),
+  //       IsitNew: 'false',
+  //       IsAmtAdd: item.IsAmtToBeAdded === 'True' ? "1" : "0",
+  //       // MobileNo: '1234567890'
+  //       MobileNo: mobileInputVisible ? mobileNumber : parseInt(route.params.item.Mobile1)
+  //     };
+
+  //     transactionTable.push(transactionData);
+  //     // await AsyncStorage.setItem('transactionTable', JSON.stringify(transactionData));
+
+  //     const newArray = {
+  //       ClientID: ClientID,
+  //       BrCode: BrCode,
+  //       AgCode: AgCode,
+  //       BrAgCode: BrAgCode,
+  //       FileCreateDate: FileCreateDate,
+  //       InputFileType: InputFileType,
+  //       NoOfRecords: '1',
+  //       CollectionData: [
+  //         transactionData
+  //       ]
+  //     };
+  //     console.log(" new array", newArray)
+
+  //     const agentmobileNumber = await AsyncStorage.getItem('mobileNumber');
+
+  //     if (agentmobileNumber) {
+  //       const newArrayString = JSON.stringify(newArray);
+
+  //       const url = `http://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp`;
+
+  //       try {
+  //         const response = await fetch(url, {
+  //           method: 'POST',
+  //           headers: {
+  //             'Content-Type': 'application/x-www-form-urlencoded',
+  //           },
+  //           body: new URLSearchParams({ DataFromApp: newArrayString }).toString(),
+  //         });
+
+  //         const responseData = await response.text();
+  //         console.log("Response:", responseData);
+  //       } catch (error) {
+  //         setButtonLoading(false);
+  //         console.error("Error during API call:", error);
+  //       }
+  //     }
+  //     await AsyncStorage.setItem('transactionTable', JSON.stringify(transactionTable));
+  //     setCollectionMadeToday(true);
+  //     setModalVisible2(true);
+  //     setButtonLoading(false);
+  //     // route.params.setRefreshData(true);
+  //     navigation.navigate('DashboardStack', { refreshData: true });
+
+  //   } catch (error) {
+  //     console.error("Error while processing transaction:", error);
+  //     setButtonLoading(false);
+  //     Alert.alert('Error', 'An error occurred while processing your transaction. Please try again.');
+  //   } finally {
+  //     setButtonLoading(false);
+  //   }
+  // };
+
+
   const handleSubmit = async () => {
-    let OneShotLmt = parseInt(item.OneShotLmt);
-    let maxBalance = parseInt(item.MaxBalance);
-    let currentBalance = parseFloat(item.ThisMthBal) || 0;
-    let amountValue = parseFloat(amount) || 0;
-    let updatedBalance = currentBalance + amountValue;
-    let dailyAmount = parseInt(item.DailyAmt);
-    let maxInstalled = parseInt(item.MaxInstal);
-
-    if (!mobileNumber) {
-      Alert.alert('Warning', `Plese enter customer's Mobile Number`);
-      return;
-    }
-    console.log(mobileNumber.length)
-    if (mobileNumber.length !== 10 || /\D/.test(mobileNumber)) {
-      Alert.alert('Warning', `Please enter a valid 10-digit mobile number`);
-      return;
-    }
-
-    if (OneShotLmt != 0) {
-      if (amountValue >= OneShotLmt) {
-        Alert.alert('Warning', 'Amount inputed is greater than one shot limit, please re-input amount less than one shot limit.');
-        return;
+    setButtonLoading(true);
+    const { OneShotLmt, MaxBalance, ThisMthBal, DailyAmt, MaxInstal, IsAmtToBeAdded, GLCode, AccountNo, EnglishName } = item;
+    const mobileValidation = () => {
+      if (!mobileNumber) {
+        Alert.alert('Warning', `Please enter customer's Mobile Number`);
+        return false;
       }
-    }
-
-    if (maxBalance != 0) {
-      if (updatedBalance >= maxBalance) {
-        Alert.alert('Warning', 'Amount inputed is greater than maximum balance, please re-input amount less than maximum balance.');
-        return;
+      if (mobileNumber.length !== 10 || /\D/.test(mobileNumber)) {
+        Alert.alert('Warning', `Please enter a valid 10-digit mobile number`);
+        return false;
       }
-    }
+      return true;
+    };
 
-    if (maxInstalled != 0 && dailyAmount != 0) {
-      if (amountValue != dailyAmount) {
-        Alert.alert('Warning', 'Amount inputed is not equal to daily amount, please re-input amount which is equal to daily amount.');
-        return;
-      }
-    }
+    const amountValidation = () => {
+      const currentBalance = parseFloat(ThisMthBal) || 0;
+      const amountValue = parseFloat(amount) || 0;
+      const updatedBalance = currentBalance + amountValue;
+      const conditions = [
+        { condition: OneShotLmt != 0 && amountValue >= parseInt(OneShotLmt), message: 'Amount exceeds one shot limit.' },
+        { condition: MaxBalance != 0 && updatedBalance >= parseInt(MaxBalance), message: 'Amount exceeds maximum balance.' },
+        { condition: MaxInstal != 0 && DailyAmt != 0 && amountValue != parseInt(DailyAmt), message: 'Amount is not equal to daily amount.' },
+        { condition: MaxInstal != 0 && DailyAmt != 0 && (amountValue % parseInt(DailyAmt) !== 0 || amountValue > parseInt(MaxInstal)), message: `Amount must be a multiple of ${DailyAmt} and not exceed ${MaxInstal}.` },
+        { condition: updatedBalance === 0 && IsAmtToBeAdded === 'False', message: `Opening balance is '0'; cannot take further collection.` },
+        { condition: amountValue <= 0, message: 'Please enter a valid amount.' }
+      ];
 
-    if (maxInstalled != 0 && dailyAmount != 0) {
-      if (amountValue % dailyAmount === 0 && amountValue <= maxInstalled) {
-        console.log('Valid amount entered');
-      } else {
-        if (amountValue % dailyAmount !== 0) {
-          Alert.alert('Warning', `Please enter an amount that is a multiple of ${dailyAmount}.`);
-          return;
-        } else if (amountValue > maxInstalled) {
-          Alert.alert('Amount Exceeds Maximum', `The entered amount exceeds the maximum allowed: ${maxInstalled}.`);
-          return;
+      for (const { condition, message } of conditions) {
+        if (condition) {
+          Alert.alert('Warning', message);
+          return false;
         }
       }
-    }
+      return true;
+    };
 
-    if (updatedBalance === 0 && item.IsAmtToBeAdded === 'False') {
-      Alert.alert('Warning', `Opening balance for this lien account is '0' so cannot take any further collection.`);
-      setModalVisible(false);
+    const calculateCollectionSum = async (accountNo) => {
+      try {
+        let transactionTable = JSON.parse(await AsyncStorage.getItem('transactionTable')) || [];
+
+        const totalCollectionSum = transactionTable
+          .filter(entry => entry.AccountNo === accountNo)
+          .map(entry => parseFloat(entry.Collection) || 0)
+          .reduce((sum, collection) => sum + collection, 0);
+
+        return totalCollectionSum;
+      } catch (error) {
+        console.error("Error calculating collection sum:", error);
+        return 0;
+      }
+    };
+
+
+
+
+    const fetchTransactionData = async () => {
+      try {
+        let transactionTable = JSON.parse(await AsyncStorage.getItem('transactionTable')) || [];
+        const filteredTransactions = transactionTable.filter(
+          (entry) => entry.AccountNo === AccountNo && entry.GLCode === GLCode
+        ).sort((a, b) => new Date(b.CollDateTime) - new Date(a.CollDateTime));
+
+        // let totalSum;
+
+        // calculateCollectionSum(AccountNo).then((totalCollectionSum) => {
+        //   console.log("Total Collection Sum:", totalCollectionSum);
+        //   const totalSum = totalCollectionSum > 0 ? totalCollectionSum : parseInt(amount);
+        //   console.log("Final Total Sum:", totalSum);
+        // });
+
+        let totalSum = parseFloat(amount);
+        const totalCollectionSum = await calculateCollectionSum(AccountNo);
+        totalSum = totalSum + totalCollectionSum;
+        // console.log("Total Collection Sum:", totalCollectionSum);
+        // console.log("Final Total Sum:", totalSum);
+
+        const latestTransaction = filteredTransactions[0];
+        // let openingBalance = parseFloat(latestTransaction?.OpeningBal || ThisMthBal || 0);
+        let openingBalance = parseFloat(ThisMthBal || 0);
+        let closingBalance;
+        // console.log("amount to be added checking old values", latestTransaction, closingBalance);
+        if (IsAmtToBeAdded === 'True') {
+          openingBalance += parseFloat(totalSum);
+          closingBalance = openingBalance + parseFloat(amount);
+          // console.log("amount to be added true", openingBalance, closingBalance);
+        } else if (openingBalance >= parseFloat(amount)) {
+          openingBalance -= parseFloat(totalSum);
+          closingBalance = openingBalance - parseFloat(amount);
+          // console.log("amount to be added false openbal less than amount", openingBalance, closingBalance);
+
+        } else {
+          Alert.alert('Error', 'Insufficient balance.');
+          return null;
+        }
+        return { openingBalance, transactionTable, closingBalance };
+      } catch (error) {
+        console.error("Error fetching transaction data:", error);
+        return null;
+      }
+    };
+
+    const submitData = async (transactionData, newArrayString) => {
+      try {
+        const response = await fetch(`http://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ DataFromApp: newArrayString }).toString(),
+        });
+        // console.log("Response:", await response.text());
+      } catch (error) {
+        console.error("Error during API call:", error);
+      }
+    };
+
+    if (!mobileValidation() || !amountValidation()) {
+      setButtonLoading(false);
       return;
     }
 
     const receiptNo = generateReceiptNo();
-
-    try {
-      let transactionTable = await AsyncStorage.getItem('transactionTable');
-      transactionTable = transactionTable ? JSON.parse(transactionTable) : [];
-
-      const filteredTransactions = transactionTable.filter(
-        (entry) => entry.AccountNo === item.AccountNo && entry.GLCode === item.GLCode
-      );
-
-      filteredTransactions.sort((a, b) => new Date(b.CollDateTime) - new Date(a.CollDateTime));
- 
-      let openingBalance = 0;
-      if (filteredTransactions.length > 0) {
-        const latestTransaction = filteredTransactions[0]; 
-        console.log("Opening balance from latest transaction:", latestTransaction);
-        openingBalance = parseFloat(latestTransaction.OpeningBal);
-
-        if (isNaN(openingBalance)) {
-          openingBalance = 0;
-        }
- 
-        if (item.IsAmtToBeAdded === 'True') {
-          openingBalance += amountValue;
-        } else if (openingBalance >= amountValue) {
-          openingBalance -= amountValue;
-        } else {
-          Alert.alert('Error', 'Insufficient balance.');
-          return;
-        }
-      } else { 
-        openingBalance = updatedBalance;
-      }
-
-      console.log("opeing balanc below", openingBalance)
-
-      setNewBalance(openingBalance);
-      let agentsPhn = await AsyncStorage.getItem('mobileNumber');
-
-      let transactionData = {
-        // receiptNo: receiptNo,
-        GLCode: item.GLCode,
-        AccountNo: item.AccountNo,
-        EnglishName: item.EnglishName,
-        OpeningBal: openingBalance.toString(),
-        Collection: amountValue?.toString(),
-        ClosingBal: openingBalance?.toString(),
-        CollDateTime: formatDateTime1(new Date()),
-        IsitNew: 'false',
-        IsAmtAdd: item.IsAmtToBeAdded === 'True' ? "1" : "0",
-        // MobileNo: '1234567890'
-        MobileNo: mobileInputVisible ? mobileNumber : parseInt(route.params.item.Mobile1)
-      };
-
-      transactionTable.push(transactionData);
-      // await AsyncStorage.setItem('transactionTable', JSON.stringify(transactionData));
-
-      const newArray = {
-        ClientID: ClientID,
-        BrCode: BrCode,
-        AgCode: AgCode,
-        BrAgCode: BrAgCode,
-        FileCreateDate: FileCreateDate,
-        InputFileType: InputFileType,
-        NoOfRecords: '1',
-        CollectionData: [
-          transactionData
-        ]
-      };
-      console.log(" new array", newArray)
-
-      const agentmobileNumber = await AsyncStorage.getItem('mobileNumber');
-
-      if (agentmobileNumber) {
-        const newArrayString = JSON.stringify(newArray);
-
-        const url = `http://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp`;
-
-        try {
-          const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams({ DataFromApp: newArrayString }).toString(),
-          });
-
-          const responseData = await response.text();
-          console.log("Response:", responseData);
-        } catch (error) {
-          console.error("Error during API call:", error);
-        }
-      }
-      await AsyncStorage.setItem('transactionTable', JSON.stringify(transactionTable));
-      setCollectionMadeToday(true);
-      setModalVisible2(true);
-      route.params.setRefreshData(true);
-    } catch (error) {
-      console.error("Error while processing transaction:", error);
-      Alert.alert('Error', 'An error occurred while processing your transaction. Please try again.');
+    const transactionDetails = await fetchTransactionData();
+    if (!transactionDetails) {
+      setButtonLoading(false);
+      return;
     }
+
+    const { openingBalance, transactionTable, closingBalance } = transactionDetails;
+    // let closingBal = openingBalance
+    const transactionData = {
+      GLCode,
+      AccountNo,
+      EnglishName,
+      OpeningBal: openingBalance.toString(),
+      Collection: amount.toString(),
+      ClosingBal: closingBalance.toString(),
+      CollDateTime: formatDateTime1(new Date()),
+      IsitNew: 'false',
+      IsAmtAdd: IsAmtToBeAdded === 'True' ? "1" : "0",
+      MobileNo: mobileInputVisible ? mobileNumber : parseInt(route.params.item.Mobile1),
+    };
+
+    const newArray = {
+      ClientID, BrCode, AgCode, BrAgCode, FileCreateDate, InputFileType, NoOfRecords: '1',
+      CollectionData: [transactionData]
+    };
+
+    // console.log("new array checling", newArray);
+    const message = `
+    Name: ${EnglishName}
+Account Number: ${AccountNo}
+Opeing Balance: ${(updatedBalances || updatedBalances === 0) ? updatedBalances : ThisMthBal}.00
+Amount Collected: ${amount}.00
+Total Account Balance: ${openingBalance ? openingBalance : 0}.00
+  `;
+
+    Alert.alert(
+      'Please Confirm Collection',
+      message.trim(),
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Confirm', onPress: async () => {
+            setNewBalance(openingBalance);
+            await AsyncStorage.setItem('transactionTable', JSON.stringify([...transactionTable, transactionData]));
+            setCollectionMadeToday(true);
+            setModalVisible2(true);
+            await submitData(transactionData, JSON.stringify(newArray));
+          }
+        }
+      ]
+    );
+
+    // await AsyncStorage.setItem('transactionTable', JSON.stringify([...transactionTable, transactionData]));
+    // setCollectionMadeToday(true);
+    // setModalVisible2(true);
+    // await submitData(transactionData, JSON.stringify(newArray));
+    // navigation.navigate('DashboardStack', { refreshData: true });
+
+    setButtonLoading(false);
   };
+
+
+
 
   // const confirmCheck = async () => {
   //   let OneShotLmt = parseInt(item.OneShotLmt);
@@ -425,7 +662,7 @@ Total Account Balance: ${newBalance ? newBalance : 0}.00
   //   let updatedBalance = currentBalance + amountValue;
   //   let dailyAmount = parseInt(item.DailyAmt);
   //   let maxInstalled = parseInt(item.MaxInstal);
-  
+
   //   if (!mobileNumber) {
   //     Alert.alert('Warning', `Please enter the customer's mobile number`);
   //     return;
@@ -434,17 +671,17 @@ Total Account Balance: ${newBalance ? newBalance : 0}.00
   //     Alert.alert('Warning', `Please enter a valid 10-digit mobile number`);
   //     return;
   //   }
-  
+
   //   if (OneShotLmt !== 0 && amountValue >= OneShotLmt) {
   //     Alert.alert('Warning', 'Amount entered exceeds the one-shot limit. Please re-enter.');
   //     return;
   //   }
-  
+
   //   if (maxBalance !== 0 && updatedBalance >= maxBalance) {
   //     Alert.alert('Warning', 'Amount entered exceeds the maximum balance. Please re-enter.');
   //     return;
   //   }
-  
+
   //   if (maxInstalled !== 0 && dailyAmount !== 0) {
   //     if (amountValue !== dailyAmount) {
   //       Alert.alert('Warning', 'Amount entered does not match the daily amount. Please re-enter.');
@@ -455,13 +692,13 @@ Total Account Balance: ${newBalance ? newBalance : 0}.00
   //       return;
   //     }
   //   }
-  
+
   //   if (updatedBalance === 0 && item.IsAmtToBeAdded === 'False') {
   //     Alert.alert('Warning', 'Opening balance for this account is 0. No further collection allowed.');
   //     setModalVisible(false);
   //     return;
   //   }
-  
+
   //   const message = `
   //     Name: ${item.EnglishName}
   //     Account Number: ${item.AccountNo}
@@ -469,7 +706,7 @@ Total Account Balance: ${newBalance ? newBalance : 0}.00
   //     Amount Collected: ${amount}.00
   //     Total Account Balance: ${newBalance ? newBalance : 0}.00
   //   `;
-    
+
   //   Alert.alert(
   //     'Please Confirm Collection',
   //     message.trim(),
@@ -480,14 +717,14 @@ Total Account Balance: ${newBalance ? newBalance : 0}.00
   //   );
   // };
 
- 
+
 
   // const handleSubmit = async () => {
   //   const receiptNo = generateReceiptNo();
   //   try {
   //     let transactionTable = await AsyncStorage.getItem('transactionTable');
   //     transactionTable = transactionTable ? JSON.parse(transactionTable) : [];
-  
+
   //     const transactionData = {
   //       GLCode: item.GLCode,
   //       AccountNo: item.AccountNo,
@@ -500,7 +737,7 @@ Total Account Balance: ${newBalance ? newBalance : 0}.00
   //       IsAmtAdd: item.IsAmtToBeAdded === 'True' ? "1" : "0",
   //       MobileNo: mobileInputVisible ? mobileNumber : parseInt(route.params.item.Mobile1)
   //     };
-  
+
   //     const newArray = {
   //       ClientID: ClientID,
   //       BrCode: BrCode,
@@ -511,12 +748,12 @@ Total Account Balance: ${newBalance ? newBalance : 0}.00
   //       NoOfRecords: '1',
   //       CollectionData: [transactionData]
   //     };
-  
+
   //     const agentmobileNumber = await AsyncStorage.getItem('mobileNumber');
   //     if (agentmobileNumber) {
   //       const newArrayString = JSON.stringify(newArray);
   //       const url = `http://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp`;
-  
+
   //       const response = await fetch(url, {
   //         method: 'POST',
   //         headers: {
@@ -524,11 +761,11 @@ Total Account Balance: ${newBalance ? newBalance : 0}.00
   //         },
   //         body: new URLSearchParams({ DataFromApp: newArrayString }).toString(),
   //       });
-  
+
   //       const responseData = await response.text();
   //       console.log("Response:", responseData);
   //     }
-  
+
   //     transactionTable.push(transactionData);
   //     await AsyncStorage.setItem('transactionTable', JSON.stringify(transactionTable));
   //     setCollectionMadeToday(true);
@@ -540,7 +777,7 @@ Total Account Balance: ${newBalance ? newBalance : 0}.00
   //   }
   // };
 
- 
+
 
   // const handleSubmit = async () => {
   //   let OneShotLmt = parseInt(item.OneShotLmt);
@@ -661,6 +898,7 @@ Total Account Balance: ${newBalance ? newBalance : 0}.00
     setModalVisible2(false);
     checkAsyncStorageForData();
     setisTodayCollected(false);
+    navigation.navigate('DashboardStack', { refreshData: true });
   }
 
   useEffect(() => {
@@ -676,7 +914,7 @@ Total Account Balance: ${newBalance ? newBalance : 0}.00
   const handleNext = () => {
     setModalVisible(false);
     setModalVisible2(false);
-    console.log("navigatibng")
+    // console.log("navigatibng")
     navigation.navigate('DashboardStack', { search: true })
   }
 
@@ -705,7 +943,7 @@ Total Account Balance: ${newBalance ? newBalance : 0}.00
         ) : (
           <View style={styles.left}>
             <Text style={[styles.text1, { color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>Account Number : </Text>
-            <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold', marginHorizontal: 25 }]}>{(item.GLCode != 0) ? item.GLCode : ''}{item.AccountNo}</Text>
+            <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold', marginHorizontal: 25 }]}>{item.AccountNo}</Text>
 
             <Text style={[styles.text1, { color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>Name : </Text>
             <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold', marginHorizontal: 25 }]}>{item.EnglishName}</Text>
@@ -814,7 +1052,7 @@ Total Account Balance: ${newBalance ? newBalance : 0}.00
                   label="Enter mobile number"
                   mode='outlined'
                   outlineColor='#8ABCF9'
-                  autoFocus={true}
+                  // autoFocus={true}
                   // ref={textInputRef} 
                   value={mobileNumber}
                   keyboardType='numeric'
@@ -825,11 +1063,42 @@ Total Account Balance: ${newBalance ? newBalance : 0}.00
                 />
               </View>
             }
+
             <TextInput
+              label="Enter amount"
+              mode="outlined"
+              outlineColor="#8ABCF9"
+              value={amount}
+              keyboardType="numeric"
+              onChangeText={text => setAmount(text)}
+              // onFocus={() => setIsFocusedInput(true)}
+              onFocus={() => {
+                if (!hasCleared) {
+                  setAmount('');
+                  setHasCleared(true);
+                }
+              }}
+              // onBlur={() => setIsFocusedInput(false)}
+              style={{
+                width: "100%",
+                marginBottom: 20,
+                fontSize: 18,
+                marginTop: 20,
+                backgroundColor: COLORS.white,
+              }}
+              outlineStyle={{
+                borderRadius: 15,
+                fontSize: 18,
+                color: COLORS.darkGrey,
+                fontFamily: "Montserrat-Bold",
+              }}
+              contentStyle={{ fontFamily: "Montserrat-SemiBold" }}
+            />
+            {/* <TextInput
               label="Enter amount"
               mode='outlined'
               outlineColor='#8ABCF9'
-              autoFocus={true}
+              // autoFocus={true}
               // ref={textInputRef} 
               value={amount}
               keyboardType='numeric'
@@ -837,9 +1106,11 @@ Total Account Balance: ${newBalance ? newBalance : 0}.00
               style={{ width: "100%", marginBottom: 20, fontSize: 18, marginTop: 20, backgroundColor: COLORS.white }}
               outlineStyle={{ borderRadius: 15, fontSize: 18, color: COLORS.darkGrey, fontFamily: "Montserrat-Bold", }}
               contentStyle={{ fontFamily: "Montserrat-SemiBold", }}
-            />
+            /> */}
             <View style={styles.buttonContainer}>
-              <Button style={{ width: '48%', marginTop: 5 }} mode="contained" labelStyle={{ fontSize: 16, fontFamily: 'Montserrat-Bold' }} onPress={handleSubmit} >Submit</Button>
+              {/* <Button style={{ width: '48%', marginTop: 5 }} mode="contained" labelStyle={{ fontSize: 16, fontFamily: 'Montserrat-Bold' }} loading={buttonLoading} disabled={buttonLoading} onPress={comfirmCheck} >Okay</Button> */}
+
+              <Button style={{ width: '48%', marginTop: 5 }} mode="contained" labelStyle={{ fontSize: 16, fontFamily: 'Montserrat-Bold' }} loading={buttonLoading} disabled={buttonLoading} onPress={handleSubmit} >Submit</Button>
               <Button style={{ width: '48%', marginTop: 5, borderColor: COLORS.primaryAccent }} labelStyle={{ fontSize: 16, fontFamily: 'Montserrat-Bold' }} mode="outlined" onPress={handleCancel} >Cancel</Button>
             </View>
           </View>
@@ -857,8 +1128,10 @@ Total Account Balance: ${newBalance ? newBalance : 0}.00
           backgroundColor={'rgba(0, 0, 0, 0.5)'}
         />
         <View style={styles.modalContainer}>
+
           <View style={styles.modalView}>
-            <MaterialCommunityIcons2 name='cloud-done' color={COLORS.primary} size={100} />
+            <MaterialCommunityIcons2 onPress={() => { setModalVisible2(false), setModalVisible(false) }} name='close' color={COLORS.primary} style={{ position: "absolute", top: 15, right: 15 }} size={30} />
+            <MaterialCommunityIcons2 name='cloud-done' color={COLORS.primary} style={{ elevation: 5 }} size={100} />
             <View style={[styles.dataInfoView, { width: '100%' }]}>
               <View style={styles.left}>
                 <Text style={styles.text1}>Name : </Text>
@@ -875,14 +1148,17 @@ Total Account Balance: ${newBalance ? newBalance : 0}.00
             </View>
 
             <View style={[styles.buttonContainer, { marginTop: 30 }]}>
-              <Button
+              {/* <Button
                 style={styles.modalButton}
                 mode="contained"
                 labelStyle={styles.buttonLabel}
                 onPress={handleSubmit2}
               >
                 Close
-              </Button>
+              </Button> */}
+              {/* <View style={styles.modalButton}>
+                <Text style={styles.buttonLabel}>No Receipt</Text>
+              </View> */}
               <Button
                 icon={'printer'}
                 style={styles.modalButton}
@@ -910,6 +1186,7 @@ Total Account Balance: ${newBalance ? newBalance : 0}.00
                 color={COLORS.white}
                 size={35}
               />
+              <Text style={{ alignSelf: 'center', fontSize: 26, fontWeight: 'thin', color: '#999999' }}>|</Text>
               <MaterialCommunityIcons
                 onPress={handleSmsPress}
                 style={styles.smsIcon}
@@ -917,6 +1194,10 @@ Total Account Balance: ${newBalance ? newBalance : 0}.00
                 color={COLORS.white}
                 size={35}
               />
+              <Text style={{ alignSelf: 'center', fontSize: 26, fontWeight: 'thin', color: '#999999' }}>|</Text>
+              <Pressable onPress={handleSubmit2} style={styles.noReceipt}>
+                <Text style={styles.buttonLabel}>No Receipt</Text>
+              </Pressable>
             </View>
           </View>
         </View>
@@ -1030,7 +1311,7 @@ const styles = StyleSheet.create({
   modalButton: {
     flex: 1,
     marginHorizontal: 5,
-    marginVertical: 5,
+    marginVertical: 10,
     borderColor: COLORS.primaryAccent,
   },
   buttonLabel: {
@@ -1043,6 +1324,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#25D366',
     borderRadius: 15,
     padding: 5,
+    elevation: 5,
+
+  },
+  noReceipt: {
+    // marginHorizontal: 5,
+    // marginVertical: 5,
+    backgroundColor: '#e1ebfa',
+    elevation: 2,
+    borderRadius: 10,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 5,
   },
   smsIcon: {
     marginHorizontal: 5,
@@ -1050,6 +1344,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     borderRadius: 15,
     padding: 5,
+    elevation: 5,
+
   }
 
 })

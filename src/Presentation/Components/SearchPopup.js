@@ -7,13 +7,14 @@ import { useIsFocused, useNavigation } from '@react-navigation/native';
 import SkeletonPlaceholder from 'react-native-skeleton-placeholder';
 import { XMLParser } from 'fast-xml-parser';
 
-export default function SearchPopup(props) {
+export default function SearchPopup(props,{route}) {
     const { modalVisible, setModalVisible, searchQuery } = props;
     const [data, setData] = useState([]);
     const [filteredData, setFilteredData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [visibleItemsCount, setVisibleItemsCount] = useState(10); // Initially render 10 items
     const isFocused = useIsFocused();
+    const navigation = useNavigation();
     const [refreshData, setRefreshData] = useState(false);
     // console.log("propss ", props)
     useEffect(() => {
@@ -76,7 +77,19 @@ export default function SearchPopup(props) {
 
     useEffect(() => {
         getMasterData();
-    }, [isFocused, refreshData]);
+    }, [isFocused]);
+
+    useEffect(() => {
+        const unsubscribe = navigation.addListener('focus', () => {
+          if (route?.params?.refreshData) {
+            setRefreshData(true); // or any method to refresh data
+            navigation.setParams({ refreshData: false }); // reset to prevent repeat refresh
+          }
+        });
+      
+        return unsubscribe;
+      }, [navigation, route?.params]);
+      
 
     useEffect(() => {
         const handleBackPress = () => {

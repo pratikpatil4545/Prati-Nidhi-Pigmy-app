@@ -7,7 +7,7 @@ import { useNavigation } from '@react-navigation/native';
 export default function DataCard(props) {
 
   const navigation = useNavigation();
-  // console.log("searchQuery", props.item)
+  // console.log("searchQuery", props)
 
   const handlePress = () => {
     // setModalVisible(true);

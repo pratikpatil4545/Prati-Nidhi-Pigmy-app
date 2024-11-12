@@ -11,7 +11,7 @@ export default function Profile({ navigation, route }) {
 
   const isFocused = useIsFocused();
   const [transactionTable, setTransactionTable] = useState([]);
-  console.log("routes", route.params, transactionTable.length)
+  // console.log("routes", route.params, transactionTable.length)
   useEffect(() => {
     const handleBackPress = () => {
       navigation.navigate('BottomTabs');

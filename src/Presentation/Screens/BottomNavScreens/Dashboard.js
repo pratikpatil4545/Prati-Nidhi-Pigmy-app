@@ -64,16 +64,18 @@ export default function Dashboard({ navigation, route }) {
             setSearchedResults(true);
         }
         setSearchQuery('');
+        // console.log('1 use effect called');
     }, [isFocused])
 
     useEffect(() => {
+        // console.log('2 use effect called');
         const checkLicenseValidity = () => {
             const currentDate = new Date(); // Get current date
             const expiryDate = new Date(LicenseValidUpto); // Parse expiry date from the state
             const timeDiff = expiryDate.getTime() - currentDate.getTime(); // Get the difference in time (milliseconds)
             const daysLeft = Math.ceil(timeDiff / (1000 * 3600 * 24)); // Convert time difference to days
 
-            console.log("Days left until expiry:", daysLeft);
+            // console.log("Days left until expiry:", daysLeft);
 
             if (daysLeft <= 0) {
                 // If the current date is past the expiry date
@@ -98,10 +100,14 @@ export default function Dashboard({ navigation, route }) {
         if (!IsActive) {
             Alert.alert('Account Activation', 'Your account has not active. Please contact your branch.');
             setLicenseExpired(true);
+        // console.log('3 use effect called');
+
         }
     }, [LicenseValidUpto])
 
     useEffect(() => {
+        // console.log('4 use effect called');
+
         if (!fileCreatedDate || !noOfDaysAllowed) return;
 
         const fileDate = new Date(fileCreatedDate);
@@ -118,6 +124,8 @@ export default function Dashboard({ navigation, route }) {
     }, [fileCreatedDate, noOfDaysAllowed]);
 
     useEffect(() => {
+        // console.log('5 use effect called');
+
         let len1 = parseInt(mappedMasterData?.length);
         let len2 = parseInt(NoOfRecords);
         if (len1 && len2) {
@@ -131,7 +139,9 @@ export default function Dashboard({ navigation, route }) {
         }
     }, [NoOfRecords, mappedMasterData?.length])
 
-    useEffect(() => {
+    useEffect(() => {       
+        //  console.log('6 use effect called');
+
         const handleBackPress = () => {
             if (backPressedOnce && !searchedResults) {
                 BackHandler.exitApp();
@@ -161,7 +171,7 @@ export default function Dashboard({ navigation, route }) {
     const getFileContent = async () => {
         setLoading(true);
         try {
-            console.log("No saved data found, making API call...");
+            // console.log("No saved data found, making API call...");
             const mobileNumber = await AsyncStorage.getItem('mobileNumber');
 
             if (mobileNumber) {
@@ -180,7 +190,7 @@ export default function Dashboard({ navigation, route }) {
 
                 const jsonString = jsonResponse.string;
                 const dataObject = JSON.parse(jsonString);
-                console.log("responseText:", dataObject.MstrData?.FileCreateDate);
+                // console.log("responseText:", dataObject.ResponseString);
 
                 if (dataObject.ResonseCode === '0000') {
                     await AsyncStorage.setItem('dataObject', JSON.stringify(dataObject));
@@ -205,14 +215,17 @@ export default function Dashboard({ navigation, route }) {
                     setInputFileType(dataObject.MstrData?.InputFileType);
                     setGlLastAcc(dataObject.MstrData?.GLLastAc);
                     // setMultipleCollection(false)
-                    setMultipleCollection((dataObject.MstrData?.AllowMultipleColln === 'True') ? true : false)
+                    setMultipleCollection((dataObject.MstrData?.AllowMultipleColln === 'True') ? true : false);
+                    setSearchedResults(true)
                     // ToastAndroid.show('API call successful and data saved!', ToastAndroid.SHORT);
                 }
                 else {
+                    if (dataObject.ResonseCode != '0000') {
                     Alert.alert(
-                        'Unauthorized User',
-                        'This mobile number is not registered.'
+                        'Error:',
+                        `Code : ${dataObject.ResonseCode}, ${dataObject.ResponseString}`
                     );
+                }
                     setDataAvailable(false);
                     setIsAuth(false);
                 }
@@ -234,6 +247,8 @@ export default function Dashboard({ navigation, route }) {
     };
 
     useEffect(() => {
+        // console.log('7 use effect called');
+
         const checkFirstLogin = async () => {
             const firstLoginComplete = await AsyncStorage.getItem('firstLoginComplete');
             if (!firstLoginComplete) {
@@ -283,6 +298,8 @@ export default function Dashboard({ navigation, route }) {
     };
 
     useEffect(() => {
+        // console.log('8 use effect called');
+
         fetchTransactionTable();
     }, [isFocused]);
 
@@ -320,9 +337,10 @@ export default function Dashboard({ navigation, route }) {
                             const responseString = dataObject.ResponseString;
                             const numberAfterHyphen = responseString.split('-')[1]?.trim();
 
-                            console.log("Number after hyphen:", numberAfterHyphen, transactionTable.length);
-                            let tempCount = parseInt(transactionTable.length);
-                            if (parseInt(numberAfterHyphen) != parseInt(tempCount)) {
+                            // console.log("Number after hyphen:", numberAfterHyphen, transactionTable.length);
+                            let tempCount = parseInt(transactionTable.length) + 25000;
+                            // if (parseInt(numberAfterHyphen) != parseInt(tempCount)) {
+                            if (parseInt(numberAfterHyphen) === parseInt(tempCount)) {
                                 Alert.alert('Cannot Close collection!', `You have collected ${transactionTable.length} reciepts out of ${NoOfRecords}. and total collected amount is Rs ${totalAmount}.00/-`)
                                 setButtonLoading(false);
                             }
@@ -333,7 +351,8 @@ export default function Dashboard({ navigation, route }) {
 
                                 if (agentmobileNumber) {
 
-                                    const url = `http://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/CloseCollection_FromApp`;
+                                    const url = `http://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/Dummy_CloseCycle`;
+                                    // const url = `http://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/CloseCollection_FromApp`;
                                     let tempCount = parseInt(transactionTable.length);
                                     try {
                                         const response = await fetch(url, {
@@ -344,7 +363,7 @@ export default function Dashboard({ navigation, route }) {
                                             body: new URLSearchParams({
                                                 MobileNo: agentmobileNumber,
                                                 Fdate: FileCreateDate,
-                                                NoofRecs: parseInt(tempCount)
+                                                // NoofRecs: parseInt(tempCount)
                                             }).toString(),
                                         });
 
@@ -387,17 +406,22 @@ export default function Dashboard({ navigation, route }) {
                                             await AsyncStorage.removeItem('transactionTable');
                                             // setLoading(true);
                                             setTransactionTable([]);
-                                            setTotalAmount(0);
+                                            setTotalAmount(null);
                                             fetchTransactionTable();
                                             setButtonLoading(false);
                                             setDataAvailable(false);
+                                            setClientName(null);
+                                            setBranchName(null);
+                                            setBranchCode(null);
+                                            setAgentName(null);
+                                            await AsyncStorage.removeItem('firstLoginComplete');
                                             // setIsDataValid(false);
                                         }
                                         else {
                                             setButtonLoading(false);
                                             ToastAndroid.show("error while closing Collections", ToastAndroid.LONG)
                                         }
-                                        console.log("Response closed collection:", responseString);
+                                        // console.log("Response closed collection:", responseString);
                                     } catch (error) {
                                         setButtonLoading(false);
                                         ToastAndroid.show("Failed to close Collections. Please try again", ToastAndroid.LONG)
@@ -515,7 +539,7 @@ export default function Dashboard({ navigation, route }) {
                 ]
             };
 
-            console.log("new user array", transactionData);
+            // console.log("new user array", transactionData);
             const agentmobileNumber = await AsyncStorage.getItem('mobileNumber');
 
             if (agentmobileNumber) {
@@ -533,7 +557,7 @@ export default function Dashboard({ navigation, route }) {
                     });
 
                     const responseData = await response.text();
-                    console.log("Response:", responseData);
+                    // console.log("Response:", responseData);
                 } catch (error) {
                     console.error("Error during API call:", error);
                 }
@@ -627,19 +651,19 @@ export default function Dashboard({ navigation, route }) {
         setModalVisible2(false);
     }
 
+    // console.log(" checking get data alloweded,", loading, !isFirstLogin, dataAvailable, LicenseExpired)
     return (
         <View style={styles.dashView}>
             <StatusBar backgroundColor={COLORS.primaryAccent} barStyle="light-content" />
 
-            {dataAvailable && !isFirstLogin && isDataValid ? (
-                <>
+            <>
+                {(dataAvailable || collectionAllowed) &&
                     <View style={{ width: windowWidth * 1, height: windowHeight * 0.1, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly' }}>
                         <Searchbar
                             placeholder="Search by Name or A/C No"
                             onChangeText={setSearchQuery}
                             // loading={true}
                             value={searchQuery}
-                            disabled
                             autoFocus={searchedResults}
                             onIconPress={() => { setSearchedResults(false), setSearchQuery(''), Keyboard.dismiss() }}
                             icon={searchedResults ? 'arrow-left-thin' : 'magnify'}
@@ -657,157 +681,104 @@ export default function Dashboard({ navigation, route }) {
                         <Pressable onPress={() => { navigation.navigate('Profile', { count: NoOfRecords, amount: totalAmount, collectionAllowed: collectionAllowed }) }}>
                             <MaterialCommunityIcons2 name='user-circle' style={{ elevation: 5 }} elevation={5} color={COLORS.primary} size={45} />
                         </Pressable>
-                    </View>
-
-                    {searchedResults ? (
-                        <>
-                            <SearchPopup BranchName={BranchName} BranchCode={BranchCode} collectionAllowed={collectionAllowed} multipleCollection={multipleCollection} mappedMasterData={mappedMasterData} setSearchedResults={setSearchedResults} searchQuery={searchQuery} />
-                        </>
-                    ) : (
-                        <View style={{ height: windowHeight * 0.80 }}>
-                            <View style={[styles.dataInfoView, { width: windowWidth * 0.90, alignSelf: 'center', flexDirection: 'row', height: 50 }]}>
-                                <View>
-                                    {/* <Text style={styles.text}>Client Name</Text> */}
-                                    <Text style={[styles.text, { fontSize: 14, fontFamily: 'Montserrat-Bold' }]}>{ClientName} </Text>
-                                </View>
-                                <View>
-                                    <Text style={styles.text}>Branch</Text>
-                                    <Text style={[styles.text, { fontSize: 14, fontFamily: 'Montserrat-Bold' }]}>{BranchName} ({BranchCode}) </Text>
-                                </View>
-                            </View>
-
-                            <View>
-                                <Text style={[styles.text, { marginTop: 10, marginBottom: 0, marginLeft: 20 }]}>Agent Name: <Text style={[styles.text, { fontSize: 14, fontFamily: 'Montserrat-Bold' }]}>{AgentName} </Text></Text>
-                            </View>
-                            <View style={{ width: windowWidth * 1, height: windowHeight * 0.12, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly' }}>
-                                <View style={styles.dataInfoView}>
-                                    <Text style={styles.text}>Total Receipts </Text>
-                                    <Text style={[styles.text, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>{transactionTable.length} </Text>
-                                </View>
-                                <View style={styles.dataInfoView}>
-                                    <Text style={styles.text}>Total collected </Text>
-                                    <Text style={[styles.text, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>₹{totalAmount}.00</Text>
-                                </View>
-                            </View>
-
-                            {AllowNewUser &&
-                                <View>
-                                    <Button icon={'plus'} onPress={addNewUser} labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }} style={{ marginTop: 5, marginBottom: -5, alignSelf: 'flex-end', marginRight: 20 }} mode="contained">Add new user</Button>
-                                </View>
-                            }
-
-                            {!collectionAllowed &&
-                                <View>
-                                    <Text style={{ color: '#CC5500', fontSize: 16, alignSelf: 'center', marginTop: 10, marginBottom: 10, fontFamily: 'Montserrat-Bold' }}>The collection window has expired.</Text>
-                                </View>
-                            }
-
-                            <View style={styles.lineView}>
-                                <Text style={styles.lineText}>Recent transactions </Text>
-                            </View>
-
-                            {/* {transactionTable && transactionTable.length > 0 && */}
-                            <View>
-                                <Button icon={'arrow-up'} loading={buttonLoading} disabled={buttonLoading} onPress={handleCloseCollection} labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }} style={{ marginTop: 30, alignSelf: 'flex-end', marginRight: 20 }} mode="contained">Close collection</Button>
-                            </View>
-                            {/*  } */}
-
-                            <ScrollView style={{ marginTop: 20, marginBottom: 40 }}>
-                                <>
-                                    {transactionTable && transactionTable?.length > 0 ? (
-                                        transactionTable
-                                            ?.sort((a, b) => {
-                                                const dateA = new Date(a.CollDateTime); // Convert to Date object
-                                                const dateB = new Date(b.CollDateTime); // Convert to Date object
-                                                return dateB - dateA; // Sort from latest (newer) to oldest (older)
-                                            })
-                                            ?.map((item, index) => (
-                                                <TransactionCard searchQuery={searchQuery} item={item} key={index} index={index} />
-                                            ))
-                                    ) : (
-                                        <Text style={[styles.text1, { margin: 'auto', marginTop: 100 }]}>No transactions yet</Text>
-                                    )}
-                                </>
-                            </ScrollView>
-                        </View>
-                    )}
-                </>
-            ) : (
-                <>
-                    {/* <View style={{ width: windowWidth * 1, height: windowHeight * 0.1, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly' }}>
-                        <Searchbar
-                            placeholder="Search by Name or A/C No"
-                            onChangeText={setSearchQuery}
-                            // loading={true}
-                            value={searchQuery}
-                            autoFocus={searchedResults}
-                            onIconPress={() => { setSearchedResults(false), setSearchQuery(''), Keyboard.dismiss() }}
-                            icon={searchedResults ? 'arrow-left-thin' : 'magnify'}
-                            iconColor={COLORS.primary}
-                            onPress={() => { setSearchedResults(true) }}
-                            elevation={1}
-                            style={{
+                        {(!dataAvailable || !collectionAllowed) && (
+                            <View style={{
+                                position: 'absolute',
                                 width: '80%',
+                                height: '100%',
+                                backgroundColor: 'rgba(255, 255, 255, 0.6)',
                                 alignSelf: 'center',
-                                // marginTop: 20,
-                                backgroundColor: '#FFFFFF',
-                                elevation: 15,
-                            }}
-                        />
-                        <Pressable onPress={() => { navigation.navigate('Profile', { count: NoOfRecords, amount: totalAmount, collectionAllowed: collectionAllowed }) }}>
-                            <MaterialCommunityIcons2 name='user-circle' styl={{ elevation: 5 }} elevation={5} color={COLORS.primary} size={45} />
-                        </Pressable>
-                    </View> */}
+                                borderRadius: 10,
+                            }} />
+                        )}
+                    </View>
+                }
+                {searchedResults ? (
+                    <>
+                        <SearchPopup BranchName={BranchName} BranchCode={BranchCode} collectionAllowed={collectionAllowed} multipleCollection={multipleCollection} mappedMasterData={mappedMasterData} setSearchedResults={setSearchedResults} searchQuery={searchQuery} />
+                    </>
+                ) : (
+                    <View style={{ height: windowHeight * 0.80 }}>
+                        <View style={[styles.dataInfoView, { width: windowWidth * 0.90, alignSelf: 'center', flexDirection: 'row', height: 50 }]}>
+                            <View>
+                                {/* <Text style={styles.text}>Client Name</Text> */}
+                                <Text style={[styles.text, { fontSize: 14, fontFamily: 'Montserrat-Bold' }]}>{ClientName ? ClientName : '-'} </Text>
+                            </View>
+                            <View>
+                                <Text style={styles.text}>Branch</Text>
+                                <Text style={[styles.text, { fontSize: 14, fontFamily: 'Montserrat-Bold' }]}>{BranchName ? BranchName : "-"} {BranchCode ? `(${BranchCode})` : ''} </Text>
+                            </View>
+                        </View>
 
-                    {/* {!isAuth &&
                         <View>
-                            <Button
-                                labelStyle={{ fontFamily: 'Montserrat-Bold', fontSize: 14 }}
-                                style={{ marginTop: 10, width: '32%', alignSelf: 'flex-end' }}
-                                mode="outlined"
-                                icon={'logout'}
-                                contentStyle={{ flexDirection: 'row-reverse' }}
-                            >
-                                Logout
-                            </Button>
+                            <Text style={[styles.text, { marginTop: 10, marginBottom: 0, marginLeft: 20 }]}>Agent Name: <Text style={[styles.text, { fontSize: 14, fontFamily: 'Montserrat-Bold' }]}>{AgentName ? AgentName : '-'} </Text></Text>
                         </View>
-                    } */}
-                    {!LicenseExpired ? (
-                        <>
-                            {loading ? (
-                                <View style={styles.loaderContainer}>
-                                    <ActivityIndicator size="large" color={COLORS.primary} />
-                                </View>
-                            ) : (
-                                <View style={styles.notFound}>
-                                    <MaterialCommunityIcons name='cloud-off-outline' style={{ marginBottom: 20 }} color={COLORS.primary} size={50} />
-                                    <Text style={styles.text1}>Data not found!</Text>
-
-                                    {IsActive && (
-                                        <View style={styles.getData}>
-                                            <Button
-                                                loading={loading}
-                                                disabled={loading}
-                                                labelStyle={{ fontFamily: 'Montserrat-Bold', fontSize: 18 }}
-                                                style={{ marginTop: 30, width: '80%' }}
-                                                mode="contained"
-                                                onPress={handleGetData}
-                                            >
-                                                Start collection
-                                            </Button>
-                                        </View>
-                                    )}
-                                </View>
-                            )}
-                        </>
-
-                    ) : (
-                        <View style={styles.notFound}>
-                            <Text style={styles.text1}>Your license has expired. Please pay subscription!</Text>
+                        <View style={{ width: windowWidth * 1, height: windowHeight * 0.12, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly' }}>
+                            <View style={styles.dataInfoView}>
+                                <Text style={styles.text}>Total Receipts </Text>
+                                <Text style={[styles.text, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>{transactionTable ? transactionTable.length : '-'} </Text>
+                            </View>
+                            <View style={styles.dataInfoView}>
+                                <Text style={styles.text}>Total collected </Text>
+                                <Text style={[styles.text, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>{totalAmount ? `₹${totalAmount}.00` : '-'}</Text>
+                            </View>
                         </View>
-                    )}
-                </>
-            )}
+
+                        {/* {AllowNewUser && */}
+                        <View>
+                            <Button icon={'plus'} disabled={!AllowNewUser || !dataAvailable || isFirstLogin} onPress={addNewUser} labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }} style={{ marginTop: 5, marginBottom: -5, alignSelf: 'flex-end', marginRight: 20 }} mode="contained">Add new user</Button>
+                        </View>
+                        {/* } */}
+
+                        {!collectionAllowed &&
+                            <View>
+                                <Text style={{ color: '#CC5500', fontSize: 16, alignSelf: 'center', marginTop: 10, marginBottom: 10, fontFamily: 'Montserrat-Bold' }}>The collection window has expired.</Text>
+                            </View>
+                        }
+
+                        <View style={{ width: '95%', alignSelf: 'center', display: 'flex', justifyContent: 'space-between', flexDirection: 'row' }}>
+                            {/* <View> */}
+                            <Button icon={'play'} loading={loading} disabled={loading || dataAvailable || LicenseExpired} onPress={handleGetData} labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }} style={{ marginTop: '8%' }} mode="contained">Start collection</Button>
+                            {/* </View>
+                                <View> */}
+                            <Button icon={'arrow-up'} loading={buttonLoading} disabled={buttonLoading || !dataAvailable || isFirstLogin || !collectionAllowed} onPress={handleCloseCollection} labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }} style={{ marginTop: '8%' }} mode="contained">Close collection</Button>
+                            {/* </View> */}
+                        </View>
+                        {/*  } */}
+
+                        {!LicenseExpired ? (
+                            <>
+                                <View style={styles.lineView}>
+                                    <Text style={styles.lineText}>Recent transactions </Text>
+                                </View>
+
+                                <ScrollView style={{ marginTop: 20, marginBottom: 40 }}>
+                                    <>
+                                        {transactionTable && transactionTable?.length > 0 ? (
+                                            transactionTable
+                                                ?.sort((a, b) => {
+                                                    const dateA = new Date(a.CollDateTime); // Convert to Date object
+                                                    const dateB = new Date(b.CollDateTime); // Convert to Date object
+                                                    return dateB - dateA; // Sort from latest (newer) to oldest (older)
+                                                })
+                                                ?.map((item, index) => (
+                                                    <TransactionCard searchQuery={searchQuery} item={item} key={index} index={index} />
+                                                ))
+                                        ) : (
+                                            <Text style={[styles.text1, { margin: 'auto', marginTop: 100 }]}>No transactions yet</Text>
+                                        )}
+                                    </>
+                                </ScrollView>
+                            </>
+                        ) : (
+                            <View style={styles.notFound}>
+                                <Text style={styles.text1}>Your license has expired. Please pay subscription!</Text>
+                            </View>
+                        )}
+
+                    </View>
+                )}
+            </>
 
             <Modal
                 animationType="slide"

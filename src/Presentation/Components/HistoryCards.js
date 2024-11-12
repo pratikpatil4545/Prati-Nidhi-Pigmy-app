@@ -45,7 +45,7 @@ export default function HistoryCards(props) {
     // const dayIndex = getDay()
 
     const dateTime = props.item?.CollDateTime ? props.item?.CollDateTime : '2024-11-05 11:27:31';
-    console.log("props item date", dateTime)
+    // console.log("props item date", dateTime)
     const [CardDate, time, period] = dateTime?.split(' ');
     const [year, month, days] = CardDate?.split('-');
 
