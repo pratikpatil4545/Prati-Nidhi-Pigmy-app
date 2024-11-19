@@ -12,6 +12,8 @@ import axios from 'axios';
 import { XMLParser } from 'fast-xml-parser';
 import SearchPopup from '../../Components/SearchPopup';
 import TransactionCard from '../../Components/TransactionCard';
+import NetInfo from '@react-native-community/netinfo';
+import { Buffer } from 'buffer';
 
 export default function Dashboard({ navigation, route }) {
 
@@ -42,6 +44,8 @@ export default function Dashboard({ navigation, route }) {
     const [BrAgCode, setBrAgCode] = useState(null);
     const [FileCreateDate, setFileCreateDate] = useState(null);
     const [GlLastAcc, setGlLastAcc] = useState(null);
+    const [GLCode, setGLCode] = useState(null);
+    const [pendingCount, setpendingCount] = useState(null);
     const [collectionAllowed, setCollectionAllowed] = useState(true);
     const [multipleCollection, setMultipleCollection] = useState(false);
     const [totalAmount, setTotalAmount] = useState(0);
@@ -54,6 +58,11 @@ export default function Dashboard({ navigation, route }) {
     const [buttonLoading, setButtonLoading] = useState(false);
     const [modalVisible2, setModalVisible2] = useState(false);
     const [isFirstLogin, setIsFirstLogin] = useState(false);
+    const [isConnected, setConnected] = useState(true);
+
+
+
+
     // console.log("states checking", dataAvailable, isDataValid, isFirstLogin)
 
     // console.log("Last acc number?", (parseInt(GlLastAcc[0]) + 1));
@@ -64,11 +73,9 @@ export default function Dashboard({ navigation, route }) {
             setSearchedResults(true);
         }
         setSearchQuery('');
-        // console.log('1 use effect called');
     }, [isFocused])
 
     useEffect(() => {
-        // console.log('2 use effect called');
         const checkLicenseValidity = () => {
             const currentDate = new Date(); // Get current date
             const expiryDate = new Date(LicenseValidUpto); // Parse expiry date from the state
@@ -100,14 +107,10 @@ export default function Dashboard({ navigation, route }) {
         if (!IsActive) {
             Alert.alert('Account Activation', 'Your account has not active. Please contact your branch.');
             setLicenseExpired(true);
-        // console.log('3 use effect called');
-
         }
     }, [LicenseValidUpto])
 
     useEffect(() => {
-        // console.log('4 use effect called');
-
         if (!fileCreatedDate || !noOfDaysAllowed) return;
 
         const fileDate = new Date(fileCreatedDate);
@@ -124,8 +127,6 @@ export default function Dashboard({ navigation, route }) {
     }, [fileCreatedDate, noOfDaysAllowed]);
 
     useEffect(() => {
-        // console.log('5 use effect called');
-
         let len1 = parseInt(mappedMasterData?.length);
         let len2 = parseInt(NoOfRecords);
         if (len1 && len2) {
@@ -139,9 +140,7 @@ export default function Dashboard({ navigation, route }) {
         }
     }, [NoOfRecords, mappedMasterData?.length])
 
-    useEffect(() => {       
-        //  console.log('6 use effect called');
-
+    useEffect(() => {
         const handleBackPress = () => {
             if (backPressedOnce && !searchedResults) {
                 BackHandler.exitApp();
@@ -161,94 +160,193 @@ export default function Dashboard({ navigation, route }) {
 
     const handleGetData = async () => {
         // setLoading(true);
-        ToastAndroid.show('Getting latest data', ToastAndroid.SHORT);
+        // ToastAndroid.show('Getting latest data', ToastAndroid.SHORT);
         getFileContent();
-        await AsyncStorage.setItem('firstLoginComplete', 'true');
-        setIsFirstLogin(false);
+        // setIsFirstLogin(true); 
         // getApi();
     }
 
     const getFileContent = async () => {
         setLoading(true);
-        try {
-            // console.log("No saved data found, making API call...");
-            const mobileNumber = await AsyncStorage.getItem('mobileNumber');
+        if (isFirstLogin) {
 
-            if (mobileNumber) {
-                const url = `http://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/RequestData_App?MobileNo=${mobileNumber}`;
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/xml',
-                    },
-                });
+            try {
+                // console.log("No saved data found, making API call...");
+                const mobileNumber = await AsyncStorage.getItem('mobileNumber');
 
-                const responseText = await response.text();
+                if (mobileNumber) {
+                    const url = `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/RequestData_App?MobileNo=${mobileNumber}`;
+                    const response = await fetch(url, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/xml',
+                        },
+                    });
 
-                const parser = new XMLParser();
-                const jsonResponse = parser.parse(responseText);
+                    const responseText = await response.text();
 
-                const jsonString = jsonResponse.string;
-                const dataObject = JSON.parse(jsonString);
-                // console.log("responseText:", dataObject.ResponseString);
+                    const parser = new XMLParser();
+                    const jsonResponse = parser.parse(responseText);
 
-                if (dataObject.ResonseCode === '0000') {
-                    await AsyncStorage.setItem('dataObject', JSON.stringify(dataObject));
-                    setMappedMasterData(dataObject.MstrData?.MstrRecs);
-                    setHeaderLastAccNo(dataObject.MstrData?.HdrLastAcNo);
-                    setDataAvailable(true);
-                    setNoOfRecords(dataObject.MstrData?.NoOfRecords);
-                    setLicenseValidUpto(dataObject.MstrData?.LicenseValidUpto);
-                    setClientName(dataObject.MstrData?.ClientName);
-                    setBranchName(dataObject.MstrData?.BrNameE);
-                    setBranchCode(dataObject.MstrData?.BrCode);
-                    setAgentName(dataObject.MstrData?.AgNameE);
-                    setIsActive(dataObject.MstrData?.IsActive ? true : false);
-                    setAllowNewUser((dataObject.MstrData?.NewAcOpenAllowed === 'True') ? true : false);
-                    setFileCreatedDate(dataObject.MstrData?.FileCreateDate);
-                    setNoOfDaysAllowed(dataObject.MstrData?.NoOfDaysAllowed);
-                    setClientId(dataObject.MstrData?.ClientID);
-                    setAgCode(dataObject.MstrData?.AgCode);
-                    setBrCode(dataObject.MstrData?.BrCode);
-                    setBrAgCode(dataObject.MstrData?.BrAgCode);
-                    setFileCreateDate(dataObject.MstrData?.FileCreateDate);
-                    setInputFileType(dataObject.MstrData?.InputFileType);
-                    setGlLastAcc(dataObject.MstrData?.GLLastAc);
-                    // setMultipleCollection(false)
-                    setMultipleCollection((dataObject.MstrData?.AllowMultipleColln === 'True') ? true : false);
-                    setSearchedResults(true)
-                    // ToastAndroid.show('API call successful and data saved!', ToastAndroid.SHORT);
-                }
-                else {
-                    if (dataObject.ResonseCode != '0000') {
-                    Alert.alert(
-                        'Error:',
-                        `Code : ${dataObject.ResonseCode}, ${dataObject.ResponseString}`
-                    );
-                }
+                    const jsonString = jsonResponse.string;
+                    const dataObject = JSON.parse(jsonString);
+                    // console.log("responseText:", dataObject.MstrData);
+
+                    if (dataObject.ResonseCode === '0000') {
+                        await AsyncStorage.setItem('dataObject', JSON.stringify(dataObject));
+                        setMappedMasterData(dataObject.MstrData?.MstrRecs);
+                        setHeaderLastAccNo(dataObject.MstrData?.HdrLastAcNo);
+                        setDataAvailable(true);
+                        setNoOfRecords(dataObject.MstrData?.NoOfRecords);
+                        setLicenseValidUpto(dataObject.MstrData?.LicenseValidUpto);
+                        setClientName(dataObject.MstrData?.ClientName);
+                        setBranchName(dataObject.MstrData?.BrNameE);
+                        setBranchCode(dataObject.MstrData?.BrCode);
+                        setAgentName(dataObject.MstrData?.AgNameE);
+                        setIsActive(dataObject.MstrData?.IsActive ? true : false);
+                        setAllowNewUser((dataObject.MstrData?.NewAcOpenAllowed === 'True') ? true : false);
+                        setFileCreatedDate(dataObject.MstrData?.FileCreateDate);
+                        setNoOfDaysAllowed(dataObject.MstrData?.NoOfDaysAllowed);
+                        setClientId(dataObject.MstrData?.ClientID);
+                        setAgCode(dataObject.MstrData?.AgCode);
+                        setBrCode(dataObject.MstrData?.BrCode);
+                        setBrAgCode(dataObject.MstrData?.BrAgCode);
+                        setFileCreateDate(dataObject.MstrData?.FileCreateDate);
+                        setInputFileType(dataObject.MstrData?.InputFileType);
+                        setGlLastAcc(dataObject.MstrData?.GLLastAc);
+                        setGLCode(dataObject.MstrData?.GLCode);
+                        // setMultipleCollection(false)
+                        setMultipleCollection((dataObject.MstrData?.AllowMultipleColln === 'True') ? true : false);
+                        setSearchedResults(true)
+                        await AsyncStorage.setItem('firstLoginComplete', 'true');
+                        setIsFirstLogin(false);
+                        handleNetworkChange();
+                        console.log("data is fetched by an API");
+                        // ToastAndroid.show('API call successful and data saved!', ToastAndroid.SHORT);
+                    }
+                    else {
+                        if (dataObject.ResonseCode != '0000') {
+                            Alert.alert(
+                                'Error:',
+                                `Code : ${dataObject.ResonseCode}, ${dataObject.ResponseString}`
+                            );
+                        }
+                        setDataAvailable(false);
+                        setIsAuth(false);
+                    }
+
+                } else {
                     setDataAvailable(false);
-                    setIsAuth(false);
+                    if (!isConnected) {
+                        Alert.alert('Failed getting data!', 'Please check your internet connection and try again.');
+                    }
+                    await AsyncStorage.setItem('firstLoginComplete', 'false');
+                    // console.warn('No mobile number found in AsyncStorage.');
+                    // ToastAndroid.show('No mobile number found!', ToastAndroid.SHORT);
+                    // }
                 }
-
-            } else {
+            } catch (error) {
                 setDataAvailable(false);
-                console.warn('No mobile number found in AsyncStorage.');
-                ToastAndroid.show('No mobile number found!', ToastAndroid.SHORT);
-                // }
+                // Capture error details
+                console.error('Error occurred:', error);
+                await AsyncStorage.setItem('firstLoginComplete', 'false');
+
+                if (!isConnected) {
+                    Alert.alert('Failed getting data!', 'Please check your internet connection and try again.');
+                }
+                // ToastAndroid.show('Error occurred!', ToastAndroid.SHORT);
+            } finally {
+                setLoading(false);
             }
-        } catch (error) {
-            setDataAvailable(false);
-            // Capture error details
-            console.error('Error occurred:', error);
-            ToastAndroid.show('Error occurred!', ToastAndroid.SHORT);
-        } finally {
-            setLoading(false);
+        }
+
+        else {
+            try {
+                // console.log("No saved data found, making API call...");
+                const savedData = await AsyncStorage.getItem('dataObject');
+
+                if (savedData) {
+                    const dataObject = JSON.parse(savedData);
+                    // console.log("responseText local storage:", dataObject.MstrData);
+
+                    if (dataObject.ResonseCode === '0000') {
+                        await AsyncStorage.setItem('dataObject', JSON.stringify(dataObject));
+                        setMappedMasterData(dataObject.MstrData?.MstrRecs);
+                        setHeaderLastAccNo(dataObject.MstrData?.HdrLastAcNo);
+                        setDataAvailable(true);
+                        setNoOfRecords(dataObject.MstrData?.NoOfRecords);
+                        setLicenseValidUpto(dataObject.MstrData?.LicenseValidUpto);
+                        setClientName(dataObject.MstrData?.ClientName);
+                        setBranchName(dataObject.MstrData?.BrNameE);
+                        setBranchCode(dataObject.MstrData?.BrCode);
+                        setAgentName(dataObject.MstrData?.AgNameE);
+                        setIsActive(dataObject.MstrData?.IsActive ? true : false);
+                        setAllowNewUser((dataObject.MstrData?.NewAcOpenAllowed === 'True') ? true : false);
+                        setFileCreatedDate(dataObject.MstrData?.FileCreateDate);
+                        setNoOfDaysAllowed(dataObject.MstrData?.NoOfDaysAllowed);
+                        setClientId(dataObject.MstrData?.ClientID);
+                        setAgCode(dataObject.MstrData?.AgCode);
+                        setBrCode(dataObject.MstrData?.BrCode);
+                        setBrAgCode(dataObject.MstrData?.BrAgCode);
+                        setFileCreateDate(dataObject.MstrData?.FileCreateDate);
+                        setInputFileType(dataObject.MstrData?.InputFileType);
+                        setGlLastAcc(dataObject.MstrData?.GLLastAc);
+                        setGLCode(dataObject.MstrData?.GLCode);
+                        // setMultipleCollection(false)
+                        setMultipleCollection((dataObject.MstrData?.AllowMultipleColln === 'True') ? true : false);
+                        setSearchedResults(true);
+                        console.log("data is taken from local storage");
+                        // ClientID: ClientID,
+                        // BrCode: BrCode, 
+                        // AgCode: AgCode, 
+                        // BrAgCode: BrAgCode, 
+                        // FileCreateDate: FileCreateDate, 
+                        // InputFileType: InputFileType, 
+                        handleNetworkChange(dataObject.MstrData?.ClientID, dataObject.MstrData?.BrCode, dataObject.MstrData?.AgCode, dataObject.MstrData?.BrAgCode, dataObject.MstrData?.FileCreateDate,dataObject.MstrData?.InputFileType);
+                        // ToastAndroid.show('API call successful and data saved!', ToastAndroid.SHORT);
+                    }
+                    else {
+                        if (dataObject.ResonseCode != '0000') {
+                            Alert.alert(
+                                'Error:',
+                                `Code : ${dataObject.ResonseCode}, ${dataObject.ResponseString}`
+                            );
+                        }
+                        setDataAvailable(false);
+                        setIsAuth(false);
+                        if (!isConnected) {
+                            Alert.alert('Failed getting data!', 'Please check your internet connection and try again.');
+                        }
+                    }
+
+                } else {
+                    setDataAvailable(false);
+                    if (!isConnected) {
+                        Alert.alert('Failed getting data!', 'Please check your internet connection and try again.');
+                    }
+                    await AsyncStorage.setItem('firstLoginComplete', 'false');
+
+                    console.warn('No mobile number found in AsyncStorage.');
+                    // ToastAndroid.show('No mobile number found!', ToastAndroid.SHORT);
+                    // }
+                }
+            } catch (error) {
+                setDataAvailable(false);
+                // Capture error details
+                console.error('Error occurred:', error);
+                await AsyncStorage.setItem('firstLoginComplete', 'false');
+
+                if (!isConnected) {
+                    Alert.alert('Failed getting data!', 'Please check your internet connection and try again.');
+                }
+                // ToastAndroid.show('Error occurred!', ToastAndroid.SHORT);
+            } finally {
+                setLoading(false);
+            }
         }
     };
 
     useEffect(() => {
-        // console.log('7 use effect called');
-
         const checkFirstLogin = async () => {
             const firstLoginComplete = await AsyncStorage.getItem('firstLoginComplete');
             if (!firstLoginComplete) {
@@ -259,6 +357,149 @@ export default function Dashboard({ navigation, route }) {
         };
         checkFirstLogin();
     }, []);
+
+    // useEffect(() => {
+    //     const unsubscribe = NetInfo.addEventListener((state) => {
+    //         setConnected(state.isConnected);
+    //         // console.log("networks state", state)
+    //         if (!state.isConnected) {
+    //             showAlert();
+    //         }
+    //         else {
+    //             sendDataInBackground();
+    //             // ToastAndroid.show('Connection is back', ToastAndroid.SHORT);
+    //         }
+    //     });
+
+    //     return () => {
+    //         unsubscribe();
+    //     };
+    // }, []);
+
+    const handleNetworkChange = (ClientID, BrCode, AgCode, BrAgCode, FileCreateDate,InputFileType) => {
+        const unsubscribe = NetInfo.addEventListener((state) => {
+            setConnected(state.isConnected);
+            if (!state.isConnected) {
+                showAlert();
+            } else {
+                sendDataInBackground(ClientID, BrCode, AgCode, BrAgCode, FileCreateDate,InputFileType);
+            }
+        });
+    
+        return unsubscribe; // To allow cleanup later if needed
+    };
+    
+
+    const showAlert = () => {
+        console.log('Internet Connection You are offline. Some features may not be available.');
+    };
+
+    // const sendDataInBackground = async () => {
+
+    //     const transactionTableData = await AsyncStorage.getItem('transactionTable');
+    //     const parsedData = JSON.parse(transactionTableData);
+    //     // const pendingTransactions = transactionTableData.filter((item)=>{ item.pending === true})
+    //     const pendingTransactions = parsedData.filter((item) => item.pending === true);
+    //     const transactionsWithoutPending = pendingTransactions.map(({ pending, ...rest }) => rest);
+
+    //     const newArray = {
+    //         ClientID, BrCode, AgCode, BrAgCode, FileCreateDate, InputFileType, NoOfRecords: (pendingTransactions.length).toString(),
+    //         CollectionData: transactionsWithoutPending
+    //     };
+
+    //     console.log("transacrion table data,", newArray);
+
+    //     if (isConnected) {
+    //         try {
+    //             const response = await fetch(`http://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp`, {
+    //                 method: 'POST',
+    //                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    //                 body: new URLSearchParams({ DataFromApp: JSON.stringify(newArray) }).toString(),
+    //             });
+    //             console.log("Response:", await response.text());
+    //         } catch (error) {
+    //             console.error("Error during API call:", error);
+    //         }
+    //     }
+    // }
+
+
+    const sendDataInBackground = async (ClientID, BrCode, AgCode, BrAgCode, FileCreateDate,InputFileType) => {
+        const transactionTableData = await AsyncStorage.getItem('transactionTable');
+        const parsedData = JSON.parse(transactionTableData) || [];
+        // console.log("sll arrayes",parsedData)
+        const pendingTransactions = parsedData.filter((item) => item.pending === true);
+        // console.log("checking data null::", BrCode, AgCode, FileCreateDate, ClientID, BrAgCode, InputFileType)
+ 
+        if (!isConnected || pendingTransactions.length === 0) {
+            console.log("No pending transactions or not connected to the internet.");
+            return;
+        }
+
+        // if (!ClientID || !BrAgCode  || !BrCode || !AgCode || FileCreateDate || InputFileType) {
+        //     console.log("Null values.");
+        //     return;
+        // }
+
+        const transactionsWithoutPending = pendingTransactions.map(({ pending, ...rest }) => rest);
+        setpendingCount(pendingTransactions.length);
+        const newArray = {
+            ClientID: ClientID,
+            BrCode: BrCode, 
+            AgCode: AgCode, 
+            BrAgCode: BrAgCode, 
+            FileCreateDate: FileCreateDate, 
+            InputFileType: InputFileType, 
+            NoOfRecords: pendingTransactions.length.toString(),
+            CollectionData: transactionsWithoutPending,
+        };
+
+        // console.log("Transaction table data to send:", newArray);
+
+        try {
+            // const response = await fetch(`http://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp`, {
+            //     method: 'POST',
+            //     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            //     body: new URLSearchParams({ DataFromApp: JSON.stringify(newArray) }).toString(),
+            // });
+
+            const response = await fetch(
+                `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp?DataFromApp=${JSON.stringify(newArray).toString()}`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    // body: new URLSearchParams({ DataFromApp: JSON.stringify(newArray) }).toString(),
+                }
+            );
+            const responseText = await response.text();
+            const parser = new XMLParser();
+            const jsonResponse = parser.parse(responseText);
+            const jsonString = jsonResponse.string;
+            const dataObject = JSON.parse(jsonString);
+            const responseString = dataObject.ResonseCode;
+            // console.log("Response in auto send data:", responseText, 'resp code new is : ',responseString);
+            // If the API call succeeds, update AsyncStorage
+            if (responseString === '0000') {
+                const updatedTransactionTable = parsedData.map((item) => {
+                    if (item.pending) {
+                        const { pending, ...rest } = item;
+                        return rest;
+                    }
+                    return item;
+                });
+
+                fetchTransactionTable();
+                await AsyncStorage.setItem('transactionTable', JSON.stringify(updatedTransactionTable));
+                // ToastAndroid.show("Uploaded pending transactions", ToastAndroid.SHORT);
+                console.log("Updated transaction table stored successfully.");
+            }
+        } catch (error) {
+            console.error("Error during API call:", error);
+        }
+    };
+
 
     // useFocusEffect(
     //     useCallback(() => {
@@ -281,10 +522,12 @@ export default function Dashboard({ navigation, route }) {
     const fetchTransactionTable = async () => {
         try {
             const transactionTableData = await AsyncStorage.getItem('transactionTable');
+            // console.log("transacrion table data,",transactionTableData)
             if (transactionTableData) {
                 const parsedData = JSON.parse(transactionTableData);  // Parse the stored data
                 setTransactionTable(parsedData);
-
+                const pendingTransactions = parsedData.filter((item) => item.pending === true);
+                setpendingCount(pendingTransactions.length);
                 const total = parsedData.reduce((sum, transaction) => {
                     return sum + (parseFloat(transaction.Collection) || 0);
                 }, 0);
@@ -298,8 +541,6 @@ export default function Dashboard({ navigation, route }) {
     };
 
     useEffect(() => {
-        // console.log('8 use effect called');
-
         fetchTransactionTable();
     }, [isFocused]);
 
@@ -307,6 +548,12 @@ export default function Dashboard({ navigation, route }) {
         setButtonLoading(true);
         if (collectionAllowed === false) {
             Alert.alert('Cannot Close collection!', `Collection is not allowed, allowed day's are expired`);
+            setButtonLoading(false);
+            return;
+        }
+
+        if (!isConnected) {
+            Alert.alert('Cannot Close collection!', `You are offline, please connect to the Internet and try again.`);
             setButtonLoading(false);
             return;
         }
@@ -322,7 +569,7 @@ export default function Dashboard({ navigation, route }) {
                         const mobileNumber = await AsyncStorage.getItem('mobileNumber');
 
                         if (mobileNumber) {
-                            const url = `http://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/ConfirmData_FromApp?MobileNo=${mobileNumber}&Fdate=${FileCreateDate}`;
+                            const url = `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/ConfirmData_FromApp?MobileNo=${mobileNumber}&Fdate=${FileCreateDate}`;
                             const response = await fetch(url, {
                                 method: 'GET',
                                 headers: {
@@ -347,11 +594,11 @@ export default function Dashboard({ navigation, route }) {
 
                             else {
 
-                                const agentmobileNumber = await AsyncStorage.getItem('mobileNumber');
+                                // const agentmobileNumber = await AsyncStorage.getItem('mobileNumber');
 
-                                if (agentmobileNumber) {
+                                if (mobileNumber) {
 
-                                    const url = `http://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/Dummy_CloseCycle`;
+                                    const url = `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/Dummy_CloseCycle?MobileNo=${mobileNumber.toString()}&Fdate=${FileCreateDate}`;
                                     // const url = `http://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/CloseCollection_FromApp`;
                                     let tempCount = parseInt(transactionTable.length);
                                     try {
@@ -361,13 +608,14 @@ export default function Dashboard({ navigation, route }) {
                                                 'Content-Type': 'application/x-www-form-urlencoded',
                                             },
                                             body: new URLSearchParams({
-                                                MobileNo: agentmobileNumber,
+                                                MobileNo: mobileNumber,
                                                 Fdate: FileCreateDate,
                                                 // NoofRecs: parseInt(tempCount)
                                             }).toString(),
                                         });
 
                                         const responseText = await response.text();
+                                        console.log('checkng dummy closing response; ', mobileNumber, response)
                                         const parser = new XMLParser();
                                         const jsonResponse = parser.parse(responseText);
                                         const jsonString = jsonResponse.string;
@@ -382,10 +630,9 @@ export default function Dashboard({ navigation, route }) {
                                         // transactionTable.forEach(transaction => {
                                         //     transactionHistoryTable.push(transaction);
                                         // });
-                                        // console.log('checkng transacrion history after mapping; ', transactionTable)
 
                                         if (responseString === '0000') {
-                                            ToastAndroid.show("Successfully closed Collections", ToastAndroid.LONG)
+                                            Alert.alert("Success", "Successfully closed Collections",)
                                             // await AsyncStorage.setItem('transactionHistoryTable', JSON.stringify(transactionTable));
 
                                             // let transactionHistoryTable = await AsyncStorage.getItem('transactionHistoryTable');
@@ -415,16 +662,18 @@ export default function Dashboard({ navigation, route }) {
                                             setBranchCode(null);
                                             setAgentName(null);
                                             await AsyncStorage.removeItem('firstLoginComplete');
+                                            // await AsyncStorage.setItem('firstLoginComplete', 'false');
+
                                             // setIsDataValid(false);
                                         }
                                         else {
                                             setButtonLoading(false);
-                                            ToastAndroid.show("error while closing Collections", ToastAndroid.LONG)
+                                            // ToastAndroid.show("error while closing Collections", ToastAndroid.LONG)
                                         }
                                         // console.log("Response closed collection:", responseString);
                                     } catch (error) {
                                         setButtonLoading(false);
-                                        ToastAndroid.show("Failed to close Collections. Please try again", ToastAndroid.LONG)
+                                        // ToastAndroid.show("Failed to close Collections. Please try again", ToastAndroid.LONG)
                                         console.error("Error during API call:", error);
                                     } finally {
                                         setButtonLoading(false);
@@ -466,11 +715,38 @@ export default function Dashboard({ navigation, route }) {
 
         return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
     }
+    
+  const [collectionDate, setCollectionDate] = useState(null);
 
     const handleSubmit = async () => {
         let newAccNo;
-        setModalVisible2(true);
+        // setModalVisible2(true);
 
+        const mobileValidation = () => {
+            if (!mobileNumber) {
+                Alert.alert('Warning', `Please enter customer's Mobile Number`);
+                return false;
+            }
+            if (mobileNumber.length !== 10 || /\D/.test(mobileNumber)) {
+                Alert.alert('Warning', `Please enter a valid 10-digit mobile number`);
+                return false;
+            }
+            return true;
+        };
+
+        if (!amount) {
+            Alert.alert('Warning', `Please enter collection amount!`);
+            return;
+        }
+
+        if (!name) {
+            Alert.alert('Warning', `Please enter customer name!`);
+            return;
+        }
+
+        if (!mobileValidation()) {
+            return;
+        }
 
         try {
             let transactionTable = await AsyncStorage.getItem('transactionTable');
@@ -539,43 +815,115 @@ export default function Dashboard({ navigation, route }) {
                 ]
             };
 
+            const message = `
+            Name: ${name}
+Account Number: ${newAccNo}
+Opeing Balance: 0.00
+Amount Collected: ₹${new Intl.NumberFormat('en-IN').format(amount)}
+Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
+          `;
+
+            Alert.alert(
+                'Please Confirm Collection',
+                message.trim(),
+                [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                        text: 'Confirm', onPress: async () => {
+                            if (isConnected) {
+                                const agentmobileNumber = await AsyncStorage.getItem('mobileNumber');
+
+                                if (agentmobileNumber) {
+                                    const newArrayString = JSON.stringify(newArray);
+
+                                    const url = `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp?DataFromApp=${newArrayString.toString()}`;
+
+                                    try {
+                                        const response = await fetch(url, {
+                                            method: 'POST',
+                                            headers: {
+                                                'Content-Type': 'application/x-www-form-urlencoded',
+                                            },
+                                            body: new URLSearchParams({ DataFromApp: newArrayString }).toString(),
+                                        });
+
+                                        // const responseData = await response.text();
+                                        const responseText = await response.text();
+
+                                        const parser = new XMLParser();
+                                        const jsonResponse = parser.parse(responseText);
+                              
+                                        const jsonString = jsonResponse.string;
+                              
+                                        try {
+                                          // Extract the actual JSON portion from ResponseString
+                                          const responseObject = JSON.parse(jsonString);
+                                          const rawResponseString = responseObject.ResponseString;
+                              
+                                          // Extract only the JSON part from the rawResponseString
+                                          const jsonStartIndex = rawResponseString.indexOf('{');
+                                          const cleanedResponseString = rawResponseString.substring(jsonStartIndex);
+                                          const dataObject = JSON.parse(cleanedResponseString);
+                              
+                                          const collectionData = dataObject.CollectionData;
+                                          console.log("collectionData:", collectionData);
+                              
+                                          if (collectionData && collectionData.length > 0) {
+                                            const collDateTime = collectionData[0].CollDateTime;
+                                            console.log("CollDateTime:", collDateTime);
+                                            setCollectionDate(collDateTime);
+                                            // You can store or use collDateTime as needed
+                                          } else {
+                                            console.log("No collection data found.");
+                                          }
+                                        }
+                                        catch (error) {
+                                          console.error("Error parsing the response:", error);
+                                        }
+                                        transactionTable.push(transactionData);
+                                        await AsyncStorage.setItem('transactionTable', JSON.stringify(transactionTable));
+                                        setModalVisible2(true);
+                                        fetchTransactionTable();
+
+                                        console.log("Response:", responseText);
+                                    } catch (error) {
+                                        console.error("Error during API call:", error);
+                                    }
+                                }
+                            }
+                            else {
+                                const updatedTransactionData = {
+                                    ...transactionData,
+                                    pending: !isConnected // Add pending flag if offline
+                                };
+
+                                const currentTransactions = JSON.parse(await AsyncStorage.getItem('transactionTable')) || [];
+                                await AsyncStorage.setItem('transactionTable', JSON.stringify([...currentTransactions, updatedTransactionData]));
+                                setModalVisible2(true);
+                                fetchTransactionTable();
+                            }
+                        }
+                    }
+                ]
+            );
+
+
             // console.log("new user array", transactionData);
-            const agentmobileNumber = await AsyncStorage.getItem('mobileNumber');
 
-            if (agentmobileNumber) {
-                const newArrayString = JSON.stringify(newArray);
-
-                const url = `http://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp`;
-
-                try {
-                    const response = await fetch(url, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                        },
-                        body: new URLSearchParams({ DataFromApp: newArrayString }).toString(),
-                    });
-
-                    const responseData = await response.text();
-                    // console.log("Response:", responseData);
-                } catch (error) {
-                    console.error("Error during API call:", error);
-                }
-            }
-
-            transactionTable.push(transactionData);
-            await AsyncStorage.setItem('transactionTable', JSON.stringify(transactionTable));
+            // transactionTable.push(transactionData);
+            // await AsyncStorage.setItem('transactionTable', JSON.stringify(transactionTable));
             // setModalVisible(false);
             // setName(null);
             // setmobileNumber(null);
             // setAmount(null);
-            setModalVisible2(true);
-            fetchTransactionTable();
+            // setModalVisible2(true);
+            // fetchTransactionTable();
 
         } catch (error) {
             console.error("Error while processing transaction:", error);
             Alert.alert('Error', 'An error occurred while processing your transaction. Please try again.');
         }
+
     };
 
     const addNewUser = () => {
@@ -597,61 +945,187 @@ export default function Dashboard({ navigation, route }) {
         return `${day}-${month}-${year} ${hours}:${minutes} ${ampm}`;
     };
 
-    const handleWhatsAppPress = async () => {
-        const savedData = await AsyncStorage.getItem('dataObject');
-        const dataObject = JSON.parse(savedData);
+    // const handleWhatsAppPress = async () => {
+    //     const savedData = await AsyncStorage.getItem('dataObject');
+    //     const dataObject = JSON.parse(savedData);
 
-        // Define the message and phone number
-        const getNumber = mobileNumber;
-        const phoneNumber = `+91${getNumber}`; // Replace with the actual phone number (with country code)
-        const message = `Hi, the amount has been successfully collected. Here is your receipt:
+    //     const getNumber = mobileNumber;
+    //     const phoneNumber = `+91${getNumber}`;
+    //     const message = `Hi, the amount has been successfully collected. Here is your receipt:
     
-    Name: *${name}*
-    Account No.: *${headerLastAccNo}*
-    Opening Balance: *0.00*
-    Amount Collected: *${amount}.00*
-    Closing Balance: *${amount}.00*
-    Agent Name: *${dataObject.MstrData?.AgNameE}*
-    Collected date and time: ${formatDateTime(new Date())}`;
+    // Name: *${name}*
+    // Account No.: *${headerLastAccNo}*
+    // Opening Balance: *0.00*
+    // Amount Collected: *₹${new Intl.NumberFormat('en-IN').format(amount)}*
+    // Closing Balance: *₹${new Intl.NumberFormat('en-IN').format(amount)}*
+    // Agent Name: *${dataObject.MstrData?.AgNameE}*
+    // Collected date and time: ${formatDateTime(new Date())}`;
 
 
-        // Create the WhatsApp URL with the correct format
-        const url = `whatsapp://send?text=${encodeURIComponent(message)}&phone=${phoneNumber}`;
+    //     const url = `whatsapp://send?text=${encodeURIComponent(message)}&phone=${phoneNumber}`;
 
-        Linking.openURL(url);
+    //     Linking.openURL(url);
+
+    // };
+
+
+    const handleWhatsAppPress = async () => {
+       
+    const formatDateTime = (date) => {
+        const padZero = (num) => (num < 10 ? `0${num}` : num);
+        const year = date.getFullYear();
+        const month = padZero(date.getMonth() + 1);
+        const day = padZero(date.getDate());
+        const hours = padZero(date.getHours());
+        const minutes = padZero(date.getMinutes());
+        const seconds = padZero(date.getSeconds());
+  
+        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+      };
+  
+  
+      const clId = ClientID;
+      const Brid = BrCode;
+      const Agid = AgCode;
+      const glcod = '0';
+      const acno = GlLastAcc;
+      const ColldateTime = formatDateTime(new Date());
+      const ruidString = `${clId},${Brid},${Agid},${glcod},${acno}`;
+      const ruid = Buffer.from(ruidString).toString('base64');
+      const encodedDateTime = collectionDate.replace(' ', '%20');
+      console.log("time new",  encodedDateTime)
+  
+      const encodedURL = `https://app.automatesystemsdataservice.in/Customer/api/Receipt?ruid=${ruid}&ColldateTime=${encodedDateTime}`;
+  
+  
+      console.log(encodedURL);
+  
+      const getNumber = mobileNumber;
+      const phoneNumber = `+91${getNumber}`; // Replace with the actual phone number (with country code)
+      const message = `Hi, Please click on the link Below for the Receipt of your Transaction. ${encodedURL} `;
+  
+  
+      // Create the WhatsApp URL with the correct format
+      const url = `whatsapp://send?text=${encodeURIComponent(message)}&phone=${phoneNumber}`;
+  
+      Linking.openURL(url);
+
+        // try {
+            
+        //     const url = `https://app.automatesystemsdataservice.in/Customer/api/Receipt?clId=21&Brid=2&Agid=13&glcod=0&acno=1&ColldateTime=2024-11-13%2014:32:28`;
+        //     const response = await fetch(url, {
+        //         method: 'GET',
+        //         headers: {
+        //             'Content-Type': 'application/xml',
+        //         },
+        //     });
+            
+        //     const responseText = await response.text();
+        //     console.log("Response for receipt generation:", responseText);
+    
+        //     const parser = new XMLParser();
+        //     const parsedData = parser.parse(responseText);
+        //     console.log("Parsed XML Data:", parsedData);
+    
+        // } catch (error) {
+        //     console.log("Error in receipt:", error);
+        // }
+
+        // const savedData = await AsyncStorage.getItem('dataObject');
+        // const dataObject = JSON.parse(savedData);
+
+    //     const getNumber = mobileNumber;
+    //     const phoneNumber = `+91${getNumber}`;
+    //     const message = `Hi, the amount has been successfully collected. Here is your receipt:
+    
+    // Name: *${name}*
+    // Account No.: *${headerLastAccNo}*
+    // Opening Balance: *0.00*
+    // Amount Collected: *${amount}.00*
+    // Closing Balance: *${amount}.00*
+    // Agent Name: *${dataObject.MstrData?.AgNameE}*
+    // Collected date and time: ${formatDateTime(new Date())}`;
+
+
+    //     const url = `whatsapp://send?text=${encodeURIComponent(message)}&phone=${phoneNumber}`;
+
+    //     Linking.openURL(url);
 
     };
 
     const handleSmsPress = async () => {
-        const savedData = await AsyncStorage.getItem('dataObject');
-        const dataObject = JSON.parse(savedData);
+    //     const savedData = await AsyncStorage.getItem('dataObject');
+    //     const dataObject = JSON.parse(savedData);
 
-        const getNumber = mobileNumber;
-        const phoneNumber = `+91${getNumber}`;
-        const message = `Hi, the amount has been successfully collected. Here is your receipt:
+    //     const getNumber = mobileNumber;
+    //     const phoneNumber = `+91${getNumber}`;
+    //     const message = `Hi, the amount has been successfully collected. Here is your receipt:
       
-      Name: ${name}
-      Account No.: ${headerLastAccNo}
-      Opening Balance: 0.00
-      Amount Collected: ${amount}.00
-      Closing Balance: ${amount}.00
-      Agent Name: ${dataObject.MstrData?.AgNameE}
-      Collected date and time: ${formatDateTime(new Date())}`;
+    //   Name: ${name}
+    //   Account No.: ${headerLastAccNo}
+    //   Opening Balance: 0.00
+    //   Amount Collected: ₹${new Intl.NumberFormat('en-IN').format(amount)}
+    //   Closing Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
+    //   Agent Name: ${dataObject.MstrData?.AgNameE}
+    //   Collected date and time: ${formatDateTime(new Date())}`;
 
-        const smsUrl = `sms:${phoneNumber}?body=${encodeURIComponent(message)}`;
-        try {
-            await Linking.openURL(smsUrl);
-        } catch (error) {
-            Alert.alert("Error", "Unable to open SMS app.");
-        }
-    };
+    //     const smsUrl = `sms:${phoneNumber}?body=${encodeURIComponent(message)}`;
+    //     try {
+    //         await Linking.openURL(smsUrl);
+    //     } catch (error) {
+    //         Alert.alert("Error", "Unable to open SMS app.");
+    //     }
+
+    const formatDateTime = (date) => {
+        const padZero = (num) => (num < 10 ? `0${num}` : num);
+        const year = date.getFullYear();
+        const month = padZero(date.getMonth() + 1);
+        const day = padZero(date.getDate());
+        const hours = padZero(date.getHours());
+        const minutes = padZero(date.getMinutes());
+        const seconds = padZero(date.getSeconds());
+  
+        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+      };
+  
+  
+      const clId = ClientID;
+      const Brid = BrCode;
+      const Agid = AgCode;
+      const glcod = '0';
+      const acno = GlLastAcc;
+      const ColldateTime = formatDateTime(new Date());
+      const ruidString = `${clId},${Brid},${Agid},${glcod},${acno}`;
+      const ruid = Buffer.from(ruidString).toString('base64');
+      const encodedDateTime = collectionDate.replace(' ', '%20');
+      console.log("time new", encodedDateTime)
+  
+      const encodedURL = `https://app.automatesystemsdataservice.in/Customer/api/Receipt?ruid=${ruid}&ColldateTime=${encodedDateTime}`;
+  
+  
+      console.log(encodedURL);
+  
+      const getNumber = mobileNumber;
+      const phoneNumber = `+91${getNumber}`; // Replace with the actual phone number (with country code)
+      const message = `Hi, Please click on the link Below for the Receipt of your Transaction. ${encodedURL} `;
+  
+      const smsUrl = `sms:${phoneNumber}?body=${encodeURIComponent(message)}`;
+          try {
+              await Linking.openURL(smsUrl);
+          } catch (error) {
+              Alert.alert("Error", "Unable to open SMS app.");
+          }
+};
 
     const handleSubmit2 = () => {
         setModalVisible(false);
         setModalVisible2(false);
+        setName(null);
+        setmobileNumber(null);
+        setAmount(null);
     }
 
-    // console.log(" checking get data alloweded,", loading, !isFirstLogin, dataAvailable, LicenseExpired)
+    // console.log(" checking get data alloweded,", loading, 'first login', isFirstLogin, 'data avail', dataAvailable, 'licence', LicenseExpired, 'collection allowed', collectionAllowed)
     return (
         <View style={styles.dashView}>
             <StatusBar backgroundColor={COLORS.primaryAccent} barStyle="light-content" />
@@ -699,10 +1173,13 @@ export default function Dashboard({ navigation, route }) {
                     </>
                 ) : (
                     <View style={{ height: windowHeight * 0.80 }}>
+                        <View>
+                            <Text onPress={handleWhatsAppPress} style={[styles.text, { marginTop: 0, marginBottom: 10, marginLeft: 20 }]}>Agent Name: <Text style={[styles.text, { fontSize: 14, fontFamily: 'Montserrat-Bold' }]}>{AgentName ? AgentName : '-'} </Text></Text>
+                        </View>
                         <View style={[styles.dataInfoView, { width: windowWidth * 0.90, alignSelf: 'center', flexDirection: 'row', height: 50 }]}>
                             <View>
                                 {/* <Text style={styles.text}>Client Name</Text> */}
-                                <Text style={[styles.text, { fontSize: 14, fontFamily: 'Montserrat-Bold' }]}>{ClientName ? ClientName : '-'} </Text>
+                                <Text style={[styles.text, { fontSize: 14, fontFamily: 'Montserrat-Bold', marginLeft: 0 }]}>{ClientName ? ClientName : '-'} </Text>
                             </View>
                             <View>
                                 <Text style={styles.text}>Branch</Text>
@@ -710,23 +1187,36 @@ export default function Dashboard({ navigation, route }) {
                             </View>
                         </View>
 
-                        <View>
-                            <Text style={[styles.text, { marginTop: 10, marginBottom: 0, marginLeft: 20 }]}>Agent Name: <Text style={[styles.text, { fontSize: 14, fontFamily: 'Montserrat-Bold' }]}>{AgentName ? AgentName : '-'} </Text></Text>
-                        </View>
-                        <View style={{ width: windowWidth * 1, height: windowHeight * 0.12, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly' }}>
+
+
+                        {/* <View style={{ width: windowWidth * 1, height: windowHeight * 0.12, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly' }}>
                             <View style={styles.dataInfoView}>
                                 <Text style={styles.text}>Total Receipts </Text>
                                 <Text style={[styles.text, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>{transactionTable ? transactionTable.length : '-'} </Text>
                             </View>
                             <View style={styles.dataInfoView}>
-                                <Text style={styles.text}>Total collected </Text>
+                                <Text style={styles.text}>Total collected amount </Text>
                                 <Text style={[styles.text, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>{totalAmount ? `₹${totalAmount}.00` : '-'}</Text>
+                            </View>
+                        </View> */}
+
+                        <View style={{ width: windowWidth * 1, height: windowHeight * 0.18, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-evenly' }}>
+                            <View style={[styles.dataInfoView, { width: windowWidth * 0.90, alignSelf: 'center', flexDirection: 'column', height: 70 }]}>
+                                <Text style={[styles.text, {}]}>Total collected receipts </Text>
+                                <Text style={[styles.text, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>{transactionTable ? transactionTable.length : '-'} </Text>
+                            </View>
+                            <View style={[styles.dataInfoView, { width: windowWidth * 0.90, alignSelf: 'center', flexDirection: 'column', height: 70, overflow: 'hidden' }]}>
+                                <Text style={[styles.text, {}]}>Total collected amount </Text>
+                                <Text style={[styles.text, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>{totalAmount ? `₹${new Intl.NumberFormat('en-IN').format(totalAmount)}` : '-'}</Text>
                             </View>
                         </View>
 
                         {/* {AllowNewUser && */}
-                        <View>
-                            <Button icon={'plus'} disabled={!AllowNewUser || !dataAvailable || isFirstLogin} onPress={addNewUser} labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }} style={{ marginTop: 5, marginBottom: -5, alignSelf: 'flex-end', marginRight: 20 }} mode="contained">Add new user</Button>
+                        <View style={{ width: '95%', height: 50, alignSelf: 'center', display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <View>
+                                {/* <Text style={{ fontFamily: 'Montserrat-Regular', color: COLORS.gray, }}> <MaterialCommunityIcons name='upload-off' style={{ elevation: 5 }} elevation={5} color={COLORS.primary} size={20} /></Text> */}
+                            </View>
+                            <Button icon={'plus'} disabled={!AllowNewUser || !dataAvailable || isFirstLogin} onPress={addNewUser} labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }} style={{ marginTop: 5, marginBottom: -5, alignSelf: 'flex-end', minWidth: windowWidth * 0.45 }} mode="contained">Add new user</Button>
                         </View>
                         {/* } */}
 
@@ -738,10 +1228,10 @@ export default function Dashboard({ navigation, route }) {
 
                         <View style={{ width: '95%', alignSelf: 'center', display: 'flex', justifyContent: 'space-between', flexDirection: 'row' }}>
                             {/* <View> */}
-                            <Button icon={'play'} loading={loading} disabled={loading || dataAvailable || LicenseExpired} onPress={handleGetData} labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }} style={{ marginTop: '8%' }} mode="contained">Start collection</Button>
+                            <Button icon={'play'} loading={loading} disabled={loading || dataAvailable || LicenseExpired} onPress={handleGetData} labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }} style={{ marginTop: '8%', minWidth: windowWidth * 0.45 }} mode="contained">Get Data</Button>
                             {/* </View>
                                 <View> */}
-                            <Button icon={'arrow-up'} loading={buttonLoading} disabled={buttonLoading || !dataAvailable || isFirstLogin || !collectionAllowed} onPress={handleCloseCollection} labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }} style={{ marginTop: '8%' }} mode="contained">Close collection</Button>
+                            <Button icon={'arrow-up'} loading={buttonLoading} disabled={buttonLoading || !dataAvailable || isFirstLogin || !collectionAllowed} onPress={handleCloseCollection} labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }} style={{ marginTop: '8%', minWidth: windowWidth * 0.45 }} mode="contained">Close collection</Button>
                             {/* </View> */}
                         </View>
                         {/*  } */}
@@ -752,7 +1242,7 @@ export default function Dashboard({ navigation, route }) {
                                     <Text style={styles.lineText}>Recent transactions </Text>
                                 </View>
 
-                                <ScrollView style={{ marginTop: 20, marginBottom: 40 }}>
+                                <ScrollView style={{ marginTop: 20, marginBottom: windowHeight * 0.002 }}>
                                     <>
                                         {transactionTable && transactionTable?.length > 0 ? (
                                             transactionTable
@@ -792,7 +1282,7 @@ export default function Dashboard({ navigation, route }) {
                 />
                 <View style={styles.modalContainer}>
                     <View style={styles.modalView11}>
-                        <Text style={styles.text}>New account Collection </Text>
+                        <Text style={styles.text}>New account collection </Text>
                         <TextInput
                             label="Enter customer name"
                             mode='outlined'
@@ -851,6 +1341,9 @@ export default function Dashboard({ navigation, route }) {
                     barStyle={'light-content'}
                     backgroundColor={'rgba(0, 0, 0, 0.5)'}
                 />
+                {/* <View style={styles.modalContainer}> */}
+
+                {/* <View style={styles.modalView}> */}
                 <View style={{
                     flex: 1,
                     justifyContent: 'center',
@@ -868,43 +1361,44 @@ export default function Dashboard({ navigation, route }) {
                     }}>
                         <MaterialCommunityIcons3 name='cloud-done' color={COLORS.primary} size={100} />
                         <View style={{
-                            width: windowWidth * 0.85,
+                            width: '100%',
                             // height: 120,
                             borderRadius: 10,
                             alignSelf: 'center',
                             marginTop: 20,
                             paddingTop: 10,
                             paddingBottom: 10,
-                            // justifyContent: 'center',
-                            // alignItems: 'center',
                             display: 'flex',
                             flexDirection: 'row',
                             backgroundColor: '#eef2fa',
                             elevation: 1
                         }}>
                             <View style={styles.left}>
-                                <Text style={styles.text1}>Name : </Text>
-                                <Text style={[styles.text1, { marginHorizontal: 25 }]}>{name}</Text>
-                                <Text style={styles.text1}>Account Number : </Text>
-                                <Text style={[styles.text1, { marginHorizontal: 25 }]}>{headerLastAccNo}</Text>
-                                <Text style={styles.text1}>Opeing Balance : </Text>
-                                <Text style={[styles.text1, { marginHorizontal: 25 }]}>0.00</Text>
-                                <Text style={styles.text1}>Amount Collected : </Text>
-                                <Text style={[styles.text1, { marginHorizontal: 25 }]}>{amount}.00</Text>
-                                <Text style={styles.text1}>Closing Balance : </Text>
-                                <Text style={[styles.text1, { marginHorizontal: 25 }]}>{amount}.00</Text>
+                                <Text style={[styles.text1, { fontSize: 16, color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>Name : </Text>
+                                <Text style={[styles.text1, { fontSize: 16, fontFamily: 'Montserrat-SemiBold', marginHorizontal: 25 }]}>{name}</Text>
+                                <Text style={[styles.text1, { fontSize: 16, color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>Account Number : </Text>
+                                <Text style={[styles.text1, { fontSize: 16, fontFamily: 'Montserrat-SemiBold', marginHorizontal: 25 }]}>{headerLastAccNo}</Text>
+                                <Text style={[styles.text1, { fontSize: 16, color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>Opeing Balance : </Text>
+                                <Text style={[styles.text1, { fontSize: 16, fontFamily: 'Montserrat-SemiBold', marginHorizontal: 25 }]}>0.00</Text>
+                                <Text style={[styles.text1, { fontSize: 16, color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>Amount Collected : </Text>
+                                <Text style={[styles.text1, { fontSize: 16, fontFamily: 'Montserrat-SemiBold', marginHorizontal: 25 }]}>₹{new Intl.NumberFormat('en-IN').format(amount)}</Text>
+                                <Text style={[styles.text1, { fontSize: 16, color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>Closing Balance : </Text>
+                                <Text style={[styles.text1, { fontSize: 16, fontFamily: 'Montserrat-SemiBold', marginHorizontal: 25 }]}>₹{new Intl.NumberFormat('en-IN').format(amount)}</Text>
                             </View>
                         </View>
 
                         <View style={[styles.buttonContainer, { marginTop: 30 }]}>
-                            <Button
-                                style={styles.modalButton}
-                                mode="contained"
-                                labelStyle={styles.buttonLabel}
-                                onPress={handleSubmit2}
-                            >
-                                Close
-                            </Button>
+                            {/* <Button
+                style={styles.modalButton}
+                mode="contained"
+                labelStyle={styles.buttonLabel}
+                onPress={handleSubmit2}
+              >
+                Close
+              </Button> */}
+                            {/* <View style={styles.modalButton}>
+                <Text style={styles.buttonLabel}>No Receipt</Text>
+              </View> */}
                             <Button
                                 icon={'printer'}
                                 style={styles.modalButton}
@@ -932,6 +1426,7 @@ export default function Dashboard({ navigation, route }) {
                                 color={COLORS.white}
                                 size={35}
                             />
+                            <Text style={{ alignSelf: 'center', fontSize: 26, fontWeight: 'thin', color: '#999999' }}>|</Text>
                             <MaterialCommunityIcons
                                 onPress={handleSmsPress}
                                 style={styles.smsIcon}
@@ -939,7 +1434,57 @@ export default function Dashboard({ navigation, route }) {
                                 color={COLORS.white}
                                 size={35}
                             />
+                            <Text style={{ alignSelf: 'center', fontSize: 26, fontWeight: 'thin', color: '#999999' }}>|</Text>
+                            {/* <Pressable onPress={handleSubmit2} style={styles.noReceipt}>
+                <Text style={styles.buttonLabel}>No Receipt</Text>
+              </Pressable> */}
+                            <Button
+                                style={{ marginHorizontal: 0, marginVertical: 10, borderColor: COLORS.primaryAccent }}
+                                mode="contained"
+                                labelStyle={styles.buttonLabel}
+                                onPress={handleSubmit2}
+                            >
+                                No Receipt
+                            </Button>
                         </View>
+
+                        {/* <View style={[styles.buttonContainer, { marginTop: 30 }]}>
+                            <Button
+                                style={styles.modalButton}
+                                mode="contained"
+                                labelStyle={styles.buttonLabel}
+                                onPress={handleSubmit2}
+                            >
+                                Close
+                            </Button>
+                            <Button
+                                icon={'printer'}
+                                style={styles.modalButton}
+                                mode="outlined"
+                                labelStyle={styles.buttonLabel}
+                                onPress={() => { Alert.alert("Printing") }}
+                            >
+                                Print
+                            </Button>
+                        </View>
+
+                        <View style={[styles.buttonContainer, { marginTop: 10, justifyContent: 'space-evenly' }]}>
+                        
+                            <MaterialCommunityIcons
+                                onPress={handleWhatsAppPress}
+                                style={styles.whatsappIcon}
+                                name='whatsapp'
+                                color={COLORS.white}
+                                size={35}
+                            />
+                            <MaterialCommunityIcons
+                                onPress={handleSmsPress}
+                                style={styles.smsIcon}
+                                name='android-messages'
+                                color={COLORS.white}
+                                size={35}
+                            />
+                        </View> */}
                     </View>
                 </View>
             </Modal>

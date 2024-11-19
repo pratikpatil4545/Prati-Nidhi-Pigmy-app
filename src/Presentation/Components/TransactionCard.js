@@ -3,15 +3,16 @@ import { View, Text, StyleSheet, ScrollView, Pressable, Modal, ToastAndroid, Sta
 import React, { useEffect, useState } from 'react'
 import { COLORS, windowHeight, windowWidth } from '../../Common/Constants';
 import { useNavigation } from '@react-navigation/native';
+import MaterialCommunityIcons2 from 'react-native-vector-icons/MaterialCommunityIcons';
 
 export default function TransactionCard(props) {
 
     const navigation = useNavigation();
-    // console.log("searchQuery", props.item.IsitNew)
+    // console.log("searchQuery", props.item.pending);
 
     const HighlightedText = ({ name, query }) => {
         if (!query) {
-            return <Text style={[styles.text, { color: COLORS.darkGrey }]}><Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>A/C No.: </Text> {name}</Text>;
+            return <><Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>Account Number: </Text><Text style={[styles.text, { color: COLORS.darkGrey }]}>    {name}</Text></>;
         }
         const regex = new RegExp(`(${query})`, 'gi'); // Create a regex to match the query
         const parts = name.split(regex); // Split the name based on the query
@@ -66,12 +67,14 @@ export default function TransactionCard(props) {
                 <View style={styles.cardView}>
                     <View style={styles.left}>
                         {props.item.IsitNew === 'True' &&
-                        <View style={{position: 'absolute', width: '100%', height: '20%', top: 0, display: 'flex',alignItems: 'center', justifyContent: 'center', backgroundColor: '#7FA1C3'}}>
-                            <Text style={{ fontSize: 12, fontFamily: 'Montserrat-Regular', color: COLORS.white, }}>
-                                New Account
-                            </Text>
-                        </View>
+                            <View style={{ position: 'absolute', width: '100%', height: '20%', top: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#7FA1C3' }}>
+                                <Text style={{ fontSize: 12, fontFamily: 'Montserrat-Regular', color: COLORS.white, }}>
+                                    New Account
+                                </Text>
+                            </View>
                         }
+
+
                         <View style={styles.dateCard}>
                             <View style={styles.dateCardInner}></View>
                             <View style={[styles.dateCardInner, { backgroundColor: '#6482AD', borderTopLeftRadius: 0, borderTopRightRadius: 0, borderBottomLeftRadius: 5, borderBottomRightRadius: 5, }]}></View>
@@ -85,16 +88,15 @@ export default function TransactionCard(props) {
                     </View>
 
                     <View style={styles.right}>
-                        
-                        <HighlightedText name={props.item.AccountNo} query={props.searchQuery} />
-                        <Text style={[styles.text, { color: COLORS.darkGrey }]}>
-                            <Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>Today's Entry:  </Text>
-                            {props.item.Collection}.00
-                        </Text>
-                        <Text style={[styles.text, { color: COLORS.darkGrey }]}>
+                        {/* {props.item.pending &&
+                            <MaterialCommunityIcons2 name='upload-off' style={{ elevation: 5, position: 'absolute', right: 5 }} elevation={5} color={COLORS.primary} size={20} />
+                        } */}
+
+                        <HighlightedText name={`${props.item.AccountNo}`} query={props.searchQuery} />
+                            <Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>Collection:  </Text>
+                        <Text style={[styles.text, { color: COLORS.darkGrey }]}>    ₹{new Intl.NumberFormat('en-IN').format(props.item.Collection)}</Text>
                             <Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>Closing balance:  </Text>
-                            {props.item.ClosingBal}.00
-                        </Text>
+                        <Text style={[styles.text, { color: COLORS.darkGrey }]}>    ₹{new Intl.NumberFormat('en-IN').format(props.item.ClosingBal)}</Text>
                     </View>
                 </View>
             </Pressable>
@@ -109,7 +111,7 @@ const styles = StyleSheet.create({
     },
     mainView: {
         width: windowWidth * 1,
-        height: windowHeight * 0.15,
+        height: windowHeight * 0.18,
         // backgroundColor: 'green',
         display: 'flex',
         alignItems: 'center',
@@ -117,7 +119,7 @@ const styles = StyleSheet.create({
     },
     card: {
         width: windowWidth * 0.85,
-        height: windowHeight * 0.13,
+        height: windowHeight * 0.15,
         display: "flex",
         // flexDirection: 'row',
         backgroundColor: COLORS.white,

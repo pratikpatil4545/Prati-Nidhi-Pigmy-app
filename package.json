@@ -16,6 +16,7 @@
     "@dylankenneally/react-native-ssh-sftp": "^1.5.20",
     "@nozbe/watermelondb": "^0.27.1",
     "@react-native-async-storage/async-storage": "^1.24.0",
+    "@react-native-community/netinfo": "^11.4.1",
     "@react-native-masked-view/masked-view": "^0.3.1",
     "@react-navigation/bottom-tabs": "^6.6.1",
     "@react-navigation/native": "^6.1.18",

@@ -7,6 +7,9 @@ import MaterialCommunityIcons4 from 'react-native-vector-icons/FontAwesome6';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Button, TextInput } from 'react-native-paper';
 import { useIsFocused } from '@react-navigation/native';
+import NetInfo from '@react-native-community/netinfo';
+import { XMLParser } from 'fast-xml-parser';
+import { Buffer } from 'buffer';
 
 export default function UserProfile({ route, navigation }) {
 
@@ -34,7 +37,25 @@ export default function UserProfile({ route, navigation }) {
   const [isFocusedInput, setIsFocusedInput] = useState(false);
   const [hasCleared, setHasCleared] = useState(false);
   const [buttonLoading, setButtonLoading] = useState(false);
+  const [isConnected, setConnected] = useState(true);
 
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      setConnected(state.isConnected);
+      console.log("networks state", state)
+      if (!state.isConnected) {
+        showAlert();
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  const showAlert = () => {
+    console.log('Internet Connection You are offline. Some features may not be available.');
+  };
   // console.log("routes", item)
 
   useEffect(() => {
@@ -89,7 +110,7 @@ export default function UserProfile({ route, navigation }) {
     // let temp = filteredTransactions[0];
     if (filteredTransactions && filteredTransactions.length > 0) {
       const latestTransaction = filteredTransactions[filteredTransactions.length - 1];
-      // console.log("updated balance", latestTransaction)
+      console.log("updated balance", latestTransaction)
 
       setupdatedBalance(latestTransaction?.OpeningBal);
       setLoading(false);
@@ -124,21 +145,39 @@ export default function UserProfile({ route, navigation }) {
   }, [transactionTableData]);
 
   const handleWhatsAppPress = async () => {
-    const savedData = await AsyncStorage.getItem('dataObject');
-    const dataObject = JSON.parse(savedData);
 
-    // Define the message and phone number
+    const formatDateTime = (date) => {
+      const padZero = (num) => (num < 10 ? `0${num}` : num);
+      const year = date.getFullYear();
+      const month = padZero(date.getMonth() + 1);
+      const day = padZero(date.getDate());
+      const hours = padZero(date.getHours());
+      const minutes = padZero(date.getMinutes());
+      const seconds = padZero(date.getSeconds());
+
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    };
+
+
+    const clId = ClientID;
+    const Brid = BrCode;
+    const Agid = AgCode;
+    const glcod = item.GLCode;
+    const acno = item.AccountNo;
+    const ColldateTime = formatDateTime(new Date());
+    const ruidString = `${clId},${Brid},${Agid},${glcod},${acno}`;
+    const ruid = Buffer.from(ruidString).toString('base64');
+    const encodedDateTime = collectionDate.replace(' ', '%20');
+    console.log("time new", encodedDateTime)
+
+    const encodedURL = `https://app.automatesystemsdataservice.in/Customer/api/Receipt?ruid=${ruid}&ColldateTime=${encodedDateTime}`;
+
+
+    console.log(encodedURL);
+
     const getNumber = mobileInputVisible ? mobileNumber : parseInt(route.params.item.Mobile1);
     const phoneNumber = `+91${getNumber}`; // Replace with the actual phone number (with country code)
-    const message = `Hi, the amount has been successfully collected. Here is your receipt:
-
-Name: *${item.EnglishName}*
-Account No.: *${item.AccountNo}*
-Opening Balance: *${(updatedBalances || updatedBalances === 0) ? updatedBalances : item.ThisMthBal}.00*
-Amount Collected: *${amount}.00*
-Closing Balance: *${newBalance ? newBalance : 0}.00*
-Agent Name: *${dataObject.MstrData?.AgNameE}*
-Collected date and time: ${formatDateTime(new Date())}`;
+    const message = `Hi, Please click on the link Below for the Receipt of your Transaction. ${encodedURL} `;
 
 
     // Create the WhatsApp URL with the correct format
@@ -146,23 +185,80 @@ Collected date and time: ${formatDateTime(new Date())}`;
 
     Linking.openURL(url);
 
+    //     const savedData = await AsyncStorage.getItem('dataObject');
+    //     const dataObject = JSON.parse(savedData);
+
+    //     // Define the message and phone number
+    //     const getNumber = mobileInputVisible ? mobileNumber : parseInt(route.params.item.Mobile1);
+    //     const phoneNumber = `+91${getNumber}`; // Replace with the actual phone number (with country code)
+    //     const message = `Hi, the amount has been successfully collected. Here is your receipt:
+
+    // Name: *${item.EnglishName}*
+    // Account No.: *${item.AccountNo}*
+    // Opening Balance: *${(updatedBalances || updatedBalances === 0) ? `₹${new Intl.NumberFormat('en-IN').format(updatedBalances)}` : item.ThisMthBal}.00*
+    // Amount Collected: *₹${amount}.00*
+    // Closing Balance: *${newBalance ? `₹${new Intl.NumberFormat('en-IN').format(newBalance)}` : 0}.00*
+    // Agent Name: *${dataObject.MstrData?.AgNameE}*
+    // Collected date and time: ${formatDateTime(new Date())}`;
+
+
+    //     // Create the WhatsApp URL with the correct format
+    //     const url = `whatsapp://send?text=${encodeURIComponent(message)}&phone=${phoneNumber}`;
+
+    //     Linking.openURL(url);
+
   };
 
   const handleSmsPress = async () => {
-    const savedData = await AsyncStorage.getItem('dataObject');
-    const dataObject = JSON.parse(savedData);
+
+    const formatDateTime = (date) => {
+      const padZero = (num) => (num < 10 ? `0${num}` : num);
+      const year = date.getFullYear();
+      const month = padZero(date.getMonth() + 1);
+      const day = padZero(date.getDate());
+      const hours = padZero(date.getHours());
+      const minutes = padZero(date.getMinutes());
+      const seconds = padZero(date.getSeconds());
+
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    };
+
+
+    const clId = ClientID;
+    const Brid = BrCode;
+    const Agid = AgCode;
+    const glcod = item.GLCode;
+    const acno = item.AccountNo;
+    const ColldateTime = formatDateTime(new Date());
+    const ruidString = `${clId},${Brid},${Agid},${glcod},${acno}`;
+    const ruid = Buffer.from(ruidString).toString('base64');
+    const encodedDateTime = collectionDate.replace(' ', '%20');
+    console.log("time new", encodedDateTime)
+
+    const encodedURL = `https://app.automatesystemsdataservice.in/Customer/api/Receipt?ruid=${ruid}&ColldateTime=${encodedDateTime}`;
+
+
+    console.log(encodedURL);
 
     const getNumber = mobileInputVisible ? mobileNumber : parseInt(route.params.item.Mobile1);
-    const phoneNumber = `+91${getNumber}`;
-    const message = `Hi, the amount has been successfully collected. Here is your receipt:
-  
-  Name: ${item.EnglishName}
-  Account No.: ${item.AccountNo}
-  Opening Balance: ${(updatedBalances || updatedBalances === 0) ? updatedBalances : item.ThisMthBal}.00
-  Amount Collected: ${amount}.00
-  Closing Balance: ${newBalance ? newBalance : 0}.00
-  Agent Name: ${dataObject.MstrData?.AgNameE}
-  Collected date and time: ${formatDateTime(new Date())}`;
+    const phoneNumber = `+91${getNumber}`; // Replace with the actual phone number (with country code)
+    const message = `Hi, Please click on the link Below for the Receipt of your Transaction. ${encodedURL} `;
+
+
+    //   const savedData = await AsyncStorage.getItem('dataObject');
+    //   const dataObject = JSON.parse(savedData);
+
+    //   const getNumber = mobileInputVisible ? mobileNumber : parseInt(route.params.item.Mobile1);
+    //   const phoneNumber = `+91${getNumber}`;
+    //   const message = `Hi, the amount has been successfully collected. Here is your receipt:
+
+    // Name: ${item.EnglishName}
+    // Account No.: ${item.AccountNo}
+    // Opening Balance: ${(updatedBalances || updatedBalances === 0) ? updatedBalances : item.ThisMthBal}.00
+    // Amount Collected: ${amount}.00
+    // Closing Balance: ${newBalance ? newBalance : 0}.00
+    // Agent Name: ${dataObject.MstrData?.AgNameE}
+    // Collected date and time: ${formatDateTime(new Date())}`;
 
     const smsUrl = `sms:${phoneNumber}?body=${encodeURIComponent(message)}`;
     try {
@@ -468,6 +564,7 @@ Total Account Balance: ${newBalance ? newBalance : 0}.00
   //   }
   // };
 
+  const [collectionDate, setCollectionDate] = useState(null);
 
   const handleSubmit = async () => {
     setButtonLoading(true);
@@ -540,11 +637,11 @@ Total Account Balance: ${newBalance ? newBalance : 0}.00
         //   console.log("Final Total Sum:", totalSum);
         // });
 
-        let totalSum = parseFloat(amount);
+        let totalSum = 0;
         const totalCollectionSum = await calculateCollectionSum(AccountNo);
         totalSum = totalSum + totalCollectionSum;
         // console.log("Total Collection Sum:", totalCollectionSum);
-        // console.log("Final Total Sum:", totalSum);
+        console.log("Final Total Sum:", totalSum);
 
         const latestTransaction = filteredTransactions[0];
         // let openingBalance = parseFloat(latestTransaction?.OpeningBal || ThisMthBal || 0);
@@ -552,12 +649,18 @@ Total Account Balance: ${newBalance ? newBalance : 0}.00
         let closingBalance;
         // console.log("amount to be added checking old values", latestTransaction, closingBalance);
         if (IsAmtToBeAdded === 'True') {
-          openingBalance += parseFloat(totalSum);
-          closingBalance = openingBalance + parseFloat(amount);
-          // console.log("amount to be added true", openingBalance, closingBalance);
+          if (parseFloat(totalSum) === 0) {
+            // openingBalance += parseFloat(amount);
+            closingBalance = openingBalance + parseFloat(amount);
+          }
+          else {
+            openingBalance += parseFloat(totalSum);
+            closingBalance = openingBalance + parseFloat(amount);
+            console.log("amount to be added true", openingBalance, totalSum, closingBalance);
+          }
         } else if (openingBalance >= parseFloat(amount)) {
-          openingBalance -= parseFloat(totalSum);
           closingBalance = openingBalance - parseFloat(amount);
+          openingBalance -= parseFloat(totalSum);
           // console.log("amount to be added false openbal less than amount", openingBalance, closingBalance);
 
         } else {
@@ -571,16 +674,54 @@ Total Account Balance: ${newBalance ? newBalance : 0}.00
       }
     };
 
-    const submitData = async (transactionData, newArrayString) => {
-      try {
-        const response = await fetch(`http://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({ DataFromApp: newArrayString }).toString(),
-        });
-        // console.log("Response:", await response.text());
-      } catch (error) {
-        console.error("Error during API call:", error);
+    const submitData = async (transactionData, newArrayString, isOnline) => {
+      if (isOnline) {
+        try {
+          const response = await fetch(`https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp?DataFromApp=${newArrayString.toString()}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ DataFromApp: newArrayString }).toString(),
+          });
+          const responseText = await response.text();
+          console.log("Response for submit api:", responseText);
+
+          const parser = new XMLParser();
+          const jsonResponse = parser.parse(responseText);
+
+          const jsonString = jsonResponse.string;
+
+          try {
+            // Extract the actual JSON portion from ResponseString
+            const responseObject = JSON.parse(jsonString);
+            const rawResponseString = responseObject.ResponseString;
+
+            // Extract only the JSON part from the rawResponseString
+            const jsonStartIndex = rawResponseString.indexOf('{');
+            const cleanedResponseString = rawResponseString.substring(jsonStartIndex);
+            const dataObject = JSON.parse(cleanedResponseString);
+
+            const collectionData = dataObject.CollectionData;
+            console.log("collectionData:", collectionData);
+
+            if (collectionData && collectionData.length > 0) {
+              const collDateTime = collectionData[0].CollDateTime;
+              console.log("CollDateTime:", collDateTime);
+              setCollectionDate(collDateTime);
+              // You can store or use collDateTime as needed
+            } else {
+              console.log("No collection data found.");
+            }
+          }
+          catch (error) {
+            console.error("Error parsing the response:", error);
+          }
+        } catch (error) {
+          console.error("Error during API call:", error);
+        }
+      } else {
+        const pendingTransactions = JSON.parse(await AsyncStorage.getItem('pendingTransactions')) || [];
+        await AsyncStorage.setItem('pendingTransactions', JSON.stringify([...pendingTransactions, transactionData]));
+        // Alert.alert('Offline', 'No internet connection. Transaction saved as pending.');
       }
     };
 
@@ -597,6 +738,9 @@ Total Account Balance: ${newBalance ? newBalance : 0}.00
     }
 
     const { openingBalance, transactionTable, closingBalance } = transactionDetails;
+    // setupdatedBalance(openingBalance);
+    // setNewBalance(closingBalance);
+    console.log("closing balance check", closingBalance)
     // let closingBal = openingBalance
     const transactionData = {
       GLCode,
@@ -620,9 +764,9 @@ Total Account Balance: ${newBalance ? newBalance : 0}.00
     const message = `
     Name: ${EnglishName}
 Account Number: ${AccountNo}
-Opeing Balance: ${(updatedBalances || updatedBalances === 0) ? updatedBalances : ThisMthBal}.00
-Amount Collected: ${amount}.00
-Total Account Balance: ${openingBalance ? openingBalance : 0}.00
+Opeing Balance: ${(openingBalance || openingBalance === 0) ? `₹${new Intl.NumberFormat('en-IN').format(openingBalance)}` : ThisMthBal}
+Amount Collected: ₹${amount}
+Total Account Balance: ${closingBalance ? `₹${new Intl.NumberFormat('en-IN').format(closingBalance)}` : 0}
   `;
 
     Alert.alert(
@@ -632,11 +776,25 @@ Total Account Balance: ${openingBalance ? openingBalance : 0}.00
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Confirm', onPress: async () => {
-            setNewBalance(openingBalance);
-            await AsyncStorage.setItem('transactionTable', JSON.stringify([...transactionTable, transactionData]));
+            setNewBalance(closingBalance);
+            setupdatedBalance(openingBalance);
+            // await AsyncStorage.setItem('transactionTable', JSON.stringify([...transactionTable, transactionData]));
+            const updatedTransactionData = {
+              ...transactionData,
+              pending: !isConnected // Add pending flag if offline
+            };
+
+            const currentTransactions = JSON.parse(await AsyncStorage.getItem('transactionTable')) || [];
+            await AsyncStorage.setItem('transactionTable', JSON.stringify([...currentTransactions, updatedTransactionData]));
+
             setCollectionMadeToday(true);
             setModalVisible2(true);
-            await submitData(transactionData, JSON.stringify(newArray));
+            // await submitData(transactionData, JSON.stringify(newArray));
+            if (isConnected) {
+              await submitData(updatedTransactionData, JSON.stringify(newArray), true);
+            } else {
+              await submitData(updatedTransactionData, JSON.stringify(newArray), false);
+            }
           }
         }
       ]
@@ -952,7 +1110,7 @@ Total Account Balance: ${openingBalance ? openingBalance : 0}.00
             <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold', marginHorizontal: 25 }]}>{route.params.BranchName} ({route.params.BranchCode})</Text>
 
             <Text style={[styles.text1, { color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>Opening Balance : </Text>
-            <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold', marginHorizontal: 25 }]}>{(updatedBalances || updatedBalances === 0) ? updatedBalances : item.ThisMthBal}.00</Text>
+            <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold', marginHorizontal: 25 }]}>{(updatedBalances || updatedBalances === 0) ? `₹${new Intl.NumberFormat('en-IN').format(updatedBalances)}` : item.ThisMthBal}</Text>
 
             {parseInt(item.LastMthBal) != 0 &&
               <Text style={[styles.text1, { color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>Last Month Balance : </Text>
@@ -965,7 +1123,7 @@ Total Account Balance: ${openingBalance ? openingBalance : 0}.00
               <Text style={[styles.text1, { color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>Lien Amount : </Text>
             }
             {parseInt(item.LienAmt) != 0 &&
-              <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold', marginHorizontal: 25 }]}>{item.LienAmt}.00</Text>
+              <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold', marginHorizontal: 25 }]}>₹{new Intl.NumberFormat('en-IN').format(item.LienAmt)}</Text>
             }
 
             <Text style={[styles.text1, { color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>A/C Opened date. : </Text>
@@ -1018,7 +1176,7 @@ Total Account Balance: ${openingBalance ? openingBalance : 0}.00
             onPress={handlePress}
             contentStyle={{ flexDirection: 'row', width: '100%' }}
           >
-            <Text style={{ color: COLORS.white, marginRight: 0 }}>Add Collection</Text>
+            <Text style={{ color: COLORS.white, marginRight: 0 }}>Collection</Text>
           </Button>
         ) : (
           <View style={{ width: '95%', alignSelf: 'center', height: windowHeight * 0.09, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1134,16 +1292,16 @@ Total Account Balance: ${openingBalance ? openingBalance : 0}.00
             <MaterialCommunityIcons2 name='cloud-done' color={COLORS.primary} style={{ elevation: 5 }} size={100} />
             <View style={[styles.dataInfoView, { width: '100%' }]}>
               <View style={styles.left}>
-                <Text style={styles.text1}>Name : </Text>
-                <Text style={[styles.text1, { marginHorizontal: 25 }]}>{item.EnglishName}</Text>
-                <Text style={styles.text1}>Account Number : </Text>
-                <Text style={[styles.text1, { marginHorizontal: 25 }]}>{item.AccountNo}</Text>
-                <Text style={styles.text1}>Old Account Balance : </Text>
-                <Text style={[styles.text1, { marginHorizontal: 25 }]}>{(updatedBalances || updatedBalances === 0) ? updatedBalances : item.ThisMthBal}.00</Text>
-                <Text style={styles.text1}>Amount Collected : </Text>
-                <Text style={[styles.text1, { marginHorizontal: 25 }]}>{amount}.00</Text>
-                <Text style={styles.text1}>Total Account Balance : </Text>
-                <Text style={[styles.text1, { marginHorizontal: 25 }]}>{newBalance ? newBalance : 0}.00</Text>
+                <Text style={[styles.text1, { color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>Name : </Text>
+                <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold', marginHorizontal: 25 }]}>{item.EnglishName}</Text>
+                <Text style={[styles.text1, { color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>Account Number : </Text>
+                <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold', marginHorizontal: 25 }]}>{item.AccountNo}</Text>
+                <Text style={[styles.text1, { color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>Old Account Balance : </Text>
+                <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold', marginHorizontal: 25 }]}>{(updatedBalances || updatedBalances === 0) ? `₹${new Intl.NumberFormat('en-IN').format(updatedBalances)}` : item.ThisMthBal}</Text>
+                <Text style={[styles.text1, { color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>Amount Collected : </Text>
+                <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold', marginHorizontal: 25 }]}>₹{amount}</Text>
+                <Text style={[styles.text1, { color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>Total Account Balance : </Text>
+                <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold', marginHorizontal: 25 }]}>{newBalance ? `₹${new Intl.NumberFormat('en-IN').format(newBalance)}` : 0}</Text>
               </View>
             </View>
 
@@ -1195,9 +1353,17 @@ Total Account Balance: ${openingBalance ? openingBalance : 0}.00
                 size={35}
               />
               <Text style={{ alignSelf: 'center', fontSize: 26, fontWeight: 'thin', color: '#999999' }}>|</Text>
-              <Pressable onPress={handleSubmit2} style={styles.noReceipt}>
+              {/* <Pressable onPress={handleSubmit2} style={styles.noReceipt}>
                 <Text style={styles.buttonLabel}>No Receipt</Text>
-              </Pressable>
+              </Pressable> */}
+              <Button
+                style={{ marginHorizontal: 0, marginVertical: 10, borderColor: COLORS.primaryAccent }}
+                mode="contained"
+                labelStyle={styles.buttonLabel}
+                onPress={handleSubmit2}
+              >
+                No Receipt
+              </Button>
             </View>
           </View>
         </View>

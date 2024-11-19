@@ -121,6 +121,55 @@ export default function Login({ navigation }) {
         console.error('Error fetching phone number:', error);
       }
     };
+
+    // const fetchPhoneNumber = async () => {
+    //   try {
+    //     if (Platform.OS === 'android' && Platform.Version < 29) {
+    //       const granted = await PermissionsAndroid.request(
+    //         PermissionsAndroid.PERMISSIONS.READ_PHONE_STATE,
+    //         {
+    //           title: 'Phone Permission',
+    //           message: 'This app needs access to your phone number for verification purposes.',
+    //           buttonNeutral: 'Ask Me Later',
+    //           buttonNegative: 'Cancel',
+    //           buttonPositive: 'OK',
+    //         }
+    //       );
+    
+    //       if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+    //         Alert.alert('Permission Denied', 'Cannot access phone number without permission.');
+    //         return;
+    //       }
+    //     }
+    
+    //     SimCardsManagerModule.getSimCardsNative()
+    //       .then((simCards) => {
+    //         if (!simCards || simCards.length === 0) {
+    //           Alert.alert('No SIM card information available');
+    //           return;
+    //         }
+    
+    //         if (simCards.length > 1) {
+    //           Alert.alert(
+    //             'Select SIM',
+    //             'Please choose a SIM card to retrieve the phone number.',
+    //             simCards.map((sim, index) => ({
+    //               text: `SIM ${index + 1}: ${sim.phoneNumber || 'No number available'}`,
+    //               onPress: () => handlePhoneNumberSelection(sim),
+    //             })),
+    //             { cancelable: true }
+    //           );
+    //         } else {
+    //           handlePhoneNumberSelection(simCards[0]);
+    //         }
+    //       })
+    //       .catch((error) => {
+    //         console.error('Error fetching phone number:', error);
+    //       });
+    //   } catch (error) {
+    //     console.error('Error fetching phone number:', error);
+    //   }
+    // };
     
     const handlePhoneNumberSelection = (sim) => {
       let phoneNumber = sim.phoneNumber;
@@ -400,17 +449,17 @@ export default function Login({ navigation }) {
         if (password === storedPassword && storedNumber === number) {
           // If entered password matches stored password, log in
           setVerificationText('Verified');
-          ToastAndroid.show('Authentication Successful!', ToastAndroid.SHORT);
+          // ToastAndroid.show('Authentication Successful!', ToastAndroid.SHORT);
           navigation.navigate('BottomTabs'); // Navigate to main app screen
         } else {
           // If password doesn't match
           setVerificationText('Invalid credentials');
-          ToastAndroid.show('Invalid Credentials', ToastAndroid.SHORT);
+          Alert.alert('Warning','Invalid Credentials');
         }
       } catch (error) {
         console.error('Error accessing stored password:', error);
         setVerificationText('Error logging in');
-        ToastAndroid.show('Error logging in', ToastAndroid.SHORT);
+        // ToastAndroid.show('Error logging in', ToastAndroid.SHORT);
       } finally {
         setLoading(false);
       }
@@ -423,16 +472,16 @@ export default function Login({ navigation }) {
       try {
         await AsyncStorage.setItem('mobileNumber', number);
         await AsyncStorage.setItem('password', password); // Store password securely (or use encrypted storage)
-        ToastAndroid.show('Password has been set successfully!', ToastAndroid.SHORT);
+        // ToastAndroid.show('Password has been set successfully!', ToastAndroid.SHORT);
         setShowSetPassword(false); // Hide the set password UI
         setNewUser(false); // Mark the user as an existing user
       } catch (error) {
         console.error('Error storing user data:', error);
-        ToastAndroid.show('Error setting password', ToastAndroid.SHORT);
+        // ToastAndroid.show('Error setting password', ToastAndroid.SHORT);
       }
     } else {
       setPasswordMatched(false);
-      ToastAndroid.show('Passwords did not match!', ToastAndroid.SHORT);
+      Alert.alert('Warning','Passwords did not match!');
     }
   };
 
@@ -505,12 +554,12 @@ export default function Login({ navigation }) {
 
             {!newUser &&
               <View style={{ width: '95%', alignSelf: 'center' }}>
-                <Text style={{ color: COLORS.primary, alignSelf: 'flex-end', textDecorationLine: 'underline' }}>Forgot Password?</Text>
+                <Text onPress={()=>{ToastAndroid.show('Development is in progress!', ToastAndroid.SHORT)}} style={{ color: COLORS.primary, alignSelf: 'flex-end', textDecorationLine: 'underline' }}>Forgot Password?</Text>
               </View>
             }
 
             <View style={styles.buttonContainer}>
-              <Button icon="login" contentStyle={{ flexDirection: 'row-reverse' }} onPress={handleNext} disabled={loading} style={{ backgroundColor: "#8ABCF9" }} labelStyle={{ fontWeight: 'bold', fontSize: 16 }} mode="contained">
+              <Button icon="login" contentStyle={{ flexDirection: 'row-reverse' }} onPress={handleNext} disabled={loading} style={{ backgroundColor: COLORS.primary }} labelStyle={{ fontWeight: 'bold', fontSize: 16 }} mode="contained">
                 {newUser ? 'Next' : 'Login'}
               </Button>
             </View>
@@ -575,7 +624,7 @@ export default function Login({ navigation }) {
           )} */}
 
           <View style={styles.buttonContainer}>
-            <Button icon="chevron-right" contentStyle={{ flexDirection: 'row-reverse' }} onPress={handleSubmit} disabled={loading} style={{ backgroundColor: "#8ABCF9" }} labelStyle={{ fontWeight: 'bold', fontSize: 16 }} mode="contained">
+            <Button icon="chevron-right" contentStyle={{ flexDirection: 'row-reverse' }} onPress={handleSubmit} disabled={loading} style={{ backgroundColor: COLORS.primary }} labelStyle={{ fontWeight: 'bold', fontSize: 16 }} mode="contained">
               Submit
             </Button>
           </View>

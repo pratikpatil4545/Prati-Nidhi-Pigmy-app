@@ -7,7 +7,7 @@ import { useIsFocused, useNavigation } from '@react-navigation/native';
 import SkeletonPlaceholder from 'react-native-skeleton-placeholder';
 import { XMLParser } from 'fast-xml-parser';
 
-export default function SearchPopup(props,{route}) {
+export default function SearchPopup(props, { route }) {
     const { modalVisible, setModalVisible, searchQuery } = props;
     const [data, setData] = useState([]);
     const [filteredData, setFilteredData] = useState([]);
@@ -39,35 +39,44 @@ export default function SearchPopup(props,{route}) {
 
     const getMasterData = async () => {
         try {
-            const mobileNumber = await AsyncStorage.getItem('mobileNumber');
+            // const mobileNumber = await AsyncStorage.getItem('mobileNumber');
 
-            if (mobileNumber) {
-                const url = `http://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/RequestData_App?MobileNo=${mobileNumber}`;
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/xml',
-                    },
-                });
+            // if (mobileNumber) {
+            //     const url = `http://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/RequestData_App?MobileNo=${mobileNumber}`;
+            //     const response = await fetch(url, {
+            //         method: 'GET',
+            //         headers: {
+            //             'Content-Type': 'application/xml',
+            //         },
+            //     });
 
-                // Use response.text() to get the response body as a string
-                const responseText = await response.text();
+            //     // Use response.text() to get the response body as a string
+            //     const responseText = await response.text();
 
-                const parser = new XMLParser(); // Ensure this is imported correctly
-                const jsonResponse = parser.parse(responseText); // Parse XML response
+            //     const parser = new XMLParser(); // Ensure this is imported correctly
+            //     const jsonResponse = parser.parse(responseText); // Parse XML response
 
-                // Assuming the relevant data is inside jsonResponse.string
-                const jsonString = jsonResponse.string;
-                const dataObject = JSON.parse(jsonString);
-                // console.log("responseText:", dataObject.ResonseCode);
+            //     // Assuming the relevant data is inside jsonResponse.string
+            //     const jsonString = jsonResponse.string;
+            //     const dataObject = JSON.parse(jsonString);
+            //     // console.log("responseText:", dataObject.ResonseCode);
 
-                if (dataObject.ResonseCode === '0000') {
-                    await AsyncStorage.setItem('dataObject', JSON.stringify(dataObject));
-                    // setMappedMasterData(dataObject.MstrData?.MstrRecs);
-                    setData(dataObject.MstrData?.MstrRecs);
-                    setFilteredData(dataObject.MstrData?.MstrRecs);
-                    setLoading(false);
-                }
+            //     if (dataObject.ResonseCode === '0000') {
+            //         await AsyncStorage.setItem('dataObject', JSON.stringify(dataObject));
+            //         // setMappedMasterData(dataObject.MstrData?.MstrRecs);
+            //         setData(dataObject.MstrData?.MstrRecs);
+            //         setFilteredData(dataObject.MstrData?.MstrRecs);
+            //         setLoading(false);
+            //     }
+            // }
+
+            const savedData = await AsyncStorage.getItem('dataObject');
+
+            if (savedData) { 
+                const dataObject = JSON.parse(savedData);
+                setData(dataObject.MstrData?.MstrRecs);
+                setFilteredData(dataObject.MstrData?.MstrRecs);
+                setLoading(false);
             }
         } catch (e) {
             setLoading(false);
@@ -81,15 +90,15 @@ export default function SearchPopup(props,{route}) {
 
     useEffect(() => {
         const unsubscribe = navigation.addListener('focus', () => {
-          if (route?.params?.refreshData) {
-            setRefreshData(true); // or any method to refresh data
-            navigation.setParams({ refreshData: false }); // reset to prevent repeat refresh
-          }
+            if (route?.params?.refreshData) {
+                setRefreshData(true); // or any method to refresh data
+                navigation.setParams({ refreshData: false }); // reset to prevent repeat refresh
+            }
         });
-      
+
         return unsubscribe;
-      }, [navigation, route?.params]);
-      
+    }, [navigation, route?.params]);
+
 
     useEffect(() => {
         const handleBackPress = () => {
@@ -100,7 +109,7 @@ export default function SearchPopup(props,{route}) {
     }, []);
 
     const renderItem = ({ item, index }) => (
-        <DataCard setRefreshData={setRefreshData} BranchName={props.BranchName} BranchCode={props.BranchCode} collectionAllowed={props.collectionAllowed} multipleCollection={props.multipleCollection} searchQuery={searchQuery} item={item} key={index} index={index} />
+        <DataCard BranchName={props.BranchName} BranchCode={props.BranchCode} collectionAllowed={props.collectionAllowed} multipleCollection={props.multipleCollection} searchQuery={searchQuery} item={item} key={index} index={index} />
     );
 
     const loadMoreItems = () => {
@@ -128,14 +137,18 @@ export default function SearchPopup(props,{route}) {
                     ))}
                 </>
             ) : (
-                <FlatList
-                    data={filteredData.slice(0, visibleItemsCount)} // Only render the visible items
-                    renderItem={renderItem}
-                    keyExtractor={(item, index) => index.toString()}
-                    onEndReached={loadMoreItems} // Load more when reaching the end
-                    onEndReachedThreshold={0.5} // Trigger when the list is scrolled halfway to the end
-                    ListFooterComponent={() => (visibleItemsCount < filteredData.length ? <LoadingIndicator /> : null)}
-                />
+                <View style={{marginBottom: windowHeight * 0.10}}>
+                    <FlatList
+                        data={filteredData.slice(0, visibleItemsCount)} // Only render the visible items
+                        renderItem={renderItem}
+                        keyExtractor={(item, index) => index.toString()}
+                        onEndReached={loadMoreItems} // Load more when reaching the end
+                        onEndReachedThreshold={0.5} // Trigger when the list is scrolled halfway to the end
+                        ListFooterComponent={() => (visibleItemsCount < filteredData.length ? <LoadingIndicator /> : null)}
+                        initialNumToRender={10} // Render initial items
+                        maxToRenderPerBatch={10}
+                    />
+                </View>
             )}
         </View>
     );
