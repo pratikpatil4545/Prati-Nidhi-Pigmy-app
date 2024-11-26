@@ -8,11 +8,11 @@ import MaterialCommunityIcons2 from 'react-native-vector-icons/MaterialCommunity
 export default function TransactionCard(props) {
 
     const navigation = useNavigation();
-    // console.log("searchQuery", props.item.pending);
+    // console.log("searchQuery", props.item);
 
     const HighlightedText = ({ name, query }) => {
         if (!query) {
-            return <><Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>Account Number: </Text><Text style={[styles.text, { color: COLORS.darkGrey }]}>    {name}</Text></>;
+            return <><Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>Account Number: </Text><Text style={[styles.text, { color: COLORS.darkGrey }]}>{name}</Text></>;
         }
         const regex = new RegExp(`(${query})`, 'gi'); // Create a regex to match the query
         const parts = name.split(regex); // Split the name based on the query
@@ -92,11 +92,14 @@ export default function TransactionCard(props) {
                             <MaterialCommunityIcons2 name='upload-off' style={{ elevation: 5, position: 'absolute', right: 5 }} elevation={5} color={COLORS.primary} size={20} />
                         } */}
 
-                        <HighlightedText name={`${props.item.AccountNo}`} query={props.searchQuery} />
+                        <Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>Collection date time:  </Text>
+                            <Text style={[styles.text, { color: COLORS.darkGrey }]}>{props.item.CollDateTime}</Text>
+                        
+                        <HighlightedText name={`${((props.item.GLCode != '0' && (props.InputFileType === '2')) ? `${props.item.GLCode}-` : '' )}${props.item.AccountNo}`} query={props.searchQuery} />
                             <Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>Collection:  </Text>
-                        <Text style={[styles.text, { color: COLORS.darkGrey }]}>    ₹{new Intl.NumberFormat('en-IN').format(props.item.Collection)}</Text>
-                            <Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>Closing balance:  </Text>
-                        <Text style={[styles.text, { color: COLORS.darkGrey }]}>    ₹{new Intl.NumberFormat('en-IN').format(props.item.ClosingBal)}</Text>
+                        <Text style={[styles.text, { color: COLORS.darkGrey }]}>₹{new Intl.NumberFormat('en-IN').format(props.item.Collection)}</Text>
+                            {/* <Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>Closing balance:  </Text>
+                        <Text style={[styles.text, { color: COLORS.darkGrey }]}>    ₹{new Intl.NumberFormat('en-IN').format(props.item.ClosingBal)}</Text> */}
                     </View>
                 </View>
             </Pressable>

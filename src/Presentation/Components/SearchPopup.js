@@ -39,37 +39,7 @@ export default function SearchPopup(props, { route }) {
 
     const getMasterData = async () => {
         try {
-            // const mobileNumber = await AsyncStorage.getItem('mobileNumber');
-
-            // if (mobileNumber) {
-            //     const url = `http://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/RequestData_App?MobileNo=${mobileNumber}`;
-            //     const response = await fetch(url, {
-            //         method: 'GET',
-            //         headers: {
-            //             'Content-Type': 'application/xml',
-            //         },
-            //     });
-
-            //     // Use response.text() to get the response body as a string
-            //     const responseText = await response.text();
-
-            //     const parser = new XMLParser(); // Ensure this is imported correctly
-            //     const jsonResponse = parser.parse(responseText); // Parse XML response
-
-            //     // Assuming the relevant data is inside jsonResponse.string
-            //     const jsonString = jsonResponse.string;
-            //     const dataObject = JSON.parse(jsonString);
-            //     // console.log("responseText:", dataObject.ResonseCode);
-
-            //     if (dataObject.ResonseCode === '0000') {
-            //         await AsyncStorage.setItem('dataObject', JSON.stringify(dataObject));
-            //         // setMappedMasterData(dataObject.MstrData?.MstrRecs);
-            //         setData(dataObject.MstrData?.MstrRecs);
-            //         setFilteredData(dataObject.MstrData?.MstrRecs);
-            //         setLoading(false);
-            //     }
-            // }
-
+         
             const savedData = await AsyncStorage.getItem('dataObject');
 
             if (savedData) { 
@@ -91,8 +61,8 @@ export default function SearchPopup(props, { route }) {
     useEffect(() => {
         const unsubscribe = navigation.addListener('focus', () => {
             if (route?.params?.refreshData) {
-                setRefreshData(true); // or any method to refresh data
-                navigation.setParams({ refreshData: false }); // reset to prevent repeat refresh
+                setRefreshData(true);  
+                navigation.setParams({ refreshData: false });  
             }
         });
 
@@ -109,12 +79,12 @@ export default function SearchPopup(props, { route }) {
     }, []);
 
     const renderItem = ({ item, index }) => (
-        <DataCard BranchName={props.BranchName} BranchCode={props.BranchCode} collectionAllowed={props.collectionAllowed} multipleCollection={props.multipleCollection} searchQuery={searchQuery} item={item} key={index} index={index} />
+        <DataCard maxAmountLimit={props.maxAmountLimit} BranchName={props.BranchName} BranchCode={props.BranchCode} collectionAllowed={props.collectionAllowed} multipleCollection={props.multipleCollection} searchQuery={searchQuery} item={item} key={index} index={index} />
     );
 
     const loadMoreItems = () => {
         if (visibleItemsCount < filteredData.length) {
-            setVisibleItemsCount(prevCount => prevCount + 10); // Load 10 more items when the end is reached
+            setVisibleItemsCount(prevCount => prevCount + 10);  
         }
     };
 
