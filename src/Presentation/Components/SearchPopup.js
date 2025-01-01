@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, StyleSheet, FlatList, BackHandler } from 'react-native';
 import { COLORS, windowHeight, windowWidth } from '../../Common/Constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -6,6 +6,8 @@ import DataCard from './DataCard';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
 import SkeletonPlaceholder from 'react-native-skeleton-placeholder';
 import { XMLParser } from 'fast-xml-parser';
+
+const MemoizedDataCard = React.memo(DataCard);
 
 export default function SearchPopup(props, { route }) {
     const { modalVisible, setModalVisible, searchQuery } = props;
@@ -17,16 +19,21 @@ export default function SearchPopup(props, { route }) {
     const navigation = useNavigation();
     const [refreshData, setRefreshData] = useState(false);
     // console.log("propss ", props)
-    useEffect(() => {
-        const query = searchQuery.toLowerCase();
-        const filtered = data.filter((item) => {
-            const name = item.EnglishName?.toLowerCase();
-            const accNumber = item.AccountNo;
-            return name.includes(query) || accNumber.includes(query);
-        });
-        setFilteredData(filtered);
-    }, [searchQuery]);
 
+    useEffect(() => {
+        const debounceSearch = setTimeout(() => {
+            const query = searchQuery.trim().toLowerCase();
+            const filtered = data.filter((item) => {
+                const name = item.EnglishName?.toLowerCase();
+                const accNumber = `${item.GLCode}${item.AccountNo}`.toLowerCase();
+                return name.includes(query) || accNumber.includes(query);
+            });
+            setFilteredData(filtered);
+        }, 300); // Delay the filter logic by 300ms to debounce
+
+        return () => clearTimeout(debounceSearch);
+    }, [searchQuery, data]);
+ 
     useEffect(() => {
         setLoading(true);
     }, [isFocused]);
@@ -39,10 +46,10 @@ export default function SearchPopup(props, { route }) {
 
     const getMasterData = async () => {
         try {
-         
+
             const savedData = await AsyncStorage.getItem('dataObject');
 
-            if (savedData) { 
+            if (savedData) {
                 const dataObject = JSON.parse(savedData);
                 setData(dataObject.MstrData?.MstrRecs);
                 setFilteredData(dataObject.MstrData?.MstrRecs);
@@ -50,7 +57,7 @@ export default function SearchPopup(props, { route }) {
             }
         } catch (e) {
             setLoading(false);
-            console.error('Failed to fetch data from AsyncStorage', e);
+            Alert.alert('Failed to fetch data from AsyncStorage', e);
         }
     };
 
@@ -61,8 +68,8 @@ export default function SearchPopup(props, { route }) {
     useEffect(() => {
         const unsubscribe = navigation.addListener('focus', () => {
             if (route?.params?.refreshData) {
-                setRefreshData(true);  
-                navigation.setParams({ refreshData: false });  
+                setRefreshData(true);
+                navigation.setParams({ refreshData: false });
             }
         });
 
@@ -77,14 +84,25 @@ export default function SearchPopup(props, { route }) {
         const backHandler = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
         return () => backHandler.remove();
     }, []);
+ 
+    const renderItem = useCallback(({ item, index }) => (
+        <MemoizedDataCard
+            maxAmountLimit={props.maxAmountLimit}
+            BranchName={props.BranchName}
+            BranchCode={props.BranchCode}
+            collectionAllowed={props.collectionAllowed}
+            multipleCollection={props.multipleCollection}
+            searchQuery={searchQuery}
+            item={item}
+            key={index}
+            index={index}
+        />
+    ), [props, searchQuery]);
 
-    const renderItem = ({ item, index }) => (
-        <DataCard maxAmountLimit={props.maxAmountLimit} BranchName={props.BranchName} BranchCode={props.BranchCode} collectionAllowed={props.collectionAllowed} multipleCollection={props.multipleCollection} searchQuery={searchQuery} item={item} key={index} index={index} />
-    );
 
     const loadMoreItems = () => {
         if (visibleItemsCount < filteredData.length) {
-            setVisibleItemsCount(prevCount => prevCount + 10);  
+            setVisibleItemsCount(prevCount => prevCount + 10); // Load more when reaching the end
         }
     };
 
@@ -111,11 +129,11 @@ export default function SearchPopup(props, { route }) {
                     <FlatList
                         data={filteredData.slice(0, visibleItemsCount)} // Only render the visible items
                         renderItem={renderItem}
-                        keyExtractor={(item, index) => index.toString()}
+                        keyExtractor={(item) => item.AccountNo.toString()} // Use unique key (e.g., AccountNo)
                         onEndReached={loadMoreItems} // Load more when reaching the end
                         onEndReachedThreshold={0.5} // Trigger when the list is scrolled halfway to the end
                         ListFooterComponent={() => (visibleItemsCount < filteredData.length ? <LoadingIndicator /> : null)}
-                        initialNumToRender={10} // Render initial items
+                        initialNumToRender={5} // Render fewer items initially
                         maxToRenderPerBatch={10}
                     />
                 </View>

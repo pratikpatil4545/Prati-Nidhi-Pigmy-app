@@ -5,52 +5,81 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import MaterialCommunityIcons2 from 'react-native-vector-icons/FontAwesome5';
 import MaterialCommunityIcons3 from 'react-native-vector-icons/MaterialIcons';
 import MaterialCommunityIcons4 from 'react-native-vector-icons/FontAwesome6';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function AccountSetting({navigation}) {
+export default function AccountSetting({ navigation }) {
+
+    const [mobileNumber, setMobileNumber] = useState(null);
+    const [agentName, setAgentName] = useState(null);
+    const [count, setCount] = useState(null);
+    const [licenceValidUpto, setLicenceValidUpto] = useState(null);
+
+    useEffect(() => {
+        getMasterData();
+    }, []);
+
+    const getMasterData = async () => {
+        try {
+            const [savedData, mobileNumber, LicenseValidUpto] = await Promise.all([
+                AsyncStorage.getItem('dataObject'),
+                AsyncStorage.getItem('mobileNumber'),
+                AsyncStorage.getItem('LicenseValidUpto')
+            ]);
+
+            setMobileNumber(mobileNumber || ''); // Set a fallback value if null/undefined
+            setLicenceValidUpto(LicenseValidUpto || '');
+
+            if (savedData) {
+                const dataObject = JSON.parse(savedData);
+                setAgentName(dataObject?.MstrData?.AgNameE || ''); // Set a fallback value if missing
+                setCount(dataObject?.MstrData?.NoOfRecords);
+            }
+        } catch (error) {
+            console.log('Failed to fetch data from AsyncStorage:', error.message || error);
+        }
+    };
+
+
     return (
         <View style={styles.mainView}>
             <View style={styles.profileView}>
                 <View style={styles.curveView} >
-                    <MaterialCommunityIcons4 onPress={()=>{navigation.navigate("Profile")}} name='angle-left' style={{ left: windowWidth * 0.05, top: windowHeight * 0.02, position: 'absolute' }} color={COLORS.white} size={40} />
+                    <MaterialCommunityIcons4 onPress={() => { navigation.navigate("Profile") }} name='angle-left' style={{ left: windowWidth * 0.05, top: windowHeight * 0.02, position: 'absolute' }} color={COLORS.white} size={40} />
                 </View>
                 <View style={styles.profileIcon}>
-                    <Image style={{ width: '100%', height: '100%', resizeMode: 'contain' }} source={require('../../Assets/Images/maestrotek_logo.png')} />
+                    <Image style={{ width: '100%', height: '100%', resizeMode: 'contain' }} source={require('../../Assets/Images/automateSystemsLogo.png')} />
                 </View>
             </View>
 
-            <Text style={[styles.keyName, { textAlign: 'center', fontSize: 20, fontFamily: 'Montserrat-Bold' }]}>Account Settings</Text>
+            <Text style={[styles.keyName, { textAlign: 'center', fontSize: 20, fontFamily: 'Montserrat-Bold' }]}>Agent Profile</Text>
 
             <View style={{ width: '80%', alignSelf: 'center', marginTop: '10%' }}>
                 <View style={{ display: 'flex', flexDirection: 'row', marginVertical: 15 }}>
                     <MaterialCommunityIcons2 name='user' style={{ alignSelf: 'center' }} color={COLORS.gray} size={20} />
-                    <Text style={styles.keyName}>   User Name:  </Text>
-                    <Text style={styles.keyValue}>Pratik Patil</Text>
-                    <MaterialCommunityIcons name='pencil' style={{ marginStart: 'auto' }} color={COLORS.gray} size={25} />
+                    <Text style={styles.keyName}>   Agent Name:  </Text>
+                    <Text style={styles.keyValue}>{agentName ? agentName : '-'}</Text>
+                    {/* <MaterialCommunityIcons name='pencil' style={{ marginStart: 'auto' }} color={COLORS.gray} size={25} /> */}
                 </View>
                 <View style={{ display: 'flex', flexDirection: 'row', marginVertical: 15 }}>
                     <MaterialCommunityIcons3 name='call' style={{ alignSelf: 'center' }} color={COLORS.gray} size={20} />
                     <Text style={styles.keyName}>   Phone No: </Text>
-                    <Text style={styles.keyValue}>+91 9876543210</Text>
-                    <MaterialCommunityIcons name='pencil' style={{ marginStart: 'auto' }} color={COLORS.gray} size={25} />
+                    <Text style={styles.keyValue}>{mobileNumber}</Text>
+                    {/* <MaterialCommunityIcons name='pencil' style={{ marginStart: 'auto' }} color={COLORS.gray} size={25} /> */}
 
                 </View>
-                <View style={{ display: 'flex', flexDirection: 'row', marginVertical: 15 }}>
-                    <MaterialCommunityIcons3 name='password' style={{ alignSelf: 'center' }} color={COLORS.gray} size={20} />
-                    <Text style={styles.keyName}>   Password: </Text>
-                    <Text style={styles.keyValue}>India@123#</Text>
-                    <MaterialCommunityIcons name='pencil' style={{ marginStart: 'auto' }} color={COLORS.gray} size={25} />
 
-                </View>
                 <View style={{ display: 'flex', flexDirection: 'row', marginVertical: 15 }}>
                     <MaterialCommunityIcons2 name='users' style={{ alignSelf: 'center' }} color={COLORS.gray} size={20} />
-                    <Text style={styles.keyName}>   Total Users:  </Text>
-                    <Text style={[styles.keyValue, { textDecorationLine: 'none' }]}>148</Text>
+                    <Text style={styles.keyName}>   Total Accounts:  </Text>
+                    <Text style={[styles.keyValue, { textDecorationLine: 'none' }]}>{count ? count : "0"}</Text>
                 </View>
+
                 <View style={{ display: 'flex', flexDirection: 'row', marginVertical: 15 }}>
-                    <MaterialCommunityIcons name='cash-multiple' style={{ alignSelf: 'center' }} color={COLORS.gray} size={20} />
-                    <Text style={styles.keyName}>   Total Collection: </Text>
-                    <Text style={[styles.keyValue, { textDecorationLine: 'none' }]}>₹ 15,600.00</Text>
+                    <MaterialCommunityIcons2 name='calendar-check' style={{ alignSelf: 'center' }} color={COLORS.gray} size={20} />
+                    <Text style={styles.keyName}>   Licence Valid Upto:  </Text>
+                    <Text style={[styles.keyValue, { textDecorationLine: 'none' }]}>{licenceValidUpto ? licenceValidUpto : '-'}</Text>
                 </View>
+
                 <View style={{ width: windowWidth * 0.85, marginTop: 10, alignSelf: 'center', borderBottomWidth: 1, borderBottomColor: COLORS.lightGrey }} />
             </View>
         </View>

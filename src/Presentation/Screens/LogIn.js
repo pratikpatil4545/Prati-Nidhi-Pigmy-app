@@ -31,7 +31,7 @@ export default function Login({ navigation }) {
           setNewUser(true);
         }
       } catch (error) {
-        console.error('Error checking authentication:', error);
+        Alert.alert('Error checking authentication:', error);
       }
     };
 
@@ -82,7 +82,7 @@ export default function Login({ navigation }) {
           handlePhoneNumberSelection(simCards[0]);
         }
       } catch (error) {
-        console.error('Error fetching phone number:', error);
+        Alert.alert('Error fetching phone number:', error);
       }
     };
 
@@ -104,6 +104,54 @@ export default function Login({ navigation }) {
     checkAuthentication();
   }, []);
 
+  // useEffect(() => {
+  //   const requestPermissions = async () => {
+  //     const permissionGranted = await requestStoragePermission();
+  //     if (!permissionGranted) {
+  //       Alert.alert('Permission Required', 'The app needs storage access to function properly.');
+  //     }
+  //   };
+
+  //   requestPermissions();
+  // }, []);
+
+  const requestStoragePermission = async () => {
+    try {
+      if (Platform.OS === 'android') {
+        if (Platform.Version >= 30) {
+          const granted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.MANAGE_EXTERNAL_STORAGE,
+            {
+              title: 'Manage External Storage Permission',
+              message: 'The app needs access to manage external storage to save and read files.',
+              buttonNeutral: 'Ask Me Later',
+              buttonNegative: 'Cancel',
+              buttonPositive: 'OK',
+            }
+          );
+
+          return granted === PermissionsAndroid.RESULTS.GRANTED;
+        } else {
+          const granted = await PermissionsAndroid.requestMultiple([
+            PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+            PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
+          ]);
+
+          return (
+            granted['android.permission.WRITE_EXTERNAL_STORAGE'] === PermissionsAndroid.RESULTS.GRANTED &&
+            granted['android.permission.READ_EXTERNAL_STORAGE'] === PermissionsAndroid.RESULTS.GRANTED
+          );
+        }
+      }
+      return true; // Not Android, assume permission is granted
+    } catch (err) {
+      Alert.alert('Permission Error', 'An error occurred while requesting permissions.');
+      console.error('Permission error:', err);
+      return false;
+    }
+  };
+  
+
   const handleNext = async () => {
     // navigation.navigate('BottomTabs');
     setLoading(true);
@@ -123,13 +171,13 @@ export default function Login({ navigation }) {
         if (password === storedPassword && storedNumber === number) {
           setVerificationText('Verified');
           // ToastAndroid.show('Authentication Successful!', ToastAndroid.SHORT);
-          navigation.navigate('BottomTabs');
+          navigation.navigate('Dashboard');
         } else {
           setVerificationText('Invalid credentials');
           Alert.alert('Warning', 'Invalid Credentials');
         }
       } catch (error) {
-        console.error('Error accessing stored password:', error);
+        Alert.alert('Error accessing stored password:', error);
         setVerificationText('Error logging in');
         // ToastAndroid.show('Error logging in', ToastAndroid.SHORT);
       } finally {
@@ -148,7 +196,7 @@ export default function Login({ navigation }) {
         setShowSetPassword(false);
         setNewUser(false);
       } catch (error) {
-        console.error('Error storing user data:', error);
+        Alert.alert('Error storing user data:', error);
         // ToastAndroid.show('Error setting password', ToastAndroid.SHORT);
       }
     } else {
@@ -161,10 +209,10 @@ export default function Login({ navigation }) {
     <View style={styles.flex}>
       {!showSetPassword ? (
         <>
-          <Image
+          {/* <Image
             style={{ width: 100, height: 100, alignSelf: 'center', marginTop: 20 }}
             source={require('../Assets/Images/automateSystemsLogo.png')}
-          />
+          /> */}
           <View style={styles.container}>
             <Text style={styles.loginText}>{newUser ? 'New User' : 'Login'}</Text>
             <TextInput
@@ -175,7 +223,7 @@ export default function Login({ navigation }) {
               keyboardType="numeric"
               onChangeText={(text) => setNumber(text)}
               style={styles.input}
-              // disabled
+              disabled
               theme={{
                 colors: { primary: '#3B5998', underlineColor: 'transparent' },
               }}

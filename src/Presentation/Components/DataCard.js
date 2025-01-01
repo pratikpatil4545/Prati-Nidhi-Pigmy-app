@@ -7,58 +7,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function DataCard(props) {
 
-  // const HighlightedText = ({ name, query, keyName }) => {
-  //   if (!query) {
-  //     return <Text style={[styles.text, { color: COLORS.darkGrey }]}><Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>{keyName}: </Text>{name}</Text>;
-  //   }
-  //   const regex = new RegExp(`(${query})`, 'gi');
-  //   const parts = name.split(regex);
-  //   return (
-  //     <Text style={[styles.text, { color: COLORS.darkGrey }]}>
-  //       <Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>{keyName}: </Text>
-  //       {parts.map((part, index) =>
-  //         part.toLowerCase() === query.toLowerCase() ? (
-  //           <Text key={index} style={{ backgroundColor: 'yellow' }}>{part}</Text>
-  //         ) : (
-  //           <Text key={index}>{part}</Text>
-  //         )
-  //       )}
-  //     </Text>
-  //   );
-  // };
-
-
-  // const HighlightedAccNo = ({ glCode, accNo, query, keyName }) => {
-  //   const combinedValue = glCode !== '0' ? `${glCode}${accNo}` : accNo;
-
-  //   if (!query) {
-  //     return (
-  //       <Text style={[styles.text, { color: COLORS.darkGrey }]}>
-  //         <Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>{keyName}: </Text>
-  //         {combinedValue}
-  //       </Text>
-  //     );
-  //   }
-
-  //   const regex = new RegExp(`(${query})`, 'gi');
-  //   const parts = combinedValue.split(regex);
-
-  //   return (
-  //     <Text style={[styles.text, { color: COLORS.darkGrey }]}>
-  //       <Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>{keyName}: </Text>
-  //       {parts.map((part, index) =>
-  //         part.toLowerCase() === query.toLowerCase() ? (
-  //           <Text key={index} style={{ backgroundColor: 'yellow' }}>{part}</Text>
-  //         ) : (
-  //           <Text key={index}>{part}</Text>
-  //         )
-  //       )}
-  //     </Text>
-  //   );
-  // };
-
   const [openingBalance, setOpeningBalance] = useState(null);
-// console.log("opening balance", openingBalance)
+  const [mobileNumber, setmobileNumber] = useState(null);
+  // console.log("opening balance", openingBalance)
   const navigation = useNavigation();
   // console.log("searchQuery", props)
 
@@ -78,8 +29,44 @@ export default function DataCard(props) {
     navigation.navigate('UserProfile', {
       ...props, // Spread the existing props
       openingBalance: openingBalance, // Add openingBalance to the params
+      mobileNumber: mobileNumber
     });
   };
+
+  // const shouldDisplayItem = (item, searchQuery) => {
+  //   if (!searchQuery) return true;
+
+  //   const query = searchQuery.trim();
+  //   const combinedAccountNo = `${item.GLCode}${item.AccountNo}`.trim();
+
+  //   const isMatch = combinedAccountNo.includes(query);
+
+  //   if (query.length > 1 && combinedAccountNo.length > 1) {
+  //     const regex = new RegExp(query, 'i');
+  //     return regex.test(combinedAccountNo);
+  //   }
+  //   return isMatch;
+  // };
+
+  const shouldDisplayItem = (item, searchQuery) => {
+    if (!searchQuery) return true;
+
+    const query = searchQuery.trim();
+    const combinedAccountNo = `${item.GLCode}${item.AccountNo}`.trim();
+
+    // Check for matches in both combinedAccountNo and EnglishName
+    const isAccountMatch = combinedAccountNo.includes(query);
+    const isNameMatch = item.EnglishName?.toLowerCase().includes(query.toLowerCase());
+
+    // Use regex for partial matching if the query is longer than 1 character
+    if (query.length > 1) {
+      const regex = new RegExp(query, 'i');
+      return regex.test(combinedAccountNo) || regex.test(item.EnglishName || '');
+    }
+
+    return isAccountMatch || isNameMatch;
+  };
+
 
   const HighlightedText = ({ text, query }) => {
     if (!query) return <Text>{text}</Text>;
@@ -89,7 +76,7 @@ export default function DataCard(props) {
 
     return parts.map((part, index) =>
       part.toLowerCase() === query.toLowerCase() ? (
-        <Text key={index} style={{ backgroundColor: 'yellow' }}>
+        <Text key={index} style={{ backgroundColor: 'yellow', color: 'black' }}>
           {part}
         </Text>
       ) : (
@@ -98,101 +85,271 @@ export default function DataCard(props) {
     );
   };
 
-  const HighlightedAccNo = ({ glCode, accNo, query, label }) => {
-    const combinedValue = glCode !== '0' ? `${glCode}${accNo}` : accNo;
 
+  const HighlightedAccNo = ({ glCode, accNo, query }) => {
+    const combinedAccountNo = glCode !== '0' ? `${glCode}-${accNo}` : accNo;
     return (
-      <Text style={[styles.text, { color: COLORS.darkGrey }]}>
-        <Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>{label}: </Text>
-        <HighlightedText text={combinedValue} query={query} />
-      </Text>
+      <HighlightedText text={combinedAccountNo} query={query} />
     );
   };
 
   useEffect(() => {
-    const calculateCollectionSum = async (accountNo) => {
+    const fetchDataAndCalculate = async () => {
       try {
         const transactionTable = JSON.parse(await AsyncStorage.getItem('transactionTable')) || [];
-        const totalCollectionSum = transactionTable
-          .filter(entry => entry.AccountNo === accountNo)
-          .map(entry => parseFloat(entry.Collection) || 0)
-          .reduce((sum, collection) => sum + collection, 0);
-        return totalCollectionSum;
+
+        const calculateCollectionSum = (accountNo) => {
+          return transactionTable
+            .filter(entry => entry.AccountNo === accountNo)
+            .reduce((sum, entry) => sum + (parseFloat(entry.Collection) || 0), 0);
+        };
+
+        const collectionAddorSub = (accountNo) => {
+          return transactionTable.filter(entry => entry.AccountNo === accountNo);
+        };
+
+        const totalCollectionSum = calculateCollectionSum(props.item.AccountNo);
+        const addorSub = collectionAddorSub(props.item.AccountNo);
+
+        let newOpeningBalance;
+
+        if (addorSub[0]?.IsAmtAdd === '1') {
+          newOpeningBalance = parseFloat(props.item.ThisMthBal || 0) + totalCollectionSum;
+        } else if (addorSub[0]?.IsAmtAdd === '0') {
+          newOpeningBalance = parseFloat(props.item.ThisMthBal || 0) - totalCollectionSum;
+        } else {
+          newOpeningBalance = parseFloat(props.item.ThisMthBal || 0);
+        }
+
+        if (!totalCollectionSum) {
+          newOpeningBalance = parseFloat(props.item.ThisMthBal || 0);
+        }
+
+        setOpeningBalance(newOpeningBalance.toFixed(2));
+
+        const mobileNumber = transactionTable.find(entry => entry.AccountNo === props.item.AccountNo)?.MobileNo;
+        setmobileNumber(mobileNumber || '');
       } catch (error) {
-        console.error("Error calculating collection sum:", error);
-        return 0;
+        Alert.alert("Error in fetchDataAndCalculate:", error);
       }
     };
 
-    const calculateOpeningBalance = async () => {
-      const totalCollectionSum = await calculateCollectionSum(props.item.AccountNo);
-      const newOpeningBalance = parseFloat(props.item.ThisMthBal || 0) + totalCollectionSum;
-      setOpeningBalance(newOpeningBalance.toFixed(2));
-    };
-
-    calculateOpeningBalance();
+    fetchDataAndCalculate();
   }, [props.item.AccountNo, props.item.ThisMthBal]);
 
   return (
     <View style={styles.mainView}>
-    <Pressable onPress={handlePress} key={props.index} style={styles.card}>
-      <View style={styles.cardView}>
-        <View style={styles.left}>
-          <Text
-            style={[
-              styles.text,
-              {
-                color: COLORS.white,
-                alignSelf: 'center',
-                fontFamily: 'Montserrat-Bold',
-                fontSize: 16,
-              },
-            ]}
-          >
-            {props.index + 1}
-          </Text>
-        </View>
-        <View style={styles.right}>
-          {orderedKeys.map(({ key, label }, subIndex) => {
-            let value = key === 'ThisMthBal' ? openingBalance : props.item[key];
+      {shouldDisplayItem(props.item, props.searchQuery) && (
+        <Pressable onPress={handlePress} key={props.index} style={styles.card}>
+          <View style={styles.cardView}>
+            <View style={styles.left}>
+              <Text
+                style={[
+                  styles.text,
+                  {
+                    color: COLORS.white,
+                    alignSelf: 'center',
+                    fontFamily: 'Montserrat-Bold',
+                    fontSize: 16,
+                  },
+                ]}
+              >
+                Sr. No. : {props.index + 1}
+              </Text>
+            </View>
+            <View style={styles.right}>
+              {orderedKeys.map(({ key, label }, subIndex) => {
+                let value = props.item[key];
 
-            if (!value || value === '0') {
-              if (key === 'Mobile1') return null;
-              return null;
-            }
+                // Handle Opening Balance specifically
+                if (key === 'ThisMthBal') {
+                  value = openingBalance || props.item[key];
+                }
 
-            if (key === 'AccountNo') {
-              return (
-                <View key={subIndex} style={{ marginBottom: 5 }}>
-                  <HighlightedAccNo
-                    glCode={props.item.GLCode}
-                    accNo={props.item.AccountNo}
-                    query={props.searchQuery}
-                    label={label}
-                  />
-                </View>
-              );
-            }
+                // Handle AccountNo concatenation
+                if (key === 'AccountNo') {
+                  value = `${props.item.GLCode}${props.item.AccountNo}`;
+                }
 
-            return (
-              <View key={subIndex} style={{ marginBottom: 5 }}>
-                <Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>
-                  {label}:{' '}
-                  <Text style={[styles.text, { color: COLORS.darkGrey }]}>
-                    {key === 'ThisMthBal'
-                      ? openingBalance !== null
-                        ? openingBalance
-                        : 'Calculating...'
-                      : <HighlightedText text={value} query={props.searchQuery} />}
+                // Skip rendering if value is '0' or falsy (null, undefined, or '')
+                if (!value || value === '0') {
+                  if (key === 'Mobile1') return null; // Skip Mobile1 if its value is '0'
+                  return null; // Skip other fields with '0' or empty values
+                }
+
+                return (
+                  <View key={subIndex} style={{ marginBottom: 5 }}>
+                    <Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>
+                      {label}:{' '}
+                      <Text style={[styles.text, { color: COLORS.darkGrey }]}>
+                        {key === 'AccountNo' ? (
+                          <HighlightedAccNo
+                            glCode={props.item.GLCode}
+                            accNo={props.item.AccountNo}
+                            query={props.searchQuery}
+                          />
+                        ) : (
+                          <>
+                            {key === 'EnglishName' ? (
+                              <HighlightedText text={value.toString()} query={props.searchQuery} />
+                            ) : (
+                              <Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>
+                                <Text style={[styles.text, { color: COLORS.darkGrey }]}> {value} </Text>
+                              </Text>
+                            )}
+                          {/*  <HighlightedText text={value.toString()} query={props.searchQuery} /> */}
+                          </>
+                        )
+                        }
+                      </Text>
+                    </Text>
+                  </View>
+                );
+              })}
+              {/* Show the mobile number from state */}
+              {/* {mobileNumber && (
+                <View style={{ marginBottom: 5 }}>
+                  <Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>
+                    Mobile:{' '}
+                    <Text style={[styles.text, { color: COLORS.darkGrey }]}>
+                      {mobileNumber}
+                    </Text>
                   </Text>
-                </Text>
-              </View>
-            );
-          })}
-        </View>
-      </View>
-    </Pressable>
-  </View>
+                </View>
+              )} */}
+              {(props.item.Mobile1 === '0') && mobileNumber && (
+                <View style={{ marginBottom: 5 }}>
+                  <Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>
+                    Mobile:{' '}
+                    <Text style={[styles.text, { color: COLORS.darkGrey }]}>
+                      {mobileNumber}
+                    </Text>
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+        </Pressable>
+      )}
+    </View>
+
+
+    // <View style={styles.mainView}>
+    //   <Pressable onPress={handlePress} key={props.index} style={styles.card}>
+    //     <View style={styles.cardView}>
+    //       <View style={styles.left}>
+    //         <Text
+    //           style={[
+    //             styles.text,
+    //             {
+    //               color: COLORS.white,
+    //               alignSelf: 'center',
+    //               fontFamily: 'Montserrat-Bold',
+    //               fontSize: 16,
+    //             },
+    //           ]}
+    //         >
+    //           Sr. No. : {props.index + 1}
+    //         </Text>
+    //       </View>
+    //       <View style={styles.right}>
+    //         {shouldDisplayItem(props.item.GLCode, props.item.AccountNo, props.searchQuery) &&
+    //           orderedKeys.map(({ key, label }, subIndex) => {
+    //             let value = key === 'ThisMthBal' ? openingBalance : props.item[key];
+
+    //             if (!value || value === '0') {
+    //               if (key === 'Mobile1') return null;
+    //               return null;
+    //             }
+
+    //             if (key === 'AccountNo') {
+    //               return (
+    //                 <View key={subIndex} style={{ marginBottom: 5 }}>
+    //                   <HighlightedAccNo
+    //                     glCode={props.item.GLCode}
+    //                     accNo={props.item.AccountNo}
+    //                     query={props.searchQuery}
+    //                     label={label}
+    //                   />
+    //                 </View>
+    //               );
+    //             }
+
+    //             return (
+    //               <View key={subIndex} style={{ marginBottom: 5 }}>
+    //                 <Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>
+    //                   {label}:{' '}
+    //                   <Text style={[styles.text, { color: COLORS.darkGrey }]}>
+    //                     {key === 'ThisMthBal'
+    //                       ? openingBalance
+    //                         ? openingBalance
+    //                         : props.item.ThisMthBal
+    //                       : <HighlightedText text={value} query={props.searchQuery} />}
+    //                   </Text>
+    //                 </Text>
+    //               </View>
+    //             );
+    //           })}
+    //       </View>
+    //     </View>
+    //   </Pressable>
+    // </View>
+    // <View style={styles.mainView}>
+    //   <Pressable onPress={handlePress} key={props.index} style={styles.card}>
+    //     <View style={styles.cardView}>
+    //       <View style={styles.left}>
+    //         <Text
+    //           style={[
+    //             styles.text,
+    //             {
+    //               color: COLORS.white,
+    //               alignSelf: 'center',
+    //               fontFamily: 'Montserrat-Bold',
+    //               fontSize: 16,
+    //             },
+    //           ]}
+    //         >
+    //           Sr. No. : {props.index + 1}
+    //         </Text>
+    //       </View>
+    //       <View style={styles.right}>
+    //         {orderedKeys.map(({ key, label }, subIndex) => {
+    //           let value = key === 'ThisMthBal' ? openingBalance : props.item[key];
+
+    //           if (!value || value === '0') {
+    //             if (key === 'Mobile1') return null;
+    //             return null;
+    //           }
+
+    //           if (key === 'AccountNo') {
+    //             return (
+    //               <View key={subIndex} style={{ marginBottom: 5 }}>
+    //                 <HighlightedAccNo
+    //                   glCode={props.item.GLCode}
+    //                   accNo={props.item.AccountNo}
+    //                   query={props.searchQuery}
+    //                   label={label}
+    //                 />
+    //               </View>
+    //             );
+    //           }
+
+    //           return (
+    //             <View key={subIndex} style={{ marginBottom: 5 }}>
+    //               <Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>
+    //                 {label}:{' '}
+    //                 <Text style={[styles.text, { color: COLORS.darkGrey }]}>
+    //                   {key === 'ThisMthBal' ? openingBalance ? openingBalance: props.item.ThisMthBal
+    //                     : <HighlightedText text={value} query={props.searchQuery} />}
+    //                 </Text>
+    //               </Text>
+    //             </View>
+    //           );
+    //         })}
+    //       </View>
+    //     </View>
+    //   </Pressable>
+    // </View>
     // <View style={styles.mainView}>
     //   <Pressable onPress={() => { handlePress() }} key={props.index} style={styles.card}>
     //     <View style={styles.cardView}>

@@ -14,7 +14,7 @@ export default function Profile({ navigation, route }) {
   // console.log("routes", route.params, transactionTable.length)
   useEffect(() => {
     const handleBackPress = () => {
-      navigation.navigate('BottomTabs');
+      navigation.navigate('Dashboard');
     };
     const backHandler = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
 
@@ -36,7 +36,7 @@ export default function Profile({ navigation, route }) {
         }
         // console.log("transaction data", transactionTableData.length)
       } catch (error) {
-        console.error('Error fetching transaction table from AsyncStorage:', error);
+        Alert.alert('Error fetching transaction table from AsyncStorage:', error);
       }
     };
 
@@ -59,11 +59,11 @@ export default function Profile({ navigation, route }) {
       <StatusBar backgroundColor={COLORS.primaryAccent} barStyle="light-content" />
       <View style={styles.profileView}>
         <View style={styles.curveView} >
-          <MaterialCommunityIcons4 onPress={() => { navigation.navigate("BottomTabs") }} name='angle-left' style={{ left: windowWidth * 0.05, top: windowHeight * 0.02, position: 'absolute' }} color={COLORS.white} size={40} />
+          <MaterialCommunityIcons4 onPress={() => { navigation.navigate("Dashboard") }} name='angle-left' style={{ left: windowWidth * 0.05, top: windowHeight * 0.02, position: 'absolute' }} color={COLORS.white} size={40} />
         </View>
         {/* <Text style={{ position: 'absolute', zIndex: 5, top: windowHeight * 0.04, color: COLORS.white, fontFamily: 'Montserrat-Bold', fontSize: 22 }}>Profile</Text> */}
         <View style={styles.profileIcon}>
-          <Image style={{ width: '100%', height: '100%', resizeMode: 'contain' }} source={require('../../Assets/Images/maestrotek_logo.png')} />
+          <Image style={{ width: '100%', height: '100%', resizeMode: 'contain' }} source={require('../../Assets/Images/automateSystemsLogo.png')} />
         </View>
       </View>
 
@@ -89,7 +89,7 @@ export default function Profile({ navigation, route }) {
               <Pressable style={{ width: '90%', height: '100%', display: 'flex', justifyContent: 'center' }} onPress={() => { navigation.navigate('AccountSetting') }}>
                 <View style={{ display: 'flex', flexDirection: 'row' }}>
                   <MaterialCommunityIcons name='account-cog-outline' color={COLORS.gray} size={25} />
-                  <Text style={{ fontFamily: 'Montserrat-Bold', color: COLORS.gray, alignSelf: 'center', fontSize: 16, }}>   Account Settings   </Text>
+                  <Text style={{ fontFamily: 'Montserrat-Bold', color: COLORS.gray, alignSelf: 'center', fontSize: 16, }}>   Agent Profile   </Text>
                 </View>
               </Pressable>
               <MaterialCommunityIcons name={'chevron-right'} color={COLORS.gray} size={30} />
@@ -99,13 +99,13 @@ export default function Profile({ navigation, route }) {
               <Pressable style={{ width: '90%', height: '100%', display: 'flex', justifyContent: 'center' }} onPress={() => { navigation.navigate('BankDetails') }}>
                 <View style={{ display: 'flex', flexDirection: 'row' }}>
                   <MaterialCommunityIcons name='bank-outline' color={COLORS.gray} size={25} />
-                  <Text style={{ fontFamily: 'Montserrat-Bold', color: COLORS.gray, alignSelf: 'center', fontSize: 16, }}>   Bank Details   </Text>
+                  <Text style={{ fontFamily: 'Montserrat-Bold', color: COLORS.gray, alignSelf: 'center', fontSize: 16, }}>   Client Details   </Text>
                 </View>
               </Pressable>
               <MaterialCommunityIcons name={'chevron-right'} color={COLORS.gray} size={30} />
             </View>
 
-            <View style={{ display: 'flex', paddingLeft: 10, paddingRight: 10, backgroundColor: COLORS.white, borderRadius: 10, height: 70, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: '0%', marginBottom: 10, }}>
+            {/* <View style={{ display: 'flex', paddingLeft: 10, paddingRight: 10, backgroundColor: COLORS.white, borderRadius: 10, height: 70, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: '0%', marginBottom: 10, }}>
               <Pressable style={{ width: '90%', height: '100%', display: 'flex', justifyContent: 'center' }} onPress={() => { navigation.navigate('GeneralSetting') }}>
                 <View style={{ display: 'flex', flexDirection: 'row' }}>
                   <MaterialCommunityIcons name='cog-outline' color={COLORS.gray} size={25} />
@@ -113,22 +113,22 @@ export default function Profile({ navigation, route }) {
                 </View>
               </Pressable>
               <MaterialCommunityIcons name={'chevron-right'} color={COLORS.gray} size={30} />
-            </View>
+            </View> */}
 
-            <View style={{ display: 'flex', paddingLeft: 10, paddingRight: 10, backgroundColor: COLORS.white, borderRadius: 10, height: 70, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: '0%', marginBottom: 10, }}>
+            {/* <View style={{ display: 'flex', paddingLeft: 10, paddingRight: 10, backgroundColor: COLORS.white, borderRadius: 10, height: 70, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: '0%', marginBottom: 10, }}>
               <Pressable style={{ width: '90%', height: '100%', display: 'flex', justifyContent: 'center' }} onPress={handleLogout}>
                 <View style={{ display: 'flex', flexDirection: 'row' }}>
                   <MaterialCommunityIcons name='logout' color={COLORS.gray} size={25} />
                   <Text style={{ fontFamily: 'Montserrat-Bold', color: COLORS.gray, alignSelf: 'center', fontSize: 16, }}>   Sign out   </Text>
                 </View>
               </Pressable>
-            </View>
+            </View> */}
 
 
           </View>
         </View>
       </ScrollView>
-            <Text style={{ position: 'absolute', bottom: '5%', fontFamily: 'Montserrat-Bold', color: COLORS.gray, alignSelf: 'center', fontSize: 16, }}>   Version - 1.1   </Text>
+            <Text style={{ position: 'absolute', bottom: '5%', fontFamily: 'Montserrat-Bold', color: COLORS.gray, alignSelf: 'center', fontSize: 16, }}>Version - 1.2 (01-01-2025)</Text>
 
     </View>
   )

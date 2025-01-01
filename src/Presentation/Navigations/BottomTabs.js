@@ -20,16 +20,17 @@ function DashboardNested() {
         component={Dashboard}
         // options={{ headerShown: false }} 
         options={{
-          tabBarLabel: 'Dashboard',
+          tabBarLabel: '',
           tabBarLabelStyle: { fontFamily: 'Montserrat-SemiBold' },
           headerShown: false,
           tabBarActiveTintColor: COLORS.primary,
           // tabBarBadge: 1,
           // tabBarBadgeStyle: {fontFamily: 'Montserrat-Medium', backgroundColor: 'red'},
           tabBarIcon: ({ focused, color, size }) => (
-            <MaterialCommunityIcons name="view-dashboard" color={color} size={focused ? 30 : 25} />
+            <MaterialCommunityIcons name="view-dashboard" color={color} size={focused ? 0 : 0} />
           ),
-        }} />
+        }} 
+        />
       <HomeStack.Screen name="UserProfile"
         component={UserProfile}
         // options={{ headerShown: false }} 

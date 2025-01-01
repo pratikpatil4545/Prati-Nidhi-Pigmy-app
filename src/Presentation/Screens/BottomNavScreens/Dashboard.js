@@ -1,17 +1,20 @@
-import { View, Text, StyleSheet, ToastAndroid, ScrollView, StatusBar, Modal, Pressable, BackHandler, Keyboard, TouchableOpacity, ActivityIndicator, FlatList, Alert, Linking } from 'react-native'
+import { View, Text, StyleSheet, ToastAndroid, ScrollView, StatusBar, Modal, Pressable, BackHandler, Keyboard, TouchableOpacity, ActivityIndicator, FlatList, Alert, Linking, Platform, PermissionsAndroid } from 'react-native'
 import React, { useCallback, useEffect, useState } from 'react'
 import { COLORS, windowHeight, windowWidth } from '../../../Common/Constants'
-import { Button, Searchbar, TextInput } from 'react-native-paper' 
+import { Button, Searchbar, TextInput } from 'react-native-paper'
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import MaterialCommunityIcons2 from 'react-native-vector-icons/FontAwesome5';
 import MaterialCommunityIcons3 from 'react-native-vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect, useIsFocused } from '@react-navigation/native'; 
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { XMLParser } from 'fast-xml-parser';
 import SearchPopup from '../../Components/SearchPopup';
 import TransactionCard from '../../Components/TransactionCard';
 import NetInfo from '@react-native-community/netinfo';
 import { Buffer } from 'buffer';
+import DeviceInfo from 'react-native-device-info';
+import RNFS from 'react-native-fs';
+import DocumentPicker from 'react-native-document-picker';
 
 export default function Dashboard({ navigation, route }) {
 
@@ -26,7 +29,7 @@ export default function Dashboard({ navigation, route }) {
     const [newAccCreated, setnewAccCreated] = useState(null);
     const [NoOfRecords, setNoOfRecords] = useState(null);
     const [isDataValid, setIsDataValid] = useState(true);
-    const [LicenseValidUpto, setLicenseValidUpto] = useState('2028-10-13');
+    const [LicenseValidUpto, setLicenseValidUpto] = useState(null);
     const [LicenseExpired, setLicenseExpired] = useState(false);
     const [ClientName, setClientName] = useState(null);
     const [BranchName, setBranchName] = useState(null);
@@ -45,6 +48,7 @@ export default function Dashboard({ navigation, route }) {
     const [GlLastAcc, setGlLastAcc] = useState(null);
     const [GLCode, setGLCode] = useState(null);
     const [pendingCount, setpendingCount] = useState(null);
+    // console.log("pening ocunbg", pendingCount)
     const [collectionAllowed, setCollectionAllowed] = useState(true);
     const [multipleCollection, setMultipleCollection] = useState(false);
     const [totalAmount, setTotalAmount] = useState(0);
@@ -57,9 +61,10 @@ export default function Dashboard({ navigation, route }) {
     const [buttonLoading, setButtonLoading] = useState(false);
     const [modalVisible2, setModalVisible2] = useState(false);
     const [isFirstLogin, setIsFirstLogin] = useState(false);
-    const [isConnected, setConnected] = useState(true); 
+    const [isConnected, setConnected] = useState(true);
     const [maxAmountLimit, setMaxAmountLimit] = useState(null);
-// console.log('max amount add', maxAmountLimit)
+    // console.log('max amount add', maxAmountLimit)
+
     useEffect(() => {
         if (route.params?.search === true) {
             setSearchedResults(true);
@@ -69,35 +74,71 @@ export default function Dashboard({ navigation, route }) {
 
     useEffect(() => {
         const checkLicenseValidity = () => {
-            const currentDate = new Date();  
-            const expiryDate = new Date(LicenseValidUpto);  
-            const timeDiff = expiryDate.getTime() - currentDate.getTime();  
-            const daysLeft = Math.ceil(timeDiff / (1000 * 3600 * 24)); 
+            if (LicenseValidUpto) {
+                const currentDate = new Date();
+                const expiryDate = new Date(LicenseValidUpto);
+                const timeDiff = expiryDate.getTime() - currentDate.getTime();
+                const daysLeft = Math.ceil(timeDiff / (1000 * 3600 * 24));
 
-            // console.log("Days left until expiry:", daysLeft);
+                // console.log("Days left until expiry:", daysLeft);
 
-            if (daysLeft <= 0) { 
-                Alert.alert('License expired!', 'Your license has expired. Please pay subscription.');
-                setLicenseExpired(true);
-            } else if (daysLeft <= 15) { 
-                Alert.alert('License Reminder', `Your license is about to expire in ${daysLeft} day(s). Please renew it soon.`);
-            } else {
-                // console.log("License is valid and more than 15 days away from expiry.");
+                if (daysLeft <= 0) {
+                    Alert.alert('License expired! 22222', 'Your license has expired. Please pay subscription.');
+                    setLicenseExpired(true);
+                } else if (daysLeft <= 15) {
+                    Alert.alert('License Reminder', `Your license is about to expire in ${daysLeft} day(s). Please renew it soon.`);
+                } else {
+                    // console.log("License is valid and more than 15 days away from expiry.");
+                }
             }
         };
 
         checkLicenseValidity();
- 
-        const interval = setInterval(checkLicenseValidity, 24 * 60 * 60 * 1000);  
-        return () => clearInterval(interval);  
+
+        const interval = setInterval(checkLicenseValidity, 24 * 60 * 60 * 1000);
+        return () => clearInterval(interval);
     }, [LicenseValidUpto]);
 
     useEffect(() => {
-        if (!IsActive) {
-            Alert.alert('Account Activation', 'Your account has not active. Please contact your branch.');
-            setLicenseExpired(true);
-        }
-    }, [LicenseValidUpto])
+        const fetchLicenseData = async () => {
+            if (LicenseExpired) {
+                const mobileNumber = await AsyncStorage.getItem('mobileNumber');
+
+                if (mobileNumber) {
+                    const url = `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/RequestData_App?MobileNo=${mobileNumber}`;
+                    try {
+                        const response = await fetch(url, {
+                            method: 'GET',
+                            headers: {
+                                'Content-Type': 'application/xml',
+                            },
+                        });
+
+                        const responseText = await response.text();
+                        const parser = new XMLParser();
+                        const jsonResponse = parser.parse(responseText);
+                        const jsonString = jsonResponse.string;
+                        const dataObject = JSON.parse(jsonString);
+                        if (dataObject.ResonseCode === '0000') {
+                            // console.log("exp date get", dataObject.MstrData?.LicenseValidUpto)
+                            setLicenseValidUpto(dataObject.MstrData?.LicenseValidUpto);
+                        }
+                    } catch (error) {
+                        console.error('Error fetching license data:', error);
+                    }
+                }
+            }
+        };
+
+        fetchLicenseData();
+    }, []);
+
+    // useEffect(() => {
+    //     if (!IsActive) {
+    //         Alert.alert('Account Activation', 'Your account has not active. Please contact your branch.');
+    //         setLicenseExpired(true);
+    //     }
+    // }, [LicenseValidUpto])
 
     useEffect(() => {
         if (!fileCreatedDate || !noOfDaysAllowed) return;
@@ -107,8 +148,8 @@ export default function Dashboard({ navigation, route }) {
         endDate.setDate(fileDate.getDate() + parseInt(noOfDaysAllowed));
 
         const currentDate = new Date();
-
-        if (currentDate >= fileDate && currentDate <= endDate) {
+        // console.log("allowed dates checking", fileDate, currentDate, endDate)
+        if (currentDate >= fileDate && currentDate < endDate) {
             setCollectionAllowed(true);
         } else {
             setCollectionAllowed(false);
@@ -150,12 +191,12 @@ export default function Dashboard({ navigation, route }) {
     useEffect(() => {
         const checkFirstLogin = async () => {
             const firstLoginComplete = await AsyncStorage.getItem('firstLoginComplete');
-            if(firstLoginComplete === 'true') {
-                console.log("setIsFirstLogin(true)")
+            if (firstLoginComplete === 'true') {
+                // console.log("setIsFirstLogin(true)")
                 getFileContent();  // Automatically load data if not first login
             }
             else {
-                console.log("setIsFirstLogin(true)")
+                // console.log("setIsFirstLogin(true)")
                 setIsFirstLogin(true);  // Show "Start collection" button
             }
         };
@@ -170,13 +211,222 @@ export default function Dashboard({ navigation, route }) {
         // getApi();
     }
 
+    // const saveFile = async (fileName, content) => {
+    //     try {
+    //       const filePath = `${RNFS.DocumentDirectoryPath}/${fileName}`;
+
+    //       // Check if the file already exists
+    //       const fileExists = await RNFS.exists(filePath);
+    //       if (fileExists) {
+    //         console.log('File exists, deleting before saving...');
+    //         await RNFS.unlink(filePath);
+    //       }
+
+    //       // Save the file
+    //       await RNFS.writeFile(filePath, content, 'utf8');
+    //       console.log(`File saved successfully: ${filePath}`);
+    //       return filePath;
+    //     } catch (error) {
+    //       console.error('Error saving file:', error);
+    //     }
+    //   };
+
+    //   const copyFile = async (sourceName, destName) => {
+    //     try {
+    //       const sourcePath = `${RNFS.DocumentDirectoryPath}/${sourceName}`;
+    //       const destPath = `${RNFS.DownloadDirectoryPath}/${destName}`;
+
+    //       // Check if the destination file already exists
+    //       const destExists = await RNFS.exists(destPath);
+    //       if (destExists) {
+    //         console.log('Destination file exists, deleting before copying...');
+    //         await RNFS.unlink(destPath);
+    //       }
+
+    //       // Copy the file
+    //       await RNFS.copyFile(sourcePath, destPath);
+    //       console.log(`File copied successfully to: ${destPath}`);
+    //       return destPath;
+    //     } catch (error) {
+    //       console.error('Error copying file:', error);
+    //     }
+    //   };
+
+
+    //       const fileName = 'dataObject.txt';
+    // const fileContent = 'Hello, this is the file content.';
+
+    // const handleSaveAndCopy = async () => {
+    //   // Save the file
+    //   const savedPath = await saveFile(fileName, fileContent);
+
+    //   // Copy the file to the public Downloads folder
+    //   if (savedPath) {
+    //     await copyFile(fileName, fileName);
+    //   }
+    // };
+
+
+    // const handleFileWrite = async () => {
+    //     // const hasPermission = await requestStoragePermission();
+    //     // if (!hasPermission) {
+    //     //     console.log('Permission denied');
+    //     //     return;
+    //     // }
+
+    //     const path = `${RNFS.DownloadDirectoryPath}/example.txt`;
+    //     const content = 'Hello, World!';
+
+    //     try {
+    //         await RNFS.writeFile(path, content, 'utf8');
+    //         // copyFile("example.txt",'example.txt')
+    //         console.log('File written successfully!');
+    //     } catch (err) {
+    //         console.log('File write error:', err.message);
+    //     }
+    // };
+
+    // const handleFileRead = async () => { 
+    //     const path = `${RNFS.DownloadDirectoryPath}/simple.txt`;
+
+    //     try {
+    //         const contents = await RNFS.readFile(path, 'utf8');
+    //         console.log('File contents:', contents);
+    //     } catch (err) {
+    //         console.log('File read error:', err.message);
+    //     }
+    // };
+
+    // const readStoredData = async () => {
+    //     try {
+    //       const filePath = `${RNFS.DocumentDirectoryPath}/dataObject17.json`;
+
+    //       // Check if the file exists
+    //       const fileExists = await RNFS.exists(filePath);
+    //       if (!fileExists) {
+    //         console.error('File does not exist.');
+    //         return;
+    //       }
+
+    //       // Read the file content
+    //       const fileContent = await RNFS.readFile(filePath, 'utf8');
+    //       const dataObject = JSON.parse(fileContent);
+
+    //       console.log('Read data from file:', dataObject);
+    //       return dataObject;
+    //     } catch (error) {
+    //       console.error('Error reading file:', error);
+    //     }
+    //   };
+
+    // const readStoredData = async () => {
+    //     try {
+    //       // Request the necessary permission
+    //       const permissionGranted = await requestMediaPermission();
+    //       if (!permissionGranted) {
+    //         console.error('Permission not granted');
+    //         return;
+    //       }
+
+    //       // Define the path to the public file (in the Download folder)
+    //       const filePath = `${RNFS.DownloadDirectoryPath}/dataObject.txt`;
+
+    //       // Check if the file exists
+    //       const fileExists = await RNFS.exists(filePath);
+    //       if (!fileExists) {
+    //         console.error('File does not exist in public storage.');
+    //         return;
+    //       }
+
+    //       // Read the file content
+    //       const fileContent = await RNFS.readFile(filePath, 'utf8');
+    //       console.log('Read data from public file:', fileContent);
+    //       return fileContent;
+    //     } catch (error) {
+    //       console.error('Error reading public file:', error);
+    //     }
+    //   };
+
+    //   const requestMediaPermission = async () => {
+    //     if (Platform.OS === 'android' && Platform.Version >= 29) {
+    //       try {
+    //         const granted = await PermissionsAndroid.request(
+    //           PermissionsAndroid.PERMISSIONS.ACCESS_MEDIA_LOCATION,
+    //           {
+    //             title: 'Access Media Location Permission',
+    //             message: 'This app needs access to media files on your device.',
+    //             buttonNeutral: 'Ask Me Later',
+    //             buttonNegative: 'Cancel',
+    //             buttonPositive: 'OK',
+    //           }
+    //         );
+
+    //         if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+    //           console.error('Permission denied');
+    //           return false;
+    //         }
+
+    //         console.log('Permission granted');
+    //         return true;
+    //       } catch (err) {
+    //         console.error('Permission error:', err);
+    //         return false;
+    //       }
+    //     }
+    //     return true; // Not Android 10+, assume permission granted
+    //   };
+
+    // const [fileUri, setFileUri] = useState(null);
+    // const [fileContent, setFileContent] = useState('');
+
+    // const pickFile = async () => {
+    //     try {
+    //         const file = await DocumentPicker.pickSingle({
+    //             type: [DocumentPicker.types.allFiles], // Allow all file types
+    //             copyTo: 'documentDirectory', // Ensures compatibility with scoped storage
+    //         });
+
+    //         if (file) {
+    //             setFileUri(file.uri);
+    //             Alert.alert('File Selected', `Path: ${file.uri}`);
+    //         }
+    //     } catch (err) {
+    //         if (DocumentPicker.isCancel(err)) {
+    //             console.log('User cancelled the picker');
+    //         } else {
+    //             console.error('Error picking file:', err);
+    //         }
+    //     }
+    // };
+
+    // // Function to read file content from the picked URI
+    // const readFileContent = async () => {
+    //     try {
+    //         if (!fileUri) {
+    //             Alert.alert('No File Selected', 'Please pick a file first.');
+    //             return;
+    //         }
+
+    //         const filePath = fileUri.startsWith('content://')
+    //             ? await RNFS.copyToDocumentDirectory(fileUri) // Copy to accessible location
+    //             : fileUri;
+
+    //         const content = await RNFS.readFile(filePath, 'utf8');
+    //         setFileContent(content);
+    //         Alert.alert('File Content', content);
+    //     } catch (error) {
+    //         console.error('Error reading file:', error);
+    //         Alert.alert('Error', `Failed to read the file: ${error.message}`);
+    //     }
+    // };
+
     const getFileContent = async () => {
         setLoading(true);
         const firstLoginComplete = await AsyncStorage.getItem('firstLoginComplete');
+        console.log("firstLoginComplete", firstLoginComplete)
         if ((firstLoginComplete === 'false') || (!firstLoginComplete)) {
 
             try {
-                // console.log("No saved data found, making API call...");
                 const mobileNumber = await AsyncStorage.getItem('mobileNumber');
 
                 if (mobileNumber) {
@@ -189,21 +439,41 @@ export default function Dashboard({ navigation, route }) {
                     });
 
                     const responseText = await response.text();
-
                     const parser = new XMLParser();
                     const jsonResponse = parser.parse(responseText);
-
                     const jsonString = jsonResponse.string;
                     const dataObject = JSON.parse(jsonString);
-                    // console.log("responseText:", dataObject.MstrData);
 
                     if (dataObject.ResonseCode === '0000') {
                         await AsyncStorage.setItem('dataObject', JSON.stringify(dataObject));
+
+                        const licenseExpiryDate = dataObject.MstrData?.LicenseValidUpto;
+                        setLicenseValidUpto(licenseExpiryDate);
+                        const currentDate = new Date();
+                        const expiryDate = new Date(licenseExpiryDate);
+                        const timeDiff = expiryDate.getTime() - currentDate.getTime();
+                        const daysLeft = Math.ceil(timeDiff / (1000 * 3600 * 24));
+
+                        if (daysLeft <= 0) {
+                            Alert.alert('License expired!', 'Your license has expired. Please pay subscription.');
+                            setLicenseExpired(true);
+                            setLoading(false);
+                            setSearchedResults(false);
+                            return;
+                        }
+
+                        if (daysLeft <= 15) {
+                            Alert.alert('License Reminder', `Your license is about to expire in ${daysLeft} day(s). Please renew it soon.`);
+                        }
+
+                        setLicenseExpired(false);
                         setMappedMasterData(dataObject.MstrData?.MstrRecs);
                         setHeaderLastAccNo(dataObject.MstrData?.HdrLastAcNo);
                         setDataAvailable(true);
                         setNoOfRecords(dataObject.MstrData?.NoOfRecords);
+                        // setLicenseValidUpto('2024-12-31');
                         setLicenseValidUpto(dataObject.MstrData?.LicenseValidUpto);
+                        await AsyncStorage.setItem('LicenseValidUpto', (dataObject.MstrData?.LicenseValidUpto).toString());
                         setClientName(dataObject.MstrData?.ClientName);
                         setBranchName(dataObject.MstrData?.BrNameE);
                         setBranchCode(dataObject.MstrData?.BrCode);
@@ -226,17 +496,14 @@ export default function Dashboard({ navigation, route }) {
                         setSearchedResults(true);
                         await AsyncStorage.setItem('firstLoginComplete', 'true');
                         setIsFirstLogin(false);
-                        handleNetworkChange();
-                        console.log("data is fetched by an API");
-                        // ToastAndroid.show('API call successful and data saved!', ToastAndroid.SHORT);
                     }
                     else {
-                        if (dataObject.ResonseCode != '0000') {
-                            Alert.alert(
-                                'Error:',
-                                `Code : ${dataObject.ResonseCode}, ${dataObject.ResponseString}`
-                            );
-                        }
+                        // if (dataObject.ResonseCode != '0000') {
+                        Alert.alert(
+                            'Error:',/*  */
+                            `Response Code : ${dataObject.ResonseCode}, ${dataObject.ResponseString}`
+                        );
+                        // }
                         setDataAvailable(false);
                         setIsAuth(false);
                     }
@@ -254,7 +521,7 @@ export default function Dashboard({ navigation, route }) {
             } catch (error) {
                 setDataAvailable(false);
                 // Capture error details
-                console.error('Error occurred:', error);
+                Alert.alert('Error occurred:', error.message);
                 await AsyncStorage.removeItem('firstLoginComplete');
 
                 if (!isConnected) {
@@ -273,15 +540,38 @@ export default function Dashboard({ navigation, route }) {
 
                 if (savedData) {
                     const dataObject = JSON.parse(savedData);
-                    // console.log("responseText local storage:", dataObject.MstrData);
+                    console.log("responseText local storage:");
 
                     if (dataObject.ResonseCode === '0000') {
                         await AsyncStorage.setItem('dataObject', JSON.stringify(dataObject));
+
+                        const licenseExpiryDate = dataObject.MstrData?.LicenseValidUpto;
+                        setLicenseValidUpto(licenseExpiryDate);
+                        const currentDate = new Date();
+                        const expiryDate = new Date(licenseExpiryDate);
+                        const timeDiff = expiryDate.getTime() - currentDate.getTime();
+                        const daysLeft = Math.ceil(timeDiff / (1000 * 3600 * 24));
+                        console.log("days left when api called", daysLeft)
+                        if (daysLeft <= 0) {
+                            Alert.alert('License expired!', 'Your license has expired. Please pay subscription.');
+                            setLicenseExpired(true);
+                            setLoading(false);
+                            setSearchedResults(false);
+                            return;
+                        }
+
+                        if (daysLeft <= 15) {
+                            Alert.alert('License Reminder', `Your license is about to expire in ${daysLeft} day(s). Please renew it soon.`);
+                        }
+
+                        setLicenseExpired(false);
                         setMappedMasterData(dataObject.MstrData?.MstrRecs);
                         setHeaderLastAccNo(dataObject.MstrData?.HdrLastAcNo);
                         setDataAvailable(true);
                         setNoOfRecords(dataObject.MstrData?.NoOfRecords);
-                        setLicenseValidUpto(dataObject.MstrData?.LicenseValidUpto);
+                        // setLicenseValidUpto(dataObject.MstrData?.LicenseValidUpto);
+                        // setLicenseValidUpto('2024-12-31'); 
+                        await AsyncStorage.setItem('LicenseValidUpto', (dataObject.MstrData?.LicenseValidUpto).toString());
                         setClientName(dataObject.MstrData?.ClientName);
                         setBranchName(dataObject.MstrData?.BrNameE);
                         setBranchCode(dataObject.MstrData?.BrCode);
@@ -302,15 +592,6 @@ export default function Dashboard({ navigation, route }) {
                         // setMultipleCollection(false)
                         setMultipleCollection((dataObject.MstrData?.AllowMultipleColln === 'True') ? true : false);
                         setSearchedResults(true);
-                        console.log("data is taken from local storage");
-                        // ClientID: ClientID,
-                        // BrCode: BrCode, 
-                        // AgCode: AgCode, 
-                        // BrAgCode: BrAgCode, 
-                        // FileCreateDate: FileCreateDate, 
-                        // InputFileType: InputFileType, 
-                        handleNetworkChange(dataObject.MstrData?.ClientID, dataObject.MstrData?.BrCode, dataObject.MstrData?.AgCode, dataObject.MstrData?.BrAgCode, dataObject.MstrData?.FileCreateDate,dataObject.MstrData?.InputFileType);
-                        // ToastAndroid.show('API call successful and data saved!', ToastAndroid.SHORT);
                     }
                     else {
                         if (dataObject.ResonseCode != '0000') {
@@ -340,7 +621,7 @@ export default function Dashboard({ navigation, route }) {
             } catch (error) {
                 setDataAvailable(false);
                 // Capture error details
-                console.error('Error occurred:', error);
+                Alert.alert('Error occurred:', error);
                 await AsyncStorage.removeItem('firstLoginComplete');
 
                 if (!isConnected) {
@@ -352,31 +633,72 @@ export default function Dashboard({ navigation, route }) {
             }
         }
     };
- 
-    const handleNetworkChange = (ClientID, BrCode, AgCode, BrAgCode, FileCreateDate,InputFileType) => {
-        const unsubscribe = NetInfo.addEventListener((state) => {
-            setConnected(state.isConnected);
-            if (!state.isConnected) {
-                showAlert();
-            } else {
-                sendDataInBackground(ClientID, BrCode, AgCode, BrAgCode, FileCreateDate,InputFileType);
+
+    // useEffect(()=> {
+
+
+    //     const handleNetworkChange = (ClientID, BrCode, AgCode, BrAgCode, FileCreateDate, InputFileType) => {
+    //         const unsubscribe = NetInfo.addEventListener((state) => {
+    //             // setConnected(state.isConnected);
+    //             if (!state.isConnected) {
+    //                 showAlert();
+    //             } else {
+    //                 if(tempFlag){
+    //                     console.log("offline checking",ClientID, BrCode, AgCode, BrAgCode, FileCreateDate, InputFileType)
+    //                     setTempFlag(false);
+    //                 }
+    //                 // sendDataInBackground(ClientID, BrCode, AgCode, BrAgCode, FileCreateDate, InputFileType);
+    //             }
+    //         });
+    //         return () =>{
+    //             if(unsubscribe){
+    //                 unsubscribe();
+    //             }
+    //         }
+    //         // return unsubscribe; // To allow cleanup later if needed
+    //     }; 
+    // },[]);
+
+
+    useEffect(() => {
+        let unsubscribe
+        let currentState
+
+        // Subscribe NetInfo event
+        unsubscribe = NetInfo.addEventListener(state => {
+            if (currentState !== state.isConnected) {
+                currentState = state.isConnected
+                console.log("Is connected?", currentState);
+                setConnected(currentState);
+                if (currentState === true) {
+                    sendDataInBackground()
+                }
             }
         });
-    
-        return unsubscribe; // To allow cleanup later if needed
-    };
-     
+
+        return () => {
+            console.log("unsubscribe");
+
+            if (unsubscribe)
+                unsubscribe();
+        };
+    }, []);
+
     const showAlert = () => {
         console.log('Internet Connection You are offline. Some features may not be available.');
     };
- 
-    const sendDataInBackground = async (ClientID, BrCode, AgCode, BrAgCode, FileCreateDate,InputFileType) => {
+
+    const sendDataInBackground = async (ClientID, BrCode, AgCode, BrAgCode, FileCreateDate, InputFileType) => {
         const transactionTableData = await AsyncStorage.getItem('transactionTable');
         const parsedData = JSON.parse(transactionTableData) || [];
-        // console.log("sll arrayes",parsedData)
         const pendingTransactions = parsedData.filter((item) => item.pending === true);
         // console.log("checking data null::", BrCode, AgCode, FileCreateDate, ClientID, BrAgCode, InputFileType)
- 
+        console.log("interent on data", pendingTransactions)
+
+        const savedData = await AsyncStorage.getItem('dataObject');
+
+        const dataObject = JSON.parse(savedData);
+
         if (!isConnected || pendingTransactions.length === 0) {
             // console.log("No pending transactions or not connected to the internet.");
             return;
@@ -385,22 +707,21 @@ export default function Dashboard({ navigation, route }) {
         // if (!ClientID || !BrAgCode  || !BrCode || !AgCode || FileCreateDate || InputFileType) {
         //     console.log("Null values.");
         //     return;
-        // }
-
+        // } 
         const transactionsWithoutPending = pendingTransactions.map(({ pending, ...rest }) => rest);
-        setpendingCount(pendingTransactions.length);
+        // setpendingCount(pendingTransactions.length);
         const newArray = {
-            ClientID: ClientID,
-            BrCode: BrCode, 
-            AgCode: AgCode, 
-            BrAgCode: BrAgCode, 
-            FileCreateDate: FileCreateDate, 
-            InputFileType: InputFileType, 
+            ClientID: dataObject.MstrData?.ClientID,
+            BrCode: dataObject.MstrData?.BrCode,
+            AgCode: dataObject.MstrData?.AgCode,
+            BrAgCode: dataObject.MstrData?.BrAgCode,
+            FileCreateDate: dataObject.MstrData?.FileCreateDate,
+            InputFileType: dataObject.MstrData?.InputFileType,
             NoOfRecords: pendingTransactions.length.toString(),
             CollectionData: transactionsWithoutPending,
         };
 
-        // console.log("Transaction table data to send:", newArray);
+        console.log("Transaction table data to send:", newArray);
 
         try {
             // const response = await fetch(`http://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp`, {
@@ -425,7 +746,7 @@ export default function Dashboard({ navigation, route }) {
             const jsonString = jsonResponse.string;
             const dataObject = JSON.parse(jsonString);
             const responseString = dataObject.ResonseCode;
-            // console.log("Response in auto send data:", responseText, 'resp code new is : ',responseString);
+            console.log("Response in auto send data:", responseText, 'resp code new is : ', responseString);
             // If the API call succeeds, update AsyncStorage
             if (responseString === '0000') {
                 const updatedTransactionTable = parsedData.map((item) => {
@@ -436,24 +757,24 @@ export default function Dashboard({ navigation, route }) {
                     return item;
                 });
 
-                fetchTransactionTable();
                 await AsyncStorage.setItem('transactionTable', JSON.stringify(updatedTransactionTable));
+                fetchTransactionTable();
                 // ToastAndroid.show("Uploaded pending transactions", ToastAndroid.SHORT);
                 console.log("Updated transaction table stored successfully.");
             }
         } catch (error) {
-            console.error("Error during API call:", error);
+            Alert.alert("Error during API call:", error);
         }
     };
- 
+
     const fetchTransactionTable = async () => {
         try {
             const transactionTableData = await AsyncStorage.getItem('transactionTable');
-            // console.log("transacrion table data,",transactionTableData)
             if (transactionTableData) {
                 const parsedData = JSON.parse(transactionTableData);  // Parse the stored data
                 setTransactionTable(parsedData);
                 const pendingTransactions = parsedData.filter((item) => item.pending === true);
+                console.log("pending data,", pendingTransactions.length)
                 setpendingCount(pendingTransactions.length);
                 const total = parsedData.reduce((sum, transaction) => {
                     return sum + (parseFloat(transaction.Collection) || 0);
@@ -463,7 +784,7 @@ export default function Dashboard({ navigation, route }) {
                 setTotalAmount(total);
             }
         } catch (error) {
-            console.error('Error fetching transaction table from AsyncStorage:', error);
+            Alert.alert('Error fetching transaction table from AsyncStorage:', error);
         }
     };
 
@@ -471,13 +792,147 @@ export default function Dashboard({ navigation, route }) {
         fetchTransactionTable();
     }, [isFocused]);
 
+    // const handleCloseCollection = async () => {
+    //     setButtonLoading(true);
+    //     if (collectionAllowed === false) {
+    //         Alert.alert('Cannot Close collection!', `Collection is not allowed, maximum allowed days are expired`);
+    //         setButtonLoading(false);
+    //         return;
+    //     }
+
+    //     if (!isConnected) {
+    //         Alert.alert('Cannot Close collection!', `You are offline, please connect to the Internet and try again.`);
+    //         setButtonLoading(false);
+    //         return;
+    //     }
+
+    //     Alert.alert(
+    //         'Close Collection',
+    //         'Do you really want to close the collection?',
+    //         [
+    //             { text: 'Cancel', style: 'cancel', onPress: () => setButtonLoading(false) },
+    //             {
+    //                 text: 'Yes',
+    //                 onPress: async () => {
+    //                     const mobileNumber = await AsyncStorage.getItem('mobileNumber');
+
+    //                     if (mobileNumber) {
+    //                         const url = `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/ConfirmData_FromApp?MobileNo=${mobileNumber}&Fdate=${FileCreateDate}`;
+    //                         const response = await fetch(url, {
+    //                             method: 'GET',
+    //                             headers: {
+    //                                 'Content-Type': 'application/xml',
+    //                             },
+    //                         });
+    //                         const responseText = await response.text();
+    //                         const parser = new XMLParser();
+    //                         const jsonResponse = parser.parse(responseText);
+    //                         const jsonString = jsonResponse.string;
+    //                         const dataObject = JSON.parse(jsonString);
+    //                         const responseString = dataObject.ResponseString;
+    //                         const numberAfterHyphen = responseString.split('-')[1]?.trim();
+
+    //                         let tempCount = parseInt(transactionTable.length) + 20000;
+    //                         console.log("Number after hyphen:", numberAfterHyphen, tempCount, jsonString);
+    //                         // if (parseInt(numberAfterHyphen) != parseInt(tempCount)) {
+    //                         if (parseInt(numberAfterHyphen) === parseInt(tempCount)) {
+    //                             // Alert.alert('Cannot Close collection!', `You have collected ${transactionTable.length} reciepts out of ${NoOfRecords}. and total collected amount is Rs ${totalAmount}.00/-`)
+    //                             Alert.alert('Cannot Close collection!', `Transactions records mismatch`)
+    //                             setButtonLoading(false);
+    //                         }
+
+    //                         else {
+
+    //                             // const agentmobileNumber = await AsyncStorage.getItem('mobileNumber');
+
+    //                             // if (mobileNumber) {
+
+    //                                 const url = `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/Dummy_CloseCycle?MobileNo=${mobileNumber}&Fdate=${FileCreateDate}`;
+    //                                 // const url = `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/CloseCollection_FromApp`;
+    //                                 let tempCount = parseInt(transactionTable.length);
+    //                                 try {
+    //                                     const response = await fetch(url, {
+    //                                         method: 'POST',
+    //                                         headers: {
+    //                                             'Content-Type': 'application/x-www-form-urlencoded',
+    //                                         },
+    //                                         body: new URLSearchParams({
+    //                                             MobileNo: mobileNumber,
+    //                                             Fdate: FileCreateDate,
+    //                                             NoofRecs: parseInt(tempCount)
+    //                                         }).toString(),
+    //                                     });
+
+    //                                     const responseText = await response.text();
+    //                                     const parser = new XMLParser();
+    //                                     const jsonResponse = parser.parse(responseText);
+    //                                     const jsonString = jsonResponse.string;
+    //                                     const dataObject = JSON.parse(jsonString);
+    //                                     const responseString = dataObject.ResonseCode; 
+    //                                     console.log('checkng dummy closing response; ',  response)
+    //                                     if (responseString === '0000' || response.ok) {
+    //                                         Alert.alert("Success", "Successfully closed Collections",) 
+    //                                         let transactionHistoryTable = await AsyncStorage.getItem('transactionHistoryTable');
+    //                                         transactionHistoryTable = transactionHistoryTable ? JSON.parse(transactionHistoryTable) : [];
+    //                                         let transactionTable = await AsyncStorage.getItem('transactionTable');
+    //                                         transactionTable = transactionTable ? JSON.parse(transactionTable) : [];
+    //                                         transactionTable.forEach(transaction => {
+    //                                             transactionHistoryTable.push(transaction);
+    //                                         });
+
+    //                                         await AsyncStorage.setItem('transactionHistoryTable', JSON.stringify(transactionHistoryTable));
+    //                                         await AsyncStorage.removeItem('transactionTable');
+    //                                         // setLoading(true);
+    //                                         setTransactionTable([]);
+    //                                         setTotalAmount(null);
+    //                                         fetchTransactionTable();
+    //                                         setButtonLoading(false);
+    //                                         setDataAvailable(false);
+    //                                         setClientName(null);
+    //                                         setBranchName(null);
+    //                                         setBranchCode(null);
+    //                                         setAgentName(null);
+    //                                         // await AsyncStorage.removeItem('firstLoginComplete');
+    //                                         await AsyncStorage.setItem('firstLoginComplete', 'false');
+
+    //                                         // setIsDataValid(false);
+    //                                     }
+    //                                     else {
+    //                                         setButtonLoading(false);
+    //                                         if (dataObject.ResonseCode != '0000') {
+    //                                             Alert.alert(
+    //                                                 'Error:',
+    //                                                 `Code : ${dataObject.ResonseCode}, ${dataObject.ResponseString}`
+    //                                             );
+    //                                         }
+    //                                         // ToastAndroid.show("error while closing Collections", ToastAndroid.LONG)
+    //                                     }
+    //                                     // console.log("Response closed collection:", response.ok);
+    //                                 } catch (error) {
+    //                                     setButtonLoading(false);
+    //                                     if (dataObject.ResonseCode != '0000' || !response.ok) {
+    //                                         Alert.alert(
+    //                                             'Error:',
+    //                                             `Code : ${dataObject.ResonseCode}, ${dataObject.ResponseString}`
+    //                                         );
+    //                                     }
+    //                                     // ToastAndroid.show("Failed to close Collections. Please try again", ToastAndroid.LONG)
+    //                                     // Alert.alert("Error during API call:", error,'okay<?',response.ok);
+    //                                 } finally {
+    //                                     setButtonLoading(false);
+    //                                     fetchTransactionTable();
+    //                                 }
+    //                             }
+    //                         // }
+    //                     }
+    //                 }
+    //             }
+    //         ]
+    //     );
+    // };
+
     const handleCloseCollection = async () => {
         setButtonLoading(true);
-        if (collectionAllowed === false) {
-            Alert.alert('Cannot Close collection!', `Collection is not allowed, maximum allowed days are expired`);
-            setButtonLoading(false);
-            return;
-        }
 
         if (!isConnected) {
             Alert.alert('Cannot Close collection!', `You are offline, please connect to the Internet and try again.`);
@@ -496,111 +951,92 @@ export default function Dashboard({ navigation, route }) {
                         const mobileNumber = await AsyncStorage.getItem('mobileNumber');
 
                         if (mobileNumber) {
-                            const url = `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/ConfirmData_FromApp?MobileNo=${mobileNumber}&Fdate=${FileCreateDate}`;
-                            const response = await fetch(url, {
-                                method: 'GET',
-                                headers: {
-                                    'Content-Type': 'application/xml',
-                                },
-                            });
-                            const responseText = await response.text();
-                            const parser = new XMLParser();
-                            const jsonResponse = parser.parse(responseText);
-                            const jsonString = jsonResponse.string;
-                            const dataObject = JSON.parse(jsonString);
-                            const responseString = dataObject.ResponseString;
-                            const numberAfterHyphen = responseString.split('-')[1]?.trim();
 
-                            let tempCount = parseInt(transactionTable.length) + 20000;
-                            console.log("Number after hyphen:", numberAfterHyphen, tempCount, jsonString);
-                            // if (parseInt(numberAfterHyphen) != parseInt(tempCount)) {
-                            if (parseInt(numberAfterHyphen) === parseInt(tempCount)) {
-                                Alert.alert('Cannot Close collection!', `You have collected ${transactionTable.length} reciepts out of ${NoOfRecords}. and total collected amount is Rs ${totalAmount}.00/-`)
-                                setButtonLoading(false);
-                            }
+                            const closeCollectionUrl = `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/CloseCollection_FromApp`;
+                            const dummyCloseCycleUrl = `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/Dummy_CloseCycle`;
+                            let tempCount = parseInt(transactionTable.length);
+                            console.log("transacion count", tempCount)
+                            try {
+                                // Call CloseCollection_FromApp API
+                                const closeCollectionResponse = await fetch(closeCollectionUrl, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/x-www-form-urlencoded',
+                                    },
+                                    body: new URLSearchParams({
+                                        MobileNo: mobileNumber,
+                                        Fdate: FileCreateDate,
+                                        NoofRecs: tempCount,
+                                    }).toString(),
+                                });
 
-                            else {
+                                const closeCollectionText = await closeCollectionResponse.text();
+                                const parser = new XMLParser();
+                                const closeCollectionJson = parser.parse(closeCollectionText);
+                                const closeCollectionData = JSON.parse(closeCollectionJson.string);
+                                const closeCollectionResponseCode = closeCollectionData.ResonseCode;
 
-                                // const agentmobileNumber = await AsyncStorage.getItem('mobileNumber');
 
-                                // if (mobileNumber) {
+                                if (closeCollectionResponseCode === '0000') {
+                                    // If CloseCollection_FromApp fails, call Dummy_CloseCycle API
+                                    const dummyCloseCycleResponse = await fetch(dummyCloseCycleUrl, {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/x-www-form-urlencoded',
+                                        },
+                                        body: new URLSearchParams({
+                                            MobileNo: mobileNumber,
+                                            Fdate: FileCreateDate,
+                                            NoofRecs: tempCount,
+                                        }).toString(),
+                                    });
 
-                                    const url = `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/Dummy_CloseCycle?MobileNo=${mobileNumber}&Fdate=${FileCreateDate}`;
-                                    // const url = `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/CloseCollection_FromApp`;
-                                    let tempCount = parseInt(transactionTable.length);
-                                    try {
-                                        const response = await fetch(url, {
-                                            method: 'POST',
-                                            headers: {
-                                                'Content-Type': 'application/x-www-form-urlencoded',
-                                            },
-                                            body: new URLSearchParams({
-                                                MobileNo: mobileNumber,
-                                                Fdate: FileCreateDate,
-                                                NoofRecs: parseInt(tempCount)
-                                            }).toString(),
-                                        });
+                                    const dummyCloseCycleText = await dummyCloseCycleResponse.text();
+                                    const dummyCloseCycleJson = parser.parse(dummyCloseCycleText);
+                                    const dummyCloseCycleData = JSON.parse(dummyCloseCycleJson.string);
+                                    const dummyCloseCycleResponseCode = dummyCloseCycleData.ResonseCode;
 
-                                        const responseText = await response.text();
-                                        const parser = new XMLParser();
-                                        const jsonResponse = parser.parse(responseText);
-                                        const jsonString = jsonResponse.string;
-                                        const dataObject = JSON.parse(jsonString);
-                                        const responseString = dataObject.ResonseCode; 
-                                        console.log('checkng dummy closing response; ',  response)
-                                        if (responseString === '0000' || response.ok) {
-                                            Alert.alert("Success", "Successfully closed Collections",) 
-                                            let transactionHistoryTable = await AsyncStorage.getItem('transactionHistoryTable');
-                                            transactionHistoryTable = transactionHistoryTable ? JSON.parse(transactionHistoryTable) : [];
-                                            let transactionTable = await AsyncStorage.getItem('transactionTable');
-                                            transactionTable = transactionTable ? JSON.parse(transactionTable) : [];
-                                            transactionTable.forEach(transaction => {
-                                                transactionHistoryTable.push(transaction);
-                                            });
-
-                                            await AsyncStorage.setItem('transactionHistoryTable', JSON.stringify(transactionHistoryTable));
-                                            await AsyncStorage.removeItem('transactionTable');
-                                            // setLoading(true);
-                                            setTransactionTable([]);
-                                            setTotalAmount(null);
-                                            fetchTransactionTable();
-                                            setButtonLoading(false);
-                                            setDataAvailable(false);
-                                            setClientName(null);
-                                            setBranchName(null);
-                                            setBranchCode(null);
-                                            setAgentName(null);
-                                            // await AsyncStorage.removeItem('firstLoginComplete');
-                                            await AsyncStorage.setItem('firstLoginComplete', 'false');
-
-                                            // setIsDataValid(false);
-                                        }
-                                        else {
-                                            setButtonLoading(false);
-                                            if (dataObject.ResonseCode != '0000') {
-                                                Alert.alert(
-                                                    'Error:',
-                                                    `Code : ${dataObject.ResonseCode}, ${dataObject.ResponseString}`
-                                                );
-                                            }
-                                            // ToastAndroid.show("error while closing Collections", ToastAndroid.LONG)
-                                        }
-                                        // console.log("Response closed collection:", response.ok);
-                                    } catch (error) {
-                                        setButtonLoading(false);
-                                        if (dataObject.ResonseCode != '0000' || !response.ok) {
-                                            Alert.alert(
-                                                'Error:',
-                                                `Code : ${dataObject.ResonseCode}, ${dataObject.ResponseString}`
-                                            );
-                                        }
-                                        // ToastAndroid.show("Failed to close Collections. Please try again", ToastAndroid.LONG)
-                                        // console.error("Error during API call:", error,'okay<?',response.ok);
-                                    } finally {
-                                        setButtonLoading(false);
-                                        fetchTransactionTable();
+                                    if (dummyCloseCycleResponseCode !== '0000') {
+                                        throw new Error(
+                                            `DummyCloseCycle Error: Code ${dummyCloseCycleResponseCode}, ${dummyCloseCycleData.ResponseString}`
+                                        );
                                     }
+
+                                    Alert.alert("Success", "Successfully closed Collections");
+
+                                    let transactionHistoryTable = await AsyncStorage.getItem('transactionHistoryTable');
+                                    transactionHistoryTable = transactionHistoryTable ? JSON.parse(transactionHistoryTable) : [];
+                                    let transactionTableData = await AsyncStorage.getItem('transactionTable');
+                                    transactionTableData = transactionTableData ? JSON.parse(transactionTableData) : [];
+                                    transactionTableData.forEach(transaction => {
+                                        transactionHistoryTable.push(transaction);
+                                    });
+
+                                    await AsyncStorage.setItem('transactionHistoryTable', JSON.stringify(transactionHistoryTable));
+                                    await AsyncStorage.removeItem('transactionTable');
+                                    setTransactionTable([]);
+                                    fetchTransactionTable();
+                                    setDataAvailable(false);
+                                    setMaxAmountLimit(null);
+                                    setNoOfDaysAllowed(null);
+                                    setTotalAmount(null);
+                                    setpendingCount(0)
+                                    await AsyncStorage.setItem('firstLoginComplete', 'false');
                                 }
+                                else {
+                                    Alert.alert('Error', ` Response Code - ${closeCollectionResponseCode} - ${closeCollectionData?.ResponseString} `)
+                                }
+
+                                // Update AsyncStorage and state
+
+
+                            } catch (error) {
+                                Alert.alert('Error', error.message);
+                            } finally {
+                                setButtonLoading(false);
+                                fetchTransactionTable();
+                            }
+                            // }
                             // }
                         }
                     }
@@ -608,6 +1044,146 @@ export default function Dashboard({ navigation, route }) {
             ]
         );
     };
+
+    // const handleCloseCollection = async () => {
+    //     setButtonLoading(true);
+    //     // if (collectionAllowed === false) {
+    //     //     Alert.alert('Cannot Close collection!', `Collection is not allowed, maximum allowed days are expired`);
+    //     //     setButtonLoading(false);
+    //     //     return;
+    //     // }
+
+    //     if (!isConnected) {
+    //         Alert.alert('Cannot Close collection!', `You are offline, please connect to the Internet and try again.`);
+    //         setButtonLoading(false);
+    //         return;
+    //     }
+
+    //     Alert.alert(
+    //         'Close Collection',
+    //         'Do you really want to close the collection?',
+    //         [
+    //             { text: 'Cancel', style: 'cancel', onPress: () => setButtonLoading(false) },
+    //             {
+    //                 text: 'Yes',
+    //                 onPress: async () => {
+    //                     const mobileNumber = await AsyncStorage.getItem('mobileNumber');
+
+    //                     if (mobileNumber) {
+    //                         // const url = `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/ConfirmData_FromApp?MobileNo=${mobileNumber}&Fdate=${FileCreateDate}`;
+    //                         // const response = await fetch(url, {
+    //                         //     method: 'GET',
+    //                         //     headers: {
+    //                         //         'Content-Type': 'application/xml',
+    //                         //     },
+    //                         // });
+    //                         // const responseText = await response.text();
+    //                         // const parser = new XMLParser();
+    //                         // const jsonResponse = parser.parse(responseText);
+    //                         // const jsonString = jsonResponse.string;
+    //                         // const dataObject = JSON.parse(jsonString);
+    //                         // const responseString = dataObject.ResponseString;
+    //                         // const numberAfterHyphen = responseString.split('-')[1]?.trim();
+
+    //                         // let tempCount = parseInt(transactionTable.length) + 20000;
+    //                         // console.log("Number after hyphen:", numberAfterHyphen, tempCount, jsonString);
+    //                         // // if (parseInt(numberAfterHyphen) != parseInt(tempCount)) {
+    //                         // if (parseInt(numberAfterHyphen) === parseInt(tempCount)) {
+    //                         //     // Alert.alert('Cannot Close collection!', `You have collected ${transactionTable.length} reciepts out of ${NoOfRecords}. and total collected amount is Rs ${totalAmount}.00/-`)
+    //                         //     Alert.alert('Cannot Close collection!', `Transactions records mismatch`)
+    //                         //     setButtonLoading(false);
+    //                         // }
+
+    //                         // else {
+
+    //                         // const agentmobileNumber = await AsyncStorage.getItem('mobileNumber');
+
+    //                         // if (mobileNumber) {
+
+    //                         const url = `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/Dummy_CloseCycle?MobileNo=${mobileNumber}&Fdate=${FileCreateDate}`;
+    //                         // const url = `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/CloseCollection_FromApp`;
+    //                         let tempCount = parseInt(transactionTable.length);
+    //                         try {
+    //                             const response = await fetch(url, {
+    //                                 method: 'POST',
+    //                                 headers: {
+    //                                     'Content-Type': 'application/x-www-form-urlencoded',
+    //                                 },
+    //                                 body: new URLSearchParams({
+    //                                     MobileNo: mobileNumber,
+    //                                     Fdate: FileCreateDate,
+    //                                     NoofRecs: parseInt(tempCount)
+    //                                 }).toString(),
+    //                             });
+
+    //                             const responseText = await response.text();
+    //                             const parser = new XMLParser();
+    //                             const jsonResponse = parser.parse(responseText);
+    //                             const jsonString = jsonResponse.string;
+    //                             const dataObject = JSON.parse(jsonString);
+    //                             const responseString = dataObject.ResonseCode;
+    //                             console.log('checkng close collection response; ', dataObject, responseString)
+    //                             if (responseString === '0000') {
+    //                                 Alert.alert("Success", "Successfully closed Collections",)
+    //                                 let transactionHistoryTable = await AsyncStorage.getItem('transactionHistoryTable');
+    //                                 transactionHistoryTable = transactionHistoryTable ? JSON.parse(transactionHistoryTable) : [];
+    //                                 let transactionTable = await AsyncStorage.getItem('transactionTable');
+    //                                 transactionTable = transactionTable ? JSON.parse(transactionTable) : [];
+    //                                 transactionTable.forEach(transaction => {
+    //                                     transactionHistoryTable.push(transaction);
+    //                                 });
+
+    //                                 await AsyncStorage.setItem('transactionHistoryTable', JSON.stringify(transactionHistoryTable));
+    //                                 await AsyncStorage.removeItem('transactionTable');
+    //                                 // setLoading(true);
+    //                                 setTransactionTable([]);
+    //                                 setTotalAmount(null);
+    //                                 fetchTransactionTable();
+    //                                 setButtonLoading(false);
+    //                                 setDataAvailable(false);
+    //                                 setClientName(null);
+    //                                 setBranchName(null);
+    //                                 setBranchCode(null);
+    //                                 setAgentName(null);
+    //                                 // await AsyncStorage.removeItem('firstLoginComplete');
+    //                                 await AsyncStorage.setItem('firstLoginComplete', 'false');
+
+    //                                 // setIsDataValid(false);
+    //                             }
+    //                             else {
+    //                                 setButtonLoading(false);
+    //                                 if (dataObject.ResonseCode != '0000') {
+    //                                     Alert.alert(
+    //                                         'Error:',
+    //                                         `Code : ${dataObject.ResonseCode}, ${dataObject.ResponseString}`
+    //                                     );
+    //                                 }
+    //                                 // ToastAndroid.show("error while closing Collections", ToastAndroid.LONG)
+    //                             }
+    //                             // console.log("Response closed collection:", response.ok);
+    //                         } catch (error) {
+    //                             setButtonLoading(false);
+    //                             if (dataObject.ResonseCode != '0000' || !response.ok) {
+    //                                 Alert.alert(
+    //                                     'Error:',
+    //                                     `Code : ${dataObject.ResonseCode}, ${dataObject.ResponseString}`
+    //                                 );
+    //                             }
+    //                             // ToastAndroid.show("Failed to close Collections. Please try again", ToastAndroid.LONG)
+    //                             // Alert.alert("Error during API call:", error,'okay<?',response.ok);
+    //                         } finally {
+    //                             setButtonLoading(false);
+    //                             fetchTransactionTable();
+    //                         }
+    //                         // }
+    //                         // }
+    //                     }
+    //                 }
+    //             }
+    //         ]
+    //     );
+    // };
+
 
     const handleCancel = () => {
         setModalVisible(false);
@@ -636,11 +1212,11 @@ export default function Dashboard({ navigation, route }) {
 
         return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
     }
-    
-  const [collectionDate, setCollectionDate] = useState(null);
+
+    const [collectionDate, setCollectionDate] = useState(null);
 
     const handleSubmit = async () => {
-        let newAccNo; 
+        let newAccNo;
         const mobileValidation = () => {
             if (!mobileNumber) {
                 Alert.alert('Warning', `Please enter customer's Mobile Number`);
@@ -771,30 +1347,30 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
 
                                         const parser = new XMLParser();
                                         const jsonResponse = parser.parse(responseText);
-                              
+
                                         const jsonString = jsonResponse.string;
-                              
+
                                         const responseObject = JSON.parse(jsonString);
                                         const rawResponseString = responseObject.ResponseString;
-                            
+
                                         // Extract only the JSON part from the rawResponseString
                                         const jsonStartIndex = rawResponseString.indexOf('{');
                                         const cleanedResponseString = rawResponseString.substring(jsonStartIndex);
                                         const dataObject = JSON.parse(cleanedResponseString);
                                         try {
-                                          // Extract the actual JSON portion from ResponseString
-                              
-                                          const collectionData = dataObject.CollectionData;
-                                          console.log("collectionData:", collectionData);
-                              
-                                          if (collectionData && collectionData.length > 0) {
-                                            const collDateTime = collectionData[0].CollDateTime;
-                                            // console.log("CollDateTime:", collDateTime);
-                                            setCollectionDate(collDateTime);
-                                            // You can store or use collDateTime as needed
-                                          } else {
-                                            console.log("No collection data found.");
-                                          }
+                                            // Extract the actual JSON portion from ResponseString
+
+                                            const collectionData = dataObject.CollectionData;
+                                            // console.log("collectionData:", collectionData);
+
+                                            if (collectionData && collectionData.length > 0) {
+                                                const collDateTime = collectionData[0].CollDateTime;
+                                                // console.log("CollDateTime:", collDateTime);
+                                                setCollectionDate(collDateTime);
+                                                // You can store or use collDateTime as needed
+                                            } else {
+                                                console.log("No collection data found.");
+                                            }
                                         }
                                         catch (error) {
                                             if (dataObject.ResonseCode != '0000') {
@@ -803,7 +1379,7 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
                                                     `Code : ${dataObject.ResonseCode}, ${dataObject.ResponseString}`
                                                 );
                                             }
-                                          console.error("Error parsing the response:", error);
+                                            Alert.alert("Error parsing the response:", error);
                                         }
                                         transactionTable.push(transactionData);
                                         await AsyncStorage.setItem('transactionTable', JSON.stringify(transactionTable));
@@ -812,8 +1388,8 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
 
                                         console.log("Response:", responseText);
                                     } catch (error) {
-                                       
-                                        console.error("Error during API call:", error);
+
+                                        Alert.alert("Error during API call:", error);
                                     }
                                 }
                             }
@@ -832,9 +1408,9 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
                     }
                 ]
             );
- 
+
         } catch (error) {
-            console.error("Error while processing transaction:", error);
+            Alert.alert("Error while processing transaction:", error);
             Alert.alert('Error', 'An error occurred while processing your transaction. Please try again.');
         }
 
@@ -847,76 +1423,127 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
     const handleCancel2 = () => {
         setModalVisible2(false);
     };
-  
+
     const handleWhatsAppPress = async () => {
-       
-    const formatDateTime = (date) => {
-        const padZero = (num) => (num < 10 ? `0${num}` : num);
-        const year = date.getFullYear();
-        const month = padZero(date.getMonth() + 1);
-        const day = padZero(date.getDate());
-        const hours = padZero(date.getHours());
-        const minutes = padZero(date.getMinutes());
-        const seconds = padZero(date.getSeconds());
-  
-        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-      }; 
-      const clId = ClientID;
-      const Brid = BrCode;
-      const Agid = AgCode;
-      const glcod = '0';
-      const acno = newAccCreated;
-      const ColldateTime = formatDateTime(new Date());
-      const ruidString = `${clId},${Brid},${Agid},${glcod},${acno}`;
-      const ruid = Buffer.from(ruidString).toString('base64');
-      const encodedDateTime = collectionDate.replace(' ', '%20');
-      const encodedURL = `https://app.automatesystemsdataservice.in/Customer/api/Receipt?ruid=${ruid}&ColldateTime=${encodedDateTime}`;
-    
-      const getNumber = mobileNumber;
-      const phoneNumber = `+91${getNumber}`;  
-      const message = `Hi, Please click on the link Below for the Receipt of your Transaction. ${encodedURL} `;
-   
-      const url = `whatsapp://send?text=${encodeURIComponent(message)}&phone=${phoneNumber}`;
-  
-      Linking.openURL(url); 
+
+        const formatDateTime = (date) => {
+            const padZero = (num) => (num < 10 ? `0${num}` : num);
+            const year = date.getFullYear();
+            const month = padZero(date.getMonth() + 1);
+            const day = padZero(date.getDate());
+            const hours = padZero(date.getHours());
+            const minutes = padZero(date.getMinutes());
+            const seconds = padZero(date.getSeconds());
+
+            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        };
+        const clId = ClientID;
+        const Brid = BrCode;
+        const Agid = AgCode;
+        const glcod = '0';
+        const acno = newAccCreated;
+        const ColldateTime = formatDateTime(new Date());
+        const ruidString = `${clId},${Brid},${Agid},${glcod},${acno}`;
+        const ruid = Buffer.from(ruidString).toString('base64');
+        const encodedDateTime = collectionDate.replace(' ', '%20');
+        const encodedURL = `https://app.automatesystemsdataservice.in/Customer/api/Receipt?ruid=${ruid}&ColldateTime=${encodedDateTime}`;
+
+        const getNumber = mobileNumber;
+        const phoneNumber = `+91${getNumber}`;
+        const message = `Hi, Please click on the link Below for the Receipt of your Transaction. ${encodedURL} `;
+
+        const url = `whatsapp://send?text=${encodeURIComponent(message)}&phone=${phoneNumber}`;
+
+        Linking.openURL(url);
     };
 
-    const handleSmsPress = async () => { 
-    const formatDateTime = (date) => {
-        const padZero = (num) => (num < 10 ? `0${num}` : num);
-        const year = date.getFullYear();
-        const month = padZero(date.getMonth() + 1);
-        const day = padZero(date.getDate());
-        const hours = padZero(date.getHours());
-        const minutes = padZero(date.getMinutes());
-        const seconds = padZero(date.getSeconds());
-  
-        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-      };
-  
-      const clId = ClientID;
-      const Brid = BrCode;
-      const Agid = AgCode;
-      const glcod = '0';
-      const acno = newAccCreated;
-      const ColldateTime = formatDateTime(new Date());
-      const ruidString = `${clId},${Brid},${Agid},${glcod},${acno}`;
-      const ruid = Buffer.from(ruidString).toString('base64');
-      const encodedDateTime = collectionDate.replace(' ', '%20');
-    //   console.log("data for sms messages ",  `${clId},${Brid},${Agid},${glcod},${acno}`)
-      const encodedURL = `https://app.automatesystemsdataservice.in/Customer/api/Receipt?ruid=${ruid}&ColldateTime=${encodedDateTime}`;
-  
-      const getNumber = mobileNumber;
-      const phoneNumber = `+91${getNumber}`; // Replace with the actual phone number (with country code)
-      const message = `Hi, Please click on the link Below for the Receipt of your Transaction. ${encodedURL} `;
-  
-      const smsUrl = `sms:${phoneNumber}?body=${encodeURIComponent(message)}`;
-          try {
-              await Linking.openURL(smsUrl);
-          } catch (error) {
-              Alert.alert("Error", "Unable to open SMS app.");
-          }
-};
+    const handleSmsPress = async () => {
+        const formatDateTime = (date) => {
+            const padZero = (num) => (num < 10 ? `0${num}` : num);
+            const year = date.getFullYear();
+            const month = padZero(date.getMonth() + 1);
+            const day = padZero(date.getDate());
+            const hours = padZero(date.getHours());
+            const minutes = padZero(date.getMinutes());
+            const seconds = padZero(date.getSeconds());
+
+            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        };
+
+        const clId = ClientID;
+        const Brid = BrCode;
+        const Agid = AgCode;
+        const glcod = '0';
+        const acno = newAccCreated;
+        const ColldateTime = formatDateTime(new Date());
+        const ruidString = `${clId},${Brid},${Agid},${glcod},${acno}`;
+        const ruid = Buffer.from(ruidString).toString('base64');
+        const encodedDateTime = collectionDate.replace(' ', '%20');
+        //   console.log("data for sms messages ",  `${clId},${Brid},${Agid},${glcod},${acno}`)
+        const encodedURL = `https://app.automatesystemsdataservice.in/Customer/api/Receipt?ruid=${ruid}&ColldateTime=${encodedDateTime}`;
+
+        const getNumber = mobileNumber;
+        const phoneNumber = `+91${getNumber}`; // Replace with the actual phone number (with country code)
+        const message = `Hi, Please click on the link Below for the Receipt of your Transaction. ${encodedURL} `;
+
+        const smsUrl = `sms:${phoneNumber}?body=${encodeURIComponent(message)}`;
+        try {
+            await Linking.openURL(smsUrl);
+        } catch (error) {
+            Alert.alert("Error", "Unable to open SMS app.");
+        }
+    };
+
+    // const handleSmsPress = async () => {
+    //     const formatDateTime = (date) => {
+    //         const padZero = (num) => (num < 10 ? `0${num}` : num);
+    //         const year = date.getFullYear();
+    //         const month = padZero(date.getMonth() + 1);
+    //         const day = padZero(date.getDate());
+    //         const hours = padZero(date.getHours());
+    //         const minutes = padZero(date.getMinutes());
+    //         const seconds = padZero(date.getSeconds());
+    //         return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    //     };
+
+    //     const clId = ClientID;
+    //     const Brid = BrCode;
+    //     const Agid = AgCode;
+    //     const glcod = '0';
+    //     const acno = newAccCreated;
+
+    //     // Check if collectionDate is valid
+    //     if (!collectionDate) {
+    //         Alert.alert("Error", "Collection date is missing or invalid.");
+    //         return;
+    //     }
+
+    //     const ColldateTime = formatDateTime(new Date());
+    //     const ruidString = `${clId},${Brid},${Agid},${glcod},${acno}`;
+    //     const ruid = Buffer.from(ruidString).toString('base64');
+    //     const encodedDateTime = collectionDate.replace(' ', '%20');
+    //     const encodedURL = `https://app.automatesystemsdataservice.in/Customer/api/Receipt?ruid=${ruid}&ColldateTime=${encodedDateTime}`;
+
+    //     const getNumber = mobileNumber;
+    //     const phoneNumber = `+91${getNumber}`;
+    //     const messageOnline = `Hi, Please click on the link Below for the Receipt of your Transaction. ${encodedURL}`;
+    //     const fallbackMessage = "Hi, Unable to fetch the receipt link as network is unavailable. Please contact support.";
+
+    //     try {
+    //         const networkState = await NetInfo.fetch();
+    //         const message = networkState.isConnected ? messageOnline : fallbackMessage;
+    //         const smsUrl = `sms:${phoneNumber}?body=${encodeURIComponent(message)}`;
+    //         const supported = await Linking.canOpenURL(smsUrl);
+
+    //         if (supported) {
+    //             await Linking.openURL(smsUrl);
+    //         } else {
+    //             Alert.alert("Error", "Your device does not support SMS functionality.");
+    //         }
+    //     } catch (error) {
+    //         Alert.alert("Error", "Unable to open SMS app.");
+    //     }
+    // };
 
     const handleSubmit2 = () => {
         setModalVisible(false);
@@ -956,7 +1583,7 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
                         <Pressable onPress={() => { navigation.navigate('Profile', { count: NoOfRecords, amount: totalAmount, collectionAllowed: collectionAllowed }) }}>
                             <MaterialCommunityIcons2 name='user-circle' style={{ elevation: 5 }} elevation={5} color={COLORS.primary} size={45} />
                         </Pressable>
-                        {(!dataAvailable || !collectionAllowed) && (
+                        {(!dataAvailable) && (
                             <View style={{
                                 position: 'absolute',
                                 width: '80%',
@@ -973,11 +1600,11 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
                         <SearchPopup maxAmountLimit={maxAmountLimit} BranchName={BranchName} BranchCode={BranchCode} collectionAllowed={collectionAllowed} multipleCollection={multipleCollection} mappedMasterData={mappedMasterData} setSearchedResults={setSearchedResults} searchQuery={searchQuery} />
                     </>
                 ) : (
-                    <View style={{ height: windowHeight * 0.80 }}>
+                    <View style={{ height: windowHeight * 0.85 }}>
                         <View>
-                            <Text onPress={handleWhatsAppPress} style={[styles.text, { marginTop: 0, marginBottom: 10, marginLeft: 20 }]}>Agent Name: <Text style={[styles.text, { fontSize: 14, fontFamily: 'Montserrat-Bold' }]}>{AgentName ? AgentName : '-'} </Text></Text>
+                            <Text style={[styles.text, { marginTop: 0, marginBottom: 10, marginLeft: 20 }]}>Agent Name: <Text style={[styles.text, { fontSize: 14, fontFamily: 'Montserrat-Bold' }]}>{AgentName ? AgentName : '-'} </Text></Text>
                         </View>
-                        <View style={[styles.dataInfoView, { width: windowWidth * 0.90, alignSelf: 'center', flexDirection: 'row', height: 50 }]}>
+                        <View style={[styles.dataInfoView, { width: windowWidth * 0.90, alignSelf: 'center', flexDirection: 'row', height: 'auto', overflow: 'hidden' }]}>
                             <View>
                                 {/* <Text style={styles.text}>Client Name</Text> */}
                                 <Text style={[styles.text, { fontSize: 14, fontFamily: 'Montserrat-Bold', marginLeft: 0 }]}>{ClientName ? ClientName : '-'} </Text>
@@ -986,40 +1613,83 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
                                 <Text style={styles.text}>Branch</Text>
                                 <Text style={[styles.text, { fontSize: 14, fontFamily: 'Montserrat-Bold' }]}>{BranchName ? BranchName : "-"} {BranchCode ? `(${BranchCode})` : ''} </Text>
                             </View>
-                        </View> 
+                        </View>
 
-                        <View style={{ width: windowWidth * 1, height: windowHeight * 0.18, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-evenly' }}>
-                            <View style={[styles.dataInfoView, { width: windowWidth * 0.90, alignSelf: 'center', flexDirection: 'column', height: 70 }]}>
-                                <Text style={[styles.text, {}]}>Total collected receipts </Text>
-                                <Text style={[styles.text, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>{transactionTable ? transactionTable.length : '-'} </Text>
+                        <View style={{ marginTop: 15, width: windowWidth * 1, height: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-evenly' }}>
+                            <View style={[styles.dataInfoView, { width: windowWidth * 0.90, alignSelf: 'center', flexDirection: 'row', height: 'auto', overflow: 'hidden' }]}>
+                                <View style={{ width: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                    <Text style={[styles.text, { marginLeft: 0 }]}>Total collected receipts </Text>
+                                    <Text style={[styles.text, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>{transactionTable ? transactionTable.length : '-'} </Text>
+                                </View>
+                                <View style={{ width: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                    <Text style={[styles.text]}>Allowed days</Text>
+                                    <Text style={[styles.text, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>{noOfDaysAllowed ? noOfDaysAllowed : '0'} </Text>
+                                </View>
                             </View>
-                            <View style={[styles.dataInfoView, { width: windowWidth * 0.90, alignSelf: 'center', flexDirection: 'column', height: 70, overflow: 'hidden' }]}>
-                                <Text style={[styles.text, {}]}>Total collected amount </Text>
-                                <Text style={[styles.text, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>{totalAmount ? `₹${new Intl.NumberFormat('en-IN').format(totalAmount)}` : '-'}</Text>
+                            <View style={[styles.dataInfoView, { marginTop: 15, width: windowWidth * 0.90, alignSelf: 'center', flexDirection: 'row', height: 'auto', overflow: 'hidden' }]}>
+
+                                <View style={{ width: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                    <Text style={[styles.text]}>Total collected amount </Text>
+                                    <Text style={[styles.text, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>{totalAmount ? `₹${new Intl.NumberFormat('en-IN').format(totalAmount)}` : '0'}</Text>
+                                </View>
+                                <View style={{ width: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                    <Text style={[styles.text]}>Amount limit</Text>
+                                    <Text style={[styles.text, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>{maxAmountLimit ? `₹${new Intl.NumberFormat('en-IN').format(maxAmountLimit)}` : '0'}</Text>
+                                </View>
+
+                            </View>
+
+                            <View style={[styles.dataInfoView, { marginTop: 15, width: windowWidth * 0.90, alignSelf: 'center', flexDirection: 'row', height: 'auto', overflow: 'hidden' }]}>
+                                <View style={{ width: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                    <Text style={[styles.text]}>Not Sent to server</Text>
+                                    <Text style={[styles.text, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>{pendingCount ? pendingCount : '0'} </Text>
+                                </View>
                             </View>
                         </View>
 
                         {/* {AllowNewUser && */}
-                        <View style={{ width: '95%', height: 50, alignSelf: 'center', display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        {/* <View style={{ width: '95%', height: 50, alignSelf: 'center', display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                             <View>
-                                {/* <Text style={{ fontFamily: 'Montserrat-Regular', color: COLORS.gray, }}> <MaterialCommunityIcons name='upload-off' style={{ elevation: 5 }} elevation={5} color={COLORS.primary} size={20} /></Text> */}
+                                <Text style={{ fontFamily: 'Montserrat-Regular', color: COLORS.gray, }}> <MaterialCommunityIcons name='upload-off' style={{ elevation: 5 }} elevation={5} color={COLORS.primary} size={20} /></Text>
                             </View>
                             <Button icon={'plus'} disabled={!AllowNewUser || !dataAvailable || isFirstLogin} onPress={addNewUser} labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }} style={{ marginTop: 5, marginBottom: -5, alignSelf: 'flex-end', minWidth: windowWidth * 0.45 }} mode="contained">Add new user</Button>
-                        </View>
+                        </View> */}
                         {/* } */}
 
                         {!collectionAllowed &&
                             <View>
-                                <Text style={{ color: '#CC5500', fontSize: 16, alignSelf: 'center', marginTop: 10, marginBottom: 10, fontFamily: 'Montserrat-Bold' }}>The collection window has expired.</Text>
+                                <Text style={{ color: '#CC5500', fontSize: 16, alignSelf: 'center', marginTop: 10, marginBottom: 10, fontFamily: 'Montserrat-Bold' }}>The allowed days for collection have expired.</Text>
                             </View>
                         }
 
                         <View style={{ width: '95%', alignSelf: 'center', display: 'flex', justifyContent: 'space-between', flexDirection: 'row' }}>
                             {/* <View> */}
-                            <Button icon={'play'} loading={loading} disabled={loading || dataAvailable || LicenseExpired} onPress={handleGetData} labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }} style={{ marginTop: '8%', minWidth: windowWidth * 0.45 }} mode="contained">Get Data</Button>
+                            {/* <Button icon={'play'} loading={loading} disabled={loading || dataAvailable || LicenseExpired} onPress={handleGetData} labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }} style={{ marginTop: '8%', minWidth: windowWidth * 0.45 }} mode="contained">Get Data</Button> */}
+
+                            {loading ? (
+                                <ActivityIndicator size={30} color={COLORS.primary} style={{ margin: 'auto', marginTop: '8%' }} />
+                            ) : (
+                                <Button
+                                    icon={'play'}
+                                    // loading={loading}
+                                    disabled={loading || dataAvailable}
+                                    onPress={handleGetData}
+                                    labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }}
+                                    style={{ marginTop: '8%', minWidth: windowWidth * 0.45 }}
+                                    mode="contained"
+                                >
+                                    Get Data
+                                </Button>
+                            )}
                             {/* </View>
                                 <View> */}
-                            <Button icon={'arrow-up'} loading={buttonLoading} disabled={buttonLoading || !dataAvailable || isFirstLogin || !collectionAllowed} onPress={handleCloseCollection} labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }} style={{ marginTop: '8%', minWidth: windowWidth * 0.45 }} mode="contained">Close collection</Button>
+                            {buttonLoading ? (
+                                <ActivityIndicator size={30} color={COLORS.primary} style={{ margin: 'auto', marginTop: '8%' }} />
+                            ) : (
+                                <Button icon={'arrow-up'} loading={buttonLoading} disabled={buttonLoading || !dataAvailable || isFirstLogin} onPress={handleCloseCollection} labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }} style={{ marginTop: '8%', minWidth: windowWidth * 0.45 }} mode="contained">Close collection</Button>
+                            )}
+                            {/* <Button icon={'arrow-up'} loading={buttonLoading} disabled={buttonLoading || !dataAvailable || isFirstLogin} onPress={handleCloseCollection} labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }} style={{ marginTop: '8%', minWidth: windowWidth * 0.45 }} mode="contained">Close collection</Button> */}
+                            {/* <Button icon={'arrow-up'} loading={buttonLoading} disabled={buttonLoading || !dataAvailable || isFirstLogin || !collectionAllowed} onPress={handleCloseCollection} labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }} style={{ marginTop: '8%', minWidth: windowWidth * 0.45 }} mode="contained">Close collection</Button> */}
                             {/* </View> */}
                         </View>
                         {/*  } */}
@@ -1128,7 +1798,7 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
                 <StatusBar
                     barStyle={'light-content'}
                     backgroundColor={'rgba(0, 0, 0, 0.5)'}
-                /> 
+                />
                 <View style={{
                     flex: 1,
                     justifyContent: 'center',
@@ -1173,7 +1843,7 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
                         </View>
 
                         <View style={[styles.buttonContainer, { marginTop: 30 }]}>
-                     
+
                             <Button
                                 icon={'printer'}
                                 style={styles.modalButton}
@@ -1186,7 +1856,7 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
                         </View>
 
                         <View style={[styles.buttonContainer, { marginTop: 10, justifyContent: 'space-evenly' }]}>
-    
+
                             <MaterialCommunityIcons
                                 onPress={handleWhatsAppPress}
                                 style={styles.whatsappIcon}
@@ -1203,7 +1873,7 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
                                 size={35}
                             />
                             <Text style={{ alignSelf: 'center', fontSize: 26, fontWeight: 'thin', color: '#999999' }}>|</Text>
-                  
+
                             <Button
                                 style={{ marginHorizontal: 0, marginVertical: 10, borderColor: COLORS.primaryAccent }}
                                 mode="contained"
@@ -1212,7 +1882,7 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
                             >
                                 No Receipt
                             </Button>
-                        </View> 
+                        </View>
                     </View>
                 </View>
             </Modal>

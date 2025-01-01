@@ -1,13 +1,9 @@
-import { View, Text, StyleSheet, Image, StatusBar, Pressable, BackHandler, ScrollView } from 'react-native'
+import { View, Text, StyleSheet, Image, ScrollView } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import { COLORS, windowHeight, windowWidth } from '../../../Common/Constants'
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import MaterialCommunityIcons2 from 'react-native-vector-icons/FontAwesome5';
-import MaterialCommunityIcons3 from 'react-native-vector-icons/MaterialIcons';
 import MaterialCommunityIcons4 from 'react-native-vector-icons/FontAwesome6';
 import { useIsFocused } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import TransactionCard from '../../Components/TransactionCard';
 import HistoryCards from '../../Components/HistoryCards';
 
 export default function CollectionHistory({ navigation }) {
@@ -34,7 +30,7 @@ export default function CollectionHistory({ navigation }) {
                 setTotalAmount(total);
             }
         } catch (error) {
-            console.error('Error fetching transaction table from AsyncStorage:', error);
+            Alert.alert('Error fetching transaction table from AsyncStorage:', error);
         }
     };
 
@@ -45,7 +41,7 @@ export default function CollectionHistory({ navigation }) {
                     <MaterialCommunityIcons4 onPress={() => { navigation.navigate("Profile") }} name='angle-left' style={{ left: windowWidth * 0.05, top: windowHeight * 0.02, position: 'absolute' }} color={COLORS.white} size={40} />
                 </View>
                 <View style={styles.profileIcon}>
-                    <Image style={{ width: '100%', height: '100%', resizeMode: 'contain' }} source={require('../../Assets/Images/maestrotek_logo.png')} />
+                    <Image style={{ width: '100%', height: '100%', resizeMode: 'contain' }} source={require('../../Assets/Images/automateSystemsLogo.png')} />
                 </View>
             </View>
 
@@ -71,13 +67,11 @@ export default function CollectionHistory({ navigation }) {
                                 );
                             })
                     ) : (
-                        <Text style={[styles.text1, { margin: 'auto', marginTop: 100 }]}>No Collections history yet</Text>
+                        <Text style={[styles.text1, { alignSelf: 'center', marginTop: 100 }]}>No Collections history yet</Text>
                     )}
                 </>
 
-
             </ScrollView>
-
         </View>
     )
 }
@@ -152,5 +146,13 @@ const styles = StyleSheet.create({
         fontSize: 17,
         color: COLORS.primary,
         textDecorationLine: 'underline'
-    }
+    },
+    text1: {
+        fontFamily: 'Montserrat-Regular',
+        fontSize: 18,
+        marginVertical: 3,
+        marginHorizontal: 15,
+        color: COLORS.gray,
+        alignSelf: 'flex-start'
+    },
 })

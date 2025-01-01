@@ -5,8 +5,39 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import MaterialCommunityIcons2 from 'react-native-vector-icons/FontAwesome5';
 import MaterialCommunityIcons3 from 'react-native-vector-icons/MaterialIcons';
 import MaterialCommunityIcons4 from 'react-native-vector-icons/FontAwesome6';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function BankDetails({navigation}) {
+
+
+    const [mobileNumber, setMobileNumber] = useState(null);
+    const [branchName,setBranchName] = useState(null);
+    const [branchCode, setbranchCode] = useState(null);
+    const [ClientName,setClientName] = useState(null);
+
+    useEffect(() => {
+        getMasterData();
+    }, []);
+    
+    const getMasterData = async () => {
+        try {
+            const [savedData] = await Promise.all([
+                AsyncStorage.getItem('dataObject'), 
+            ]);
+    
+            // setMobileNumber(mobileNumber || ''); // Set a fallback value if null/undefined
+            
+            if (savedData) {
+                const dataObject = JSON.parse(savedData);
+                setBranchName(dataObject?.MstrData?.BrNameE || ''); // Set a fallback value if missing
+                setbranchCode(dataObject?.MstrData?.BrCode);
+                setClientName(dataObject.MstrData?.ClientName);
+            }
+        } catch (error) {
+            console.log('Failed to fetch data from AsyncStorage:', error.message || error);
+        }
+    };
+
     return (
         <View style={styles.mainView}>
             <View style={styles.profileView}>
@@ -14,26 +45,26 @@ export default function BankDetails({navigation}) {
                     <MaterialCommunityIcons4 onPress={() => { navigation.navigate("Profile") }} name='angle-left' style={{ left: windowWidth * 0.05, top: windowHeight * 0.02, position: 'absolute' }} color={COLORS.white} size={40} />
                 </View>
                 <View style={styles.profileIcon}>
-                    <Image style={{ width: 125, height: 120, alignSelf: 'center', resizeMode: 'contain' }} source={require('../../Assets/Images/janataBank1.jpeg')} />
+                    <Image style={{ width: 125, height: 120, alignSelf: 'center', resizeMode: 'contain' }} source={require('../../Assets/Images/automateSystemsLogo.png')} />
                 </View>
             </View>
-            <Text style={[styles.keyName, { textAlign: 'center', fontSize: 20, fontFamily: 'Montserrat-Bold' }]}>Bank Details</Text>
+            <Text style={[styles.keyName, { textAlign: 'center', fontSize: 20, fontFamily: 'Montserrat-Bold' }]}>Client Details</Text>
 
             <View style={{ width: '85%', alignSelf: 'center', marginTop: '10%' }}>
-                <View style={{ display: 'flex', flexDirection: 'row', marginVertical: 15 }}>
+                <View style={{ display: 'flex', flexDirection: 'row', marginVertical: 15, alignItems: 'center' }}>
                     <MaterialCommunityIcons name='bank' style={{ alignSelf: 'center' }} color={COLORS.gray} size={20} />
-                    <Text style={styles.keyName}>   Bank Name:  </Text>
-                    <Text style={[styles.keyValue, { textDecorationLine: 'none' }]}>Janata sarkari bank Pvt.Ltd.</Text>
+                    <Text style={styles.keyName}>   Client Name: </Text>
+                    <Text style={[styles.keyValue, { textDecorationLine: 'none', width: '60%', textAlign: 'jusify' }]}>{ClientName ? ClientName : '-'}</Text>
+                </View>
+                <View style={{ display: 'flex', flexDirection: 'row', marginVertical: 15, alignItems: 'center' }}>
+                    <MaterialCommunityIcons name='bank' style={{ alignSelf: 'center' }} color={COLORS.gray} size={20} />
+                    <Text style={styles.keyName}>   Branch Name:  </Text>
+                    <Text style={[styles.keyValue, { textDecorationLine: 'none', width: '60%', textAlign: 'jusify'}]}>{branchName ? branchName : '-'}</Text>
                 </View>
                 <View style={{ display: 'flex', flexDirection: 'row', marginVertical: 15 }}>
                     <MaterialCommunityIcons name='city' style={{ alignSelf: 'center' }} color={COLORS.gray} size={20} />
-                    <Text style={styles.keyName}>   Branch Name/Code :  </Text>
-                    <Text style={[styles.keyValue, { textDecorationLine: 'none' }]}>Kothrud, Pune</Text>
-                </View>
-                <View style={{ display: 'flex', flexDirection: 'row', marginVertical: 15 }}>
-                    <MaterialCommunityIcons name='face-man' style={{ alignSelf: 'center' }} color={COLORS.gray} size={20} />
-                    <Text style={styles.keyName}>   Branch Admin: </Text>
-                    <Text style={[styles.keyValue, { textDecorationLine: 'none' }]}>Mr. Uday Thatte</Text>
+                    <Text style={styles.keyName}>   Branch Code :  </Text>
+                    <Text style={[styles.keyValue, { textDecorationLine: 'none' }]}>{branchCode ? branchCode : '-'}</Text>
                 </View>
                 <View style={{ width: windowWidth * 0.85, marginTop: 10, alignSelf: 'center', borderBottomWidth: 1, borderBottomColor: COLORS.lightGrey }} />
             </View>

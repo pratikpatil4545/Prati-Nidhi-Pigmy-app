@@ -1,14 +1,21 @@
 
-import { View, Text, StyleSheet, ScrollView, Pressable, Modal, ToastAndroid, StatusBar } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, Pressable, Modal, ToastAndroid, StatusBar, Alert, TouchableOpacity, Linking } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import { COLORS, windowHeight, windowWidth } from '../../Common/Constants';
 import { useNavigation } from '@react-navigation/native';
-import MaterialCommunityIcons2 from 'react-native-vector-icons/MaterialCommunityIcons';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { Button } from 'react-native-paper';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Buffer } from 'buffer';
 
 export default function TransactionCard(props) {
 
     const navigation = useNavigation();
-    // console.log("searchQuery", props.item);
+    // console.log("searchQuery", props);
+    const [modalVisible, setModalVisible] = useState(false);
+    const [ClientID, setClientId] = useState(null);
+    const [BrCode, setBrCode] = useState(null);
+    const [AgCode, setAgCode] = useState(null); 
 
     const HighlightedText = ({ name, query }) => {
         if (!query) {
@@ -60,10 +67,81 @@ export default function TransactionCard(props) {
     const monthName = monthNames[monthIndex];
     const cardDay = days;
 
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const savedData = await AsyncStorage.getItem('dataObject');
+                // console.log("saved data", savedData);
+                if (savedData) {
+                    const dataObject = JSON.parse(savedData);
+                    setClientId(dataObject.MstrData?.ClientID);
+                    setAgCode(dataObject.MstrData?.AgCode);
+                    setBrCode(dataObject.MstrData?.BrCode);
+                }
+            } catch (error) {
+                Alert.alert("Error fetching data from AsyncStorage:", error);
+            }
+        };
+    
+        fetchData();
+    }, []);
+    
+
+    const handleWhatsAppPress = async () => {
+ 
+        const clId = ClientID;
+        const Brid = BrCode;
+        const Agid = AgCode;
+        const glcod = props.item?.GLCode;
+        const acno = props.item?.AccountNo; 
+        const ruidString = `${clId},${Brid},${Agid},${glcod},${acno}`;
+        const ruid = Buffer.from(ruidString).toString('base64');
+        const encodedDateTime = props.item?.CollDateTime?.replace(' ', '%20');
+        // console.log("time new", encodedDateTime)
+    
+        const encodedURL = `https://app.automatesystemsdataservice.in/Customer/api/Receipt?ruid=${ruid}&ColldateTime=${encodedDateTime}`;
+    
+        // console.log(encodedURL);
+        const getNumber = parseInt(props.item?.MobileNo);
+        const phoneNumber = `+91${getNumber}`;
+        const message = `Hi, Please click on the link Below for the Receipt of your Transaction. ${encodedURL} `;
+        const url = `whatsapp://send?text=${encodeURIComponent(message)}&phone=${phoneNumber}`;
+        Linking.openURL(url);
+        setModalVisible(false)
+     
+      };
+     
+      const handleSmsPress = async () => {
+    
+        const clId = ClientID;
+        const Brid = BrCode;
+        const Agid = AgCode;
+        const glcod = props.item?.GLCode;
+        const acno = props.item?.AccountNo; 
+        const ruidString = `${clId},${Brid},${Agid},${glcod},${acno}`;
+        const ruid = Buffer.from(ruidString).toString('base64');
+        const encodedDateTime = props.item?.CollDateTime?.replace(' ', '%20');
+        // console.log("time new", encodedDateTime)
+    
+        const encodedURL = `https://app.automatesystemsdataservice.in/Customer/api/Receipt?ruid=${ruid}&ColldateTime=${encodedDateTime}`;
+    
+        // console.log(encodedURL);
+        const getNumber = parseInt(props.item?.MobileNo);
+        const phoneNumber = `+91${getNumber}`;
+        const message = `Hi, Please click on the link Below for the Receipt of your Transaction. ${encodedURL} `;
+    
+        const smsUrl = `sms:${phoneNumber}?body=${encodeURIComponent(message)}`;
+        try {
+          await Linking.openURL(smsUrl); 
+          setModalVisible(false);
+        } catch (error) {
+          Alert.alert("Error", "Unable to open SMS app.");
+        }
+      };
 
     return (
         <View style={styles.mainView}>
-            <Pressable key={props.index} style={styles.card}>
+            <Pressable onLongPress={() => setModalVisible(true)} key={props.index} style={styles.card}>
                 <View style={styles.cardView}>
                     <View style={styles.left}>
                         {props.item.IsitNew === 'True' &&
@@ -93,16 +171,49 @@ export default function TransactionCard(props) {
                         } */}
 
                         <Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>Collection date time:  </Text>
-                            <Text style={[styles.text, { color: COLORS.darkGrey }]}>{props.item.CollDateTime}</Text>
-                        
-                        <HighlightedText name={`${((props.item.GLCode != '0' && (props.InputFileType === '2')) ? `${props.item.GLCode}-` : '' )}${props.item.AccountNo}`} query={props.searchQuery} />
-                            <Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>Collection:  </Text>
+                        <Text style={[styles.text, { color: COLORS.darkGrey }]}>{props.item.CollDateTime}</Text>
+
+                        <HighlightedText name={`${((props.item.GLCode != '0' && (props.InputFileType === '2')) ? `${props.item.GLCode}-` : '')}${props.item.AccountNo}`} query={props.searchQuery} />
+                        <Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>Collection:  </Text>
                         <Text style={[styles.text, { color: COLORS.darkGrey }]}>₹{new Intl.NumberFormat('en-IN').format(props.item.Collection)}</Text>
-                            {/* <Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>Closing balance:  </Text>
+                        {/* <Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>Closing balance:  </Text>
                         <Text style={[styles.text, { color: COLORS.darkGrey }]}>    ₹{new Intl.NumberFormat('en-IN').format(props.item.ClosingBal)}</Text> */}
                     </View>
                 </View>
             </Pressable>
+            <Modal
+                transparent={true}
+                visible={modalVisible}
+                onRequestClose={() => setModalVisible(false)}
+            >
+                <View style={styles.modalContainer}>
+                    <View style={styles.modalContent}>
+                        <Text style={{ fontSize: 16, color: 'black', fontFamily: 'Montserrat-Bold', marginBottom: 20 }}>Share a Receipt</Text>
+                            {/* <Text style={{fontSize: 14, alignSelf: 'flex-start', color: 'grey', fontFamily: 'Montserrat-SemiBold', marginBottom: 20}}>Account number : {((props.item.GLCode != '0' && (props.InputFileType === '2')) ? `${props.item.GLCode}-` : '')}{props.item.AccountNo} </Text> */}
+                        <View style={styles.iconContainer}>
+                            <MaterialCommunityIcons
+                                onPress={handleWhatsAppPress}
+                                style={styles.whatsappIcon}
+                                name='whatsapp'
+                                color={COLORS.white}
+                                size={35}
+                            />
+                            <Text style={{ alignSelf: 'center', fontSize: 26, fontWeight: 'thin', color: '#999999' }}>|</Text>
+                            <MaterialCommunityIcons
+                                onPress={handleSmsPress}
+                                style={styles.smsIcon}
+                                name='android-messages'
+                                color={COLORS.white}
+                                size={35}
+                            />
+                        </View>
+                        <Button icon={'close'} onPress={() => setModalVisible(false)} labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }} style={{ marginTop: '8%', minWidth: windowWidth * 0.35 }} mode="contained">Close</Button>
+                        {/* <TouchableOpacity onPress={() => setModalVisible(false)}>
+                            <Text style={{ color: COLORS.primary, marginTop: 20 }}>Close</Text>
+                        </TouchableOpacity> */}
+                    </View>
+                </View>
+            </Modal>
         </View>
     )
 }
@@ -114,7 +225,7 @@ const styles = StyleSheet.create({
     },
     mainView: {
         width: windowWidth * 1,
-        height: windowHeight * 0.18,
+        height: windowHeight * 0.20,
         // backgroundColor: 'green',
         display: 'flex',
         alignItems: 'center',
@@ -122,7 +233,7 @@ const styles = StyleSheet.create({
     },
     card: {
         width: windowWidth * 0.85,
-        height: windowHeight * 0.15,
+        height: windowHeight * 0.18,
         display: "flex",
         // flexDirection: 'row',
         backgroundColor: COLORS.white,
@@ -133,6 +244,24 @@ const styles = StyleSheet.create({
         alignSelf: 'center',
         elevation: 2,
         overflow: 'hidden'
+    },
+    whatsappIcon: {
+        marginHorizontal: 5,
+        marginVertical: 5,
+        backgroundColor: '#25D366',
+        borderRadius: 15,
+        padding: 5,
+        elevation: 5,
+
+    },
+    smsIcon: {
+        marginHorizontal: 5,
+        marginVertical: 5,
+        backgroundColor: COLORS.primary,
+        borderRadius: 15,
+        padding: 5,
+        elevation: 5,
+
     },
     text: {
         fontSize: 14,
@@ -218,12 +347,6 @@ const styles = StyleSheet.create({
         left: 0,
         bottom: 0,
     },
-    modalContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    },
     modalView: {
         width: windowWidth * 0.9,
         // height: windowHeight * 0.5,
@@ -252,6 +375,9 @@ const styles = StyleSheet.create({
         fontFamily: 'Montserrat-Regular',
         color: '#FFFFFF'
     },
+    modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
+    modalContent: { width: 300, padding: 20, backgroundColor: 'white', borderRadius: 10, alignItems: 'center' },
+    iconContainer: { flexDirection: 'row', justifyContent: 'space-around', width: '60%' },
     input: {
         width: '100%',
         padding: 10,
