@@ -72,66 +72,67 @@ export default function Dashboard({ navigation, route }) {
         setSearchQuery('');
     }, [isFocused])
 
-    useEffect(() => {
-        const checkLicenseValidity = () => {
-            if (LicenseValidUpto) {
-                const currentDate = new Date();
-                const expiryDate = new Date(LicenseValidUpto);
-                const timeDiff = expiryDate.getTime() - currentDate.getTime();
-                const daysLeft = Math.ceil(timeDiff / (1000 * 3600 * 24));
+    // useEffect(() => {
+    //     const checkLicenseValidity = () => {
+    //         if (LicenseValidUpto) {
+    //             const currentDate = new Date();
+    //             // const expiryDate = new Date('2025-01-10');
+    //             const expiryDate = new Date(LicenseValidUpto);
+    //             const timeDiff = expiryDate.getTime() - currentDate.getTime();
+    //             const daysLeft = Math.ceil(timeDiff / (1000 * 3600 * 24));
 
-                // console.log("Days left until expiry:", daysLeft);
+    //             // console.log("Days left until expiry:", daysLeft);
 
-                if (daysLeft <= 0) {
-                    Alert.alert('License expired! 22222', 'Your license has expired. Please pay subscription.');
-                    setLicenseExpired(true);
-                } else if (daysLeft <= 15) {
-                    Alert.alert('License Reminder', `Your license is about to expire in ${daysLeft} day(s). Please renew it soon.`);
-                } else {
-                    // console.log("License is valid and more than 15 days away from expiry.");
-                }
-            }
-        };
+    //             if (daysLeft <= 0) {
+    //                 Alert.alert('License expired!', 'Your license has expired. Please pay subscription.');
+    //                 // setLicenseExpired(true);
+    //             } else if (daysLeft <= 15 && daysLeft > 0) {
+    //                 Alert.alert('License Reminder', `Your license is about to expire in ${daysLeft} day(s). Please renew it soon.`);
+    //             } else {
+    //                 // console.log("License is valid and more than 15 days away from expiry.");
+    //             }
+    //         }
+    //     };
 
-        checkLicenseValidity();
+    //     checkLicenseValidity();
 
-        const interval = setInterval(checkLicenseValidity, 24 * 60 * 60 * 1000);
-        return () => clearInterval(interval);
-    }, [LicenseValidUpto]);
+    //     const interval = setInterval(checkLicenseValidity, 24 * 60 * 60 * 1000);
+    //     return () => clearInterval(interval);
+    // }, [LicenseValidUpto]);
 
-    useEffect(() => {
-        const fetchLicenseData = async () => {
-            if (LicenseExpired) {
-                const mobileNumber = await AsyncStorage.getItem('mobileNumber');
+    // useEffect(() => {
+    //     const fetchLicenseData = async () => {
+    //         if (LicenseExpired) {
+    //             const mobileNumber = await AsyncStorage.getItem('mobileNumber');
 
-                if (mobileNumber) {
-                    const url = `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/RequestData_App?MobileNo=${mobileNumber}`;
-                    try {
-                        const response = await fetch(url, {
-                            method: 'GET',
-                            headers: {
-                                'Content-Type': 'application/xml',
-                            },
-                        });
+    //             if (mobileNumber) {
+    //                 const url = `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/RequestData_App?MobileNo=${mobileNumber}`;
+    //                 try {
+    //                     const response = await fetch(url, {
+    //                         method: 'GET',
+    //                         headers: {
+    //                             'Content-Type': 'application/xml',
+    //                         },
+    //                     });
 
-                        const responseText = await response.text();
-                        const parser = new XMLParser();
-                        const jsonResponse = parser.parse(responseText);
-                        const jsonString = jsonResponse.string;
-                        const dataObject = JSON.parse(jsonString);
-                        if (dataObject.ResonseCode === '0000') {
-                            // console.log("exp date get", dataObject.MstrData?.LicenseValidUpto)
-                            setLicenseValidUpto(dataObject.MstrData?.LicenseValidUpto);
-                        }
-                    } catch (error) {
-                        console.error('Error fetching license data:', error);
-                    }
-                }
-            }
-        };
+    //                     const responseText = await response.text();
+    //                     const parser = new XMLParser();
+    //                     const jsonResponse = parser.parse(responseText);
+    //                     const jsonString = jsonResponse.string;
+    //                     const dataObject = JSON.parse(jsonString);
+    //                     if (dataObject.ResonseCode === '0000') {
+    //                         // console.log("exp date get", dataObject.MstrData?.LicenseValidUpto)
+    //                         setLicenseValidUpto(dataObject.MstrData?.LicenseValidUpto);
+    //                     }
+    //                 } catch (error) {
+    //                     console.error('Error fetching license data:', error);
+    //                 }
+    //             }
+    //         }
+    //     };
 
-        fetchLicenseData();
-    }, []);
+    //     fetchLicenseData();
+    // }, []);
 
     // useEffect(() => {
     //     if (!IsActive) {
@@ -456,13 +457,13 @@ export default function Dashboard({ navigation, route }) {
 
                         if (daysLeft <= 0) {
                             Alert.alert('License expired!', 'Your license has expired. Please pay subscription.');
-                            setLicenseExpired(true);
-                            setLoading(false);
-                            setSearchedResults(false);
-                            return;
+                            // setLicenseExpired(true);
+                            // setLoading(false);
+                            // setSearchedResults(false);
+                            // return;
                         }
 
-                        if (daysLeft <= 15) {
+                        if (daysLeft <= 15 && daysLeft > 0) {
                             Alert.alert('License Reminder', `Your license is about to expire in ${daysLeft} day(s). Please renew it soon.`);
                         }
 
@@ -472,7 +473,7 @@ export default function Dashboard({ navigation, route }) {
                         setDataAvailable(true);
                         setNoOfRecords(dataObject.MstrData?.NoOfRecords);
                         // setLicenseValidUpto('2024-12-31');
-                        setLicenseValidUpto(dataObject.MstrData?.LicenseValidUpto);
+                        // setLicenseValidUpto(dataObject.MstrData?.LicenseValidUpto);
                         await AsyncStorage.setItem('LicenseValidUpto', (dataObject.MstrData?.LicenseValidUpto).toString());
                         setClientName(dataObject.MstrData?.ClientName);
                         setBranchName(dataObject.MstrData?.BrNameE);
@@ -554,13 +555,13 @@ export default function Dashboard({ navigation, route }) {
                         console.log("days left when api called", daysLeft)
                         if (daysLeft <= 0) {
                             Alert.alert('License expired!', 'Your license has expired. Please pay subscription.');
-                            setLicenseExpired(true);
-                            setLoading(false);
-                            setSearchedResults(false);
-                            return;
+                            // setLicenseExpired(true);
+                            // setLoading(false);
+                            // setSearchedResults(false);
+                            // return;
                         }
 
-                        if (daysLeft <= 15) {
+                        if (daysLeft <= 15 && daysLeft > 0) {
                             Alert.alert('License Reminder', `Your license is about to expire in ${daysLeft} day(s). Please renew it soon.`);
                         }
 
@@ -784,7 +785,7 @@ export default function Dashboard({ navigation, route }) {
                 setTotalAmount(total);
             }
         } catch (error) {
-            Alert.alert('Error fetching transaction table from AsyncStorage:', error);
+            Alert.alert('Error fetching transaction table from Local storage:', error);
         }
     };
 
@@ -1410,7 +1411,7 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
             );
 
         } catch (error) {
-            Alert.alert("Error while processing transaction:", error);
+            // Alert.alert("Error while processing transaction:", error);
             Alert.alert('Error', 'An error occurred while processing your transaction. Please try again.');
         }
 

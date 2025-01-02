@@ -21,6 +21,7 @@ export default function UserProfile({ route, navigation }) {
   // console.log("mobile number main", mobileNumber)
   const [modalVisible, setModalVisible] = useState(false);
   const [modalVisible2, setModalVisible2] = useState(false);
+  const [customeLoaderModal, setCustomLoaderModal] = useState(false);
   const [amount, setAmount] = useState(null);
   const [isTodayCollected, setisTodayCollected] = useState(true);
   const [updatedBalances, setupdatedBalance] = useState(null);
@@ -161,21 +162,21 @@ export default function UserProfile({ route, navigation }) {
     const checkLicense = async () => {
       try {
         const licenseValidUpto = await AsyncStorage.getItem('LicenseValidUpto');
-        if (!licenseValidUpto) {
-          Alert.alert('License expired!', 'License validity date not found. Please pay subscription.');
-          setLicenseExpired(true);
-          setLoading(false);
-          return;
-        }
-  
+        // if (!licenseValidUpto) {
+        //   Alert.alert('License expired!', 'License validity date not found. Please pay subscription.');
+        //   setLicenseExpired(true);
+        //   setLoading(false);
+        //   return;
+        // }
+
         const expiryDate = new Date(licenseValidUpto);
         const currentDate = new Date();
         const timeDiff = expiryDate.getTime() - currentDate.getTime();
         const daysLeft = Math.ceil(timeDiff / (1000 * 3600 * 24));
-  
+
         console.log("License valid up to:", licenseValidUpto);
         if (daysLeft <= 0) {
-          Alert.alert('License expired!', 'Your license has expired. Please pay subscription.');
+          // Alert.alert('License expired!', 'Your license has expired. Please pay subscription.');
           setLicenseExpired(true);
         } else {
           setLicenseExpired(false);
@@ -187,10 +188,10 @@ export default function UserProfile({ route, navigation }) {
         setLoading(false);
       }
     };
-  
+
     checkLicense();
   }, []);
-  
+
   const handleWhatsAppPress = async () => {
 
     const formatDateTime = (date) => {
@@ -227,7 +228,51 @@ export default function UserProfile({ route, navigation }) {
 
     handleSubmit2();
   };
+ 
+  // const handleWhatsAppPress = async () => {
+  //   const formatDateTime = (date) => {
+  //     const padZero = (num) => (num < 10 ? `0${num}` : num);
+  //     const year = date.getFullYear();
+  //     const month = padZero(date.getMonth() + 1);
+  //     const day = padZero(date.getDate());
+  //     const hours = padZero(date.getHours());
+  //     const minutes = padZero(date.getMinutes());
+  //     const seconds = padZero(date.getSeconds());
 
+  //     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  //   };
+
+  //   const clId = ClientID;
+  //   const Brid = BrCode;
+  //   const Agid = AgCode;
+  //   const glcod = item.GLCode;
+  //   const acno = item.AccountNo;
+  //   const ColldateTime = formatDateTime(new Date());
+  //   const ruidString = `${clId},${Brid},${Agid},${glcod},${acno}`;
+  //   const ruid = Buffer.from(ruidString).toString('base64');
+  //   const encodedDateTime = collectionDate.replace(' ', '%20');
+
+  //   const encodedURL = `https://app.automatesystemsdataservice.in/Customer/api/Receipt?ruid=${ruid}&ColldateTime=${encodedDateTime}`;
+
+  //   const getNumber = mobileInputVisible ? mobileNumber : (mobileNumber ? mobileNumber : parseInt(route.params.item.Mobile1));
+  //   const phoneNumber = `+91${getNumber}`;
+  //   const message = `Hi, Please click on the link Below for the Receipt of your Transaction. ${encodedURL}`;
+  //   const whatsappURL = `whatsapp://send?text=${encodeURIComponent(message)}&phone=${phoneNumber}`;
+
+  //   try {
+  //     const supported = await Linking.canOpenURL(whatsappURL);
+  //     // if (supported) {
+  //       Linking.openURL(whatsappURL);
+  //     // } else {
+  //     //   Alert.alert('WhatsApp is not installed or the URL is not supported.');
+  //     // }
+  //   } catch (error) {
+  //     console.error('Error opening WhatsApp:', error);
+  //   }
+
+  //   handleSubmit2();
+  // };
+ 
   const handleSmsPress = async () => {
 
     const formatDateTime = (date) => {
@@ -295,7 +340,7 @@ export default function UserProfile({ route, navigation }) {
         // });
       }
     } catch (e) {
-      Alert.alert('Failed to fetch data from AsyncStorage', e);
+      Alert.alert('Failed to fetch data from Local Storage', e);
     }
   };
 
@@ -346,8 +391,7 @@ export default function UserProfile({ route, navigation }) {
   const handleSubmit = async () => {
     setButtonLoading(true);
     const { OneShotLmt, MaxBalance, ThisMthBal, DailyAmt, MaxInstal, IsAmtToBeAdded, GLCode, AccountNo, EnglishName } = item;
-    let newNumber = parseInt(mobileNumber);
-    // console.log("mobile check", newNumber.length)
+ 
     const mobileValidation = () => {
       if (!mobileNumber) {
         Alert.alert('Warning', `Please enter customer's Mobile Number`);
@@ -397,22 +441,7 @@ export default function UserProfile({ route, navigation }) {
         return 0;
       }
     };
-
-    // const transactionTableData = await AsyncStorage.getItem('transactionTable');
-    // console.log("transacrion table data,",transactionTableData)
-    // if (transactionTableData) {
-    //     const parsedData = JSON.parse(transactionTableData);  // Parse the stored data
-    //     setTransactionTable(parsedData);
-    //     const pendingTransactions = parsedData.filter((item) => item.pending === true);
-    //     setpendingCount(pendingTransactions.length);
-    //     const total = parsedData.reduce((sum, transaction) => {
-    //         return sum + (parseFloat(transaction.Collection) || 0);
-    //     }, 0);
-    //     // console.log("No saved data found, making API call...", total);
-
-    //     setTotalAmount(total);
-    // }
-
+  
     const fetchTransactionData = async () => {
       try {
         let transactionTable = JSON.parse(await AsyncStorage.getItem('transactionTable')) || [];
@@ -467,73 +496,7 @@ export default function UserProfile({ route, navigation }) {
         return null;
       }
     };
-
-
-    // const fetchTransactionData = async () => {
-    //   try {
-    //     let transactionTable = JSON.parse(await AsyncStorage.getItem('transactionTable')) || [];
-    //     const filteredTransactions = transactionTable.filter(
-    //       (entry) => entry.AccountNo === AccountNo && entry.GLCode === GLCode
-    //     ).sort((a, b) => new Date(b.CollDateTime) - new Date(a.CollDateTime));
-
-    //     const total = transactionTable.reduce((sum, transaction) => {
-    //       return sum + (parseFloat(transaction.Collection) || 0);
-    //     }, 0);
-
-
-    //     let totalCheck = parseFloat(total) + parseFloat(amount);
-
-    //     let maxamount = parseInt(route.params?.maxAmountLimit);
-    //     // console.log("checkuing total collected amount", total, maxamount)
-
-    //     // if (route.params.item?.maxAmountLimit > 0) {
-
-    //       if (totalCheck > maxamount) {
-    //         Alert.alert(
-    //           "Warning",
-    //           "The maximum collection limit has been reached. No further amounts can be collected."
-    //         );
-    //         return;
-    //       }
-    //     // }
-
-    //     let totalSum = 0;
-    //     const totalCollectionSum = await calculateCollectionSum(AccountNo);
-    //     totalSum = totalSum + totalCollectionSum;
-    //     // console.log("Total Collection Sum:", totalCollectionSum);
-    //     // console.log("Final Total Sum:", totalSum);
-
-    //     const latestTransaction = filteredTransactions[0];
-    //     // let openingBalance = parseFloat(latestTransaction?.OpeningBal || ThisMthBal || 0);
-    //     let openingBalance = parseFloat(ThisMthBal || 0);
-    //     let closingBalance;
-    //     // console.log("amount to be added checking old values", latestTransaction, closingBalance);
-    //     if (IsAmtToBeAdded === 'True') {
-    //       if (parseFloat(totalSum) === 0) {
-    //         // openingBalance += parseFloat(amount);
-    //         closingBalance = openingBalance + parseFloat(amount);
-    //       }
-    //       else {
-    //         openingBalance += parseFloat(totalSum);
-    //         closingBalance = openingBalance + parseFloat(amount);
-    //         // console.log("amount to be added true", openingBalance, totalSum, closingBalance);
-    //       }
-    //     } else if ( IsAmtToBeAdded === 'False' && openingBalance >= parseFloat(amount)) {
-    //       openingBalance -= parseFloat(totalSum);
-    //       closingBalance = openingBalance - parseFloat(amount);
-    //       // console.log("amount to be added false openbal less than amount", openingBalance, closingBalance);
-
-    //     } else {
-    //       Alert.alert('Warning', `Cannot take collection Balance is: ${openingBalance} and collected amount is ${amount}.`);
-    //       return null;
-    //     }
-    //     return { openingBalance, transactionTable, closingBalance };
-    //   } catch (error) {
-    //     Alert.alert("Error fetching transaction data:", error);
-    //     return null;
-    //   }
-    // };
-
+  
     const submitData = async (transactionData, newArrayString, isOnline) => {
       if (isOnline) {
         try {
@@ -582,6 +545,8 @@ export default function UserProfile({ route, navigation }) {
                 // setupdatedBalance(newBalance);
                 setCollectionMadeToday(true);
                 setModalVisible2(true);
+                setCustomLoaderModal(false);
+
                 // You can store or use collDateTime as needed
               } else {
                 Alert.alert("No collection date found.");
@@ -607,6 +572,7 @@ export default function UserProfile({ route, navigation }) {
         // setupdatedBalance(newBalance);
         setCollectionMadeToday(true);
         setModalVisible2(true);
+        setCustomLoaderModal(false);
         const pendingTransactions = JSON.parse(await AsyncStorage.getItem('pendingTransactions')) || [];
         await AsyncStorage.setItem('pendingTransactions', JSON.stringify([...pendingTransactions, transactionData]));
         // Alert.alert('Offline', 'No internet connection. Transaction saved as pending.');
@@ -617,19 +583,14 @@ export default function UserProfile({ route, navigation }) {
       setButtonLoading(false);
       return;
     }
-
-    const receiptNo = generateReceiptNo();
+ 
     const transactionDetails = await fetchTransactionData();
     if (!transactionDetails) {
       setButtonLoading(false);
       return;
     }
     console.log("mobile numeber checkingh", route.params.item.Mobile1, ' and ', mobileNumber)
-    const { openingBalance, transactionTable, closingBalance } = transactionDetails;
-    // setupdatedBalance(openingBalance);
-    // setNewBalance(closingBalance);
-    // console.log("closing balance check", closingBalance)
-    // let closingBal = openingBalance
+    const { openingBalance, transactionTable, closingBalance } = transactionDetails; 
     const transactionData = {
       GLCode,
       AccountNo,
@@ -657,8 +618,7 @@ export default function UserProfile({ route, navigation }) {
       // console.log("CollDateTime:", collDateTime);
     } else {
       console.log("CollDateTime not available");
-    }
-
+    } 
 
     const message = `
     Name: ${EnglishName}
@@ -674,6 +634,7 @@ Total Account Balance: ${closingBalance ? `₹${new Intl.NumberFormat('en-IN').f
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Confirm', onPress: async () => {
+            setCustomLoaderModal(true);
             setNewBalance(closingBalance);
             setupdatedBalance(closingBalance);
             setOpeningBalinPop(openingBalance);
@@ -689,6 +650,7 @@ Total Account Balance: ${closingBalance ? `₹${new Intl.NumberFormat('en-IN').f
             // setCollectionMadeToday(true);
             // setModalVisible2(true);
             // await submitData(transactionData, JSON.stringify(newArray));
+            
             if (isConnected) {
               await submitData(updatedTransactionData, JSON.stringify(newArray), true);
             } else {
@@ -788,7 +750,7 @@ Total Account Balance: ${closingBalance ? `₹${new Intl.NumberFormat('en-IN').f
           <>
             {LicenseExpired ? (
               <View>
-                <Text style={[styles.text1, { alignSelf: 'center', fontFamily: 'Montserrat-Bold' }]}>License expired!, Your license has expired. Please pay subscription.</Text>
+                <Text style={[styles.text1, { marginTop: '10%', alignSelf: 'center', fontFamily: 'Montserrat-Bold' }]}>License expired! Your license has expired. Please pay subscription.</Text>
               </View>
             ) :
               (
@@ -915,6 +877,24 @@ Total Account Balance: ${closingBalance ? `₹${new Intl.NumberFormat('en-IN').f
         </View>
       </Modal>
 
+      {customeLoaderModal &&
+        <Modal
+          animationType="fade"
+          transparent={true}
+          visible={customeLoaderModal}
+        // onRequestClose={handleCancel}
+        >
+          <StatusBar
+            barStyle={'light-content'}
+            backgroundColor={'rgba(0, 0, 0, 0.5)'}
+          />
+          <View style={[styles.modalContainer,{ backgroundColor: 'rgba(0, 0, 0, 0.3)'}]}>
+            <View style={styles.loaderContainer}>
+              <ActivityIndicator size="large" color={COLORS.primary} />
+            </View>
+          </View>
+        </Modal>
+      }
       <Modal
         animationType="slide"
         transparent={true}

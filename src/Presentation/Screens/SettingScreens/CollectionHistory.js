@@ -60,7 +60,7 @@ export default function CollectionHistory({ navigation }) {
                                 return (
                                     <React.Fragment key={index}>
                                         {showDateHeader && (
-                                            <Text style={styles.dateHeader}>{currentCardDate}</Text>
+                                            <Text style={[styles.keyName,{marginLeft: 10}]}>{currentCardDate}</Text>
                                         )}
                                         <HistoryCards history={true} item={item} index={index} />
                                     </React.Fragment>

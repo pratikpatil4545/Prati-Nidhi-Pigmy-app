@@ -128,7 +128,7 @@ export default function Profile({ navigation, route }) {
           </View>
         </View>
       </ScrollView>
-            <Text style={{ position: 'absolute', bottom: '5%', fontFamily: 'Montserrat-Bold', color: COLORS.gray, alignSelf: 'center', fontSize: 16, }}>Version - 1.2 (01-01-2025)</Text>
+            <Text style={{ position: 'absolute', bottom: '5%', fontFamily: 'Montserrat-Bold', color: COLORS.gray, alignSelf: 'center', fontSize: 16, }}>Version - 1.2 (02-01-2025)</Text>
 
     </View>
   )
