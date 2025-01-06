@@ -128,7 +128,7 @@ export default function Profile({ navigation, route }) {
           </View>
         </View>
       </ScrollView>
-            <Text style={{ position: 'absolute', bottom: '5%', fontFamily: 'Montserrat-Bold', color: COLORS.gray, alignSelf: 'center', fontSize: 16, }}>Version - 1.2 (02-01-2025)</Text>
+      <Text  allowFontScaling={false} style={{ position: 'absolute', bottom: windowHeight * 0.08, fontFamily: 'Montserrat-Bold', color: COLORS.gray, alignSelf: 'center', fontSize: 16, }}>Version - 1.2 (03-01-2025)</Text>
 
     </View>
   )
@@ -142,12 +142,11 @@ const styles = StyleSheet.create({
   },
   profileView: {
     width: windowWidth * 1,
-    height: windowHeight * 0.25,
+    height: windowHeight * 0.27,
     // backgroundColor: COLORS.lightGrey,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-
   },
   profileIcon: {
     width: 120,
@@ -159,11 +158,11 @@ const styles = StyleSheet.create({
     borderColor: COLORS.lightGrey,
     elevation: 5,
     position: 'absolute',
-    top: windowHeight * 0.1
+    top: windowHeight * 0.07
   },
   curveView: {
     width: windowWidth * 1,
-    height: windowHeight * 0.165,
+    height: windowHeight * 0.15,
     backgroundColor: COLORS.primaryAccent,
     // position: 'absolute',
     marginBottom: 'auto',

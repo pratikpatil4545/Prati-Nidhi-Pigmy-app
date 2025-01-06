@@ -51,7 +51,7 @@ export default function AccountSetting({ navigation }) {
                 </View>
             </View>
 
-            <Text style={[styles.keyName, { textAlign: 'center', fontSize: 20, fontFamily: 'Montserrat-Bold' }]}>Agent Profile</Text>
+            <Text style={[styles.keyName, { marginTop:15, textAlign: 'center', fontSize: 20, fontFamily: 'Montserrat-Bold' }]}>Agent Profile</Text>
 
             <View style={{ width: '80%', alignSelf: 'center', marginTop: '10%' }}>
                 <View style={{ display: 'flex', flexDirection: 'row', marginVertical: 15 }}>

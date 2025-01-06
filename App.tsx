@@ -14,6 +14,7 @@ import {
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   useColorScheme,
   View,
 } from 'react-native';
@@ -43,6 +44,12 @@ import UserProfile from './src/Presentation/Screens/BottomNavScreens/UserProfile
 type SectionProps = PropsWithChildren<{
   title: string;
 }>;
+
+(Text as any).defaultProps = (Text as any).defaultProps || {};
+(Text as any).defaultProps.allowFontScaling = false;
+
+(TextInput as any).defaultProps = (TextInput as any).defaultProps || {};
+(TextInput as any).defaultProps.allowFontScaling = false;
 
 const fontConfig = {
   customVariant: {

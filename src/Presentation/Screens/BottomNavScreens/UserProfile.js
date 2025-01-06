@@ -120,33 +120,39 @@ export default function UserProfile({ route, navigation }) {
     // setLoading(true);
     const filteredTransactions = transactionTableData?.filter((transaction) =>
       transaction.AccountNo === item.AccountNo && transaction.GLCode === item.GLCode
-    );
-    // let temp = filteredTransactions[0];
-    // if (filteredTransactions && filteredTransactions.length > 0) {
-    //   const latestTransaction = filteredTransactions[filteredTransactions.length - 1];
-    //   console.log("updated balance", latestTransaction)
-
-    //   setupdatedBalance(latestTransaction?.OpeningBal);
-    //   setLoading(false);
-
-    // } else {
-    //   setLoading(false);
-
-    //   setupdatedBalance(null);
-    // }
+    ); 
     setupdatedBalance(route.params?.openingBalance ? route.params.openingBalance : 0);
-    // console.log("filtered data", transactionTableData);
-    const lastTransactionToday = transactionTableData?.some((transaction) => {
+    // console.log("filtered data", filteredTransactions,"00000000000", route.params?.item);
+    // const lastTransactionToday = filteredTransactions?.some((transaction) => {
+    //   let item = route.params?.item;
+    //   const [day, month, year] = transaction.CollDateTime?.split(' ')[0]?.split('-');
+    //   const fullYear = year.length === 2 ? `20${year}` : year;
+    //   const collectionDate = new Date(`${fullYear}-${month}-${day}`);
+    //   console.log("today and collectionDate",collectionDate,today)
+    //   return collectionDate.toLocaleDateString() === today
+    //     && transaction.accNo === item.AccountNo
+    //     && transaction.glCode === item.GLCode;
+    // });
+
+    const lastTransactionToday = filteredTransactions?.some((transaction) => {
       let item = route.params?.item;
-      const [day, month, year] = transaction.CollDateTime?.split(' ')[0]?.split('-');
+      const [datePart] = transaction.CollDateTime?.split(' '); // Extract only the date part
+      const [year, month, day] = datePart.split('-');
       const fullYear = year.length === 2 ? `20${year}` : year;
-      const collectionDate = new Date(`${fullYear}-${month}-${day}`);
-
-      return collectionDate.toLocaleDateString() === today
-        && transaction.accNo === item.AccountNo
-        && transaction.glCode === item.GLCode;
+    
+      // Construct the collection date as a string for direct comparison
+      const collectionDate = `${fullYear}-${month}-${day}`;
+      const todayDate = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
+    
+      console.log("collectionDate and today:", transaction, transaction.AccountNo, item.AccountNo, transaction.GLCode, item.GLCode);
+    
+      return collectionDate === todayDate
+        && transaction.AccountNo === item.AccountNo
+        && transaction.GLCode === item.GLCode;
     });
+    
 
+    console.log("last transaction made",lastTransactionToday )
     if (lastTransactionToday) {
       setCollectionMadeToday(true);
       setLoading(false);
@@ -682,6 +688,7 @@ Total Account Balance: ${closingBalance ? `₹${new Intl.NumberFormat('en-IN').f
     return () => backHandler.remove();
   }, [isFocused]);
 
+  // console.log("route.params.multipleCollection ,collectionMadeToday", route.params.multipleCollection ,collectionMadeToday)
 
   return (
     <View style={styles.mainView}>

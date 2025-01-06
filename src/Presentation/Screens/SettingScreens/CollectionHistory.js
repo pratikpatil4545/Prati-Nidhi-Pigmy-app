@@ -1,38 +1,66 @@
-import { View, Text, StyleSheet, Image, ScrollView } from 'react-native'
+import { View, Text, StyleSheet, Image, ScrollView, TextInput, Pressable, Keyboard } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import { COLORS, windowHeight, windowWidth } from '../../../Common/Constants'
 import MaterialCommunityIcons4 from 'react-native-vector-icons/FontAwesome6';
 import { useIsFocused } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import HistoryCards from '../../Components/HistoryCards';
+import { Searchbar } from 'react-native-paper';
+import MaterialCommunityIcons2 from 'react-native-vector-icons/FontAwesome5';
 
 export default function CollectionHistory({ navigation }) {
     const [transactionTable, setTransactionTable] = useState([]);
+    const [filteredTable, setFilteredTable] = useState([]);
     const [totalAmount, setTotalAmount] = useState(0);
+    const [searchTerm, setSearchTerm] = useState('');
     const isFocused = useIsFocused();
 
     useEffect(() => {
         fetchTransactionTable();
     }, [isFocused]);
 
+    useEffect(() => {
+        if (searchTerm.trim() === '') {
+            setFilteredTable(transactionTable);
+        } else {
+            const filteredData = transactionTable.filter(
+                (item) =>
+                    item.EnglishName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    item.AccountNo?.toString().includes(searchTerm)
+            );
+            setFilteredTable(filteredData);
+        }
+    }, [searchTerm, transactionTable]);
+
     const fetchTransactionTable = async () => {
         try {
             const transactionTableData = await AsyncStorage.getItem('transactionHistoryTable');
             if (transactionTableData) {
-                const parsedData = JSON.parse(transactionTableData);  // Parse the stored data
-                setTransactionTable(parsedData);
+                const parsedData = JSON.parse(transactionTableData);
+ 
+                const sevenDaysAgo = new Date();
+                sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-                const total = parsedData.reduce((sum, transaction) => {
+                const filteredData = parsedData.filter(transaction => {
+                    const transactionDate = new Date(transaction.CollDateTime);
+                    return transactionDate >= sevenDaysAgo;
+                });
+ 
+                await AsyncStorage.setItem('transactionHistoryTable', JSON.stringify(filteredData));
+
+                setTransactionTable(filteredData);
+                setFilteredTable(filteredData);
+
+                const total = filteredData.reduce((sum, transaction) => {
                     return sum + (parseFloat(transaction.Collection) || 0);
                 }, 0);
-                // console.log("No saved data found, making API call...", total);
-
                 setTotalAmount(total);
             }
         } catch (error) {
             Alert.alert('Error fetching transaction table from AsyncStorage:', error);
         }
     };
+
 
     return (
         <View style={styles.mainView}>
@@ -44,33 +72,48 @@ export default function CollectionHistory({ navigation }) {
                     <Image style={{ width: '100%', height: '100%', resizeMode: 'contain' }} source={require('../../Assets/Images/automateSystemsLogo.png')} />
                 </View>
             </View>
-
             <Text style={[styles.keyName, { textAlign: 'center', fontSize: 20, fontFamily: 'Montserrat-Bold' }]}>Collections History</Text>
 
+            <View style={{ width: windowWidth * 1, marginTop: '2%', height: windowHeight * 0.1, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly' }}>
+                <Searchbar
+                    placeholder="Search by Name or A/C No"
+                    onChangeText={setSearchTerm}
+                    // loading={true}
+                    value={searchTerm}
+                    onIconPress={() => { setSearchTerm(''), Keyboard.dismiss() }}
+                    iconColor={COLORS.primary}
+                    elevation={1}
+                    style={{
+                        width: '80%',
+                        alignSelf: 'center',
+                        // marginTop: 20,
+                        backgroundColor: '#FFFFFF',
+                        elevation: 15,
+                    }}
+                />
+            </View>
+
             <ScrollView style={{ marginTop: 20, marginBottom: 40 }}>
-                <>
-                    {transactionTable && transactionTable?.length > 0 ? (
-                        transactionTable
-                            ?.sort((a, b) => new Date(b.CollDateTime) - new Date(a.CollDateTime))
-                            ?.map((item, index, sortedTable) => {
-                                const currentCardDate = item.CollDateTime?.split(' ')[0]; // Extract date part only
-                                const previousCardDate = sortedTable[index - 1]?.CollDateTime?.split(' ')[0];
-                                const showDateHeader = currentCardDate !== previousCardDate;
+                {filteredTable && filteredTable.length > 0 ? (
+                    filteredTable
+                        .sort((a, b) => new Date(b.CollDateTime) - new Date(a.CollDateTime))
+                        .map((item, index, sortedTable) => {
+                            const currentCardDate = item.CollDateTime?.split(' ')[0]; // Extract date part only
+                            const previousCardDate = sortedTable[index - 1]?.CollDateTime?.split(' ')[0];
+                            const showDateHeader = currentCardDate !== previousCardDate;
 
-                                return (
-                                    <React.Fragment key={index}>
-                                        {showDateHeader && (
-                                            <Text style={[styles.keyName,{marginLeft: 10}]}>{currentCardDate}</Text>
-                                        )}
-                                        <HistoryCards history={true} item={item} index={index} />
-                                    </React.Fragment>
-                                );
-                            })
-                    ) : (
-                        <Text style={[styles.text1, { alignSelf: 'center', marginTop: 100 }]}>No Collections history yet</Text>
-                    )}
-                </>
-
+                            return (
+                                <React.Fragment key={index}>
+                                    {showDateHeader && (
+                                        <Text style={[styles.keyName, { marginLeft: 10 }]}>{currentCardDate}</Text>
+                                    )}
+                                    <HistoryCards history={true} item={item} index={index} />
+                                </React.Fragment>
+                            );
+                        })
+                ) : (
+                    <Text style={[styles.text1, { alignSelf: 'center', marginTop: 100 }]}>No Collections history yet</Text>
+                )}
             </ScrollView>
         </View>
     )
@@ -85,16 +128,13 @@ const styles = StyleSheet.create({
     profileView: {
         width: windowWidth * 1,
         height: windowHeight * 0.20,
-        // backgroundColor: COLORS.lightGrey,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-
     },
     profileIcon: {
         width: 120,
         height: 120,
-        // borderWidth: 1,
         borderRadius: 60,
         overflow: 'hidden',
         padding: 2,
@@ -107,45 +147,15 @@ const styles = StyleSheet.create({
         width: windowWidth * 1,
         height: windowHeight * 0.10,
         backgroundColor: COLORS.primaryAccent,
-        // position: 'absolute',
         marginBottom: 'auto',
         borderBottomLeftRadius: 0,
         borderBottomRightRadius: 0,
         elevation: 5
     },
-    lineView: {
-        marginTop: 0,
-        width: windowWidth * 0.85,
-        height: windowHeight * 0.02,
-        alignSelf: 'center',
-        borderBottomWidth: 2,
-        borderBottomColor: COLORS.primary
-    },
-    lineText: {
-        position: 'absolute',
-        top: 3,
-        backgroundColor: '#FFFFFF',
-        fontFamily: 'Montserrat-Bold',
-        color: COLORS.darkGrey,
-        alignSelf: 'flex-start',
-        fontSize: 18
-    },
-    profileInfo: {
-        marginTop: 10,
-        width: windowWidth * 0.85,
-        // backgroundColor: 'grey',
-        alignSelf: 'center'
-    },
     keyName: {
         fontFamily: 'Montserrat-SemiBold',
         fontSize: 17,
         color: COLORS.darkGrey
-    },
-    keyValue: {
-        fontFamily: 'Montserrat-SemiBold',
-        fontSize: 17,
-        color: COLORS.primary,
-        textDecorationLine: 'underline'
     },
     text1: {
         fontFamily: 'Montserrat-Regular',
@@ -154,5 +164,5 @@ const styles = StyleSheet.create({
         marginHorizontal: 15,
         color: COLORS.gray,
         alignSelf: 'flex-start'
-    },
-})
+    }
+});
