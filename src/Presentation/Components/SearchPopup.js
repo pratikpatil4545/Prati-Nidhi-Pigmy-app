@@ -57,7 +57,8 @@ export default function SearchPopup(props, { route }) {
             }
         } catch (e) {
             setLoading(false);
-            Alert.alert('Failed to fetch data from AsyncStorage', e);
+            console.log('Failed to fetch data from AsyncStorage', e);
+            Alert.alert('Failed to fetch data from Local Storage');
         }
     };
 

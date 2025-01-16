@@ -17,12 +17,107 @@ export default function Login({ navigation }) {
   const [verificationText, setVerificationText] = useState('');
   const [showSetPassword, setShowSetPassword] = useState(false); 
 
+  // useEffect(() => {
+  //   const checkAuthentication = async () => {
+  //     try {
+  //       const storedMobileNumber = await AsyncStorage.getItem('mobileNumber');
+  //       const storedPassword = await AsyncStorage.getItem('password');
+
+  //       if (storedMobileNumber && storedPassword) {
+  //         setNewUser(false);
+  //         setNumber(storedMobileNumber);
+  //       } else {
+  //         fetchPhoneNumber();
+  //         setNewUser(true);
+  //       }
+  //     } catch (error) {
+  //       Alert.alert('Error checking authentication:', error);
+  //     }
+  //   };
+
+  //   const requestPermissions = async () => {
+  //     const permissionGranted = await requestStoragePermission();
+  //     if (!permissionGranted) {
+  //       Alert.alert('Permission Required', 'The app needs storage access to function properly.');
+  //     }
+  //   };
+
+  //   const fetchPhoneNumber = async () => {
+  //     try {
+  //       if (Platform.OS === 'android' && Platform.Version < 29) {
+  //         const granted = await PermissionsAndroid.request(
+  //           PermissionsAndroid.PERMISSIONS.READ_PHONE_STATE,
+  //           {
+  //             title: 'Phone Permission',
+  //             message: 'This app needs access to your phone number for verification purposes.',
+  //             buttonNeutral: 'Ask Me Later',
+  //             buttonNegative: 'Cancel',
+  //             buttonPositive: 'OK',
+  //           },
+  //         );
+
+  //         if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+  //           Alert.alert('Permission Denied', 'Cannot access phone number without permission.');
+  //           return;
+  //         }
+  //       }
+
+  //       const simCards = await SimCardsManagerModule.getSimCards({
+  //         title: 'App Permission',
+  //         message: 'Custom message',
+  //         buttonNeutral: 'Not now',
+  //         buttonNegative: 'Not OK',
+  //         buttonPositive: 'OK',
+  //       });
+
+  //       if (!simCards || simCards.length === 0) {
+  //         Alert.alert('No SIM card information available');
+  //         return;
+  //       }
+
+  //       if (simCards.length > 1) {
+  //         Alert.alert(
+  //           'Select SIM',
+  //           'Please choose a SIM card to retrieve the phone number.',
+  //           simCards.map((sim, index) => ({
+  //             text: `SIM ${index + 1}: ${sim.phoneNumber || 'No number available'}`,
+  //             onPress: () => handlePhoneNumberSelection(sim),
+  //           })),
+  //           { cancelable: true }
+  //         );
+  //       } else {
+  //         handlePhoneNumberSelection(simCards[0]);
+  //       }
+  //     } catch (error) {
+  //       Alert.alert('Error fetching phone number:', error);
+  //     }
+  //   };
+
+  //   const handlePhoneNumberSelection = (sim) => {
+  //     let phoneNumber = sim.phoneNumber;
+  //     if (phoneNumber) {
+  //       phoneNumber = phoneNumber.replace(/\D/g, '');
+  //       if (phoneNumber.length > 10) phoneNumber = phoneNumber.slice(-10);
+  //       if (phoneNumber.length === 10) {
+  //         setNumber(phoneNumber);
+  //       } else {
+  //         Alert.alert('Invalid Phone Number', 'The phone number should be exactly 10 digits.');
+  //       }
+  //     } else {
+  //       Alert.alert('Phone Number Unavailable');
+  //     }
+  //   };
+
+  //   checkAuthentication();
+  //   requestPermissions();
+  // }, []);
+
   useEffect(() => {
     const checkAuthentication = async () => {
       try {
         const storedMobileNumber = await AsyncStorage.getItem('mobileNumber');
         const storedPassword = await AsyncStorage.getItem('password');
-
+  
         if (storedMobileNumber && storedPassword) {
           setNewUser(false);
           setNumber(storedMobileNumber);
@@ -31,10 +126,25 @@ export default function Login({ navigation }) {
           setNewUser(true);
         }
       } catch (error) {
-        Alert.alert('Error checking authentication:', error);
+        console.log('Error checking authentication:', error.toString());
+        Alert.alert('Error checking authentication:');
       }
     };
-
+  
+    const requestAllPermissions = async () => {
+      try {
+        // const storagePermissionGranted = await requestStoragePermission();
+        // if (storagePermissionGranted) {
+          await fetchPhoneNumber();
+        // } else {
+        //   Alert.alert('Permission Required', 'The app needs permissions to function properly.');
+        // }
+      } catch (error) {
+        console.log('Error requesting permissions:', error.toString());
+        Alert.alert('Error requesting permissions:');
+      }
+    };
+  
     const fetchPhoneNumber = async () => {
       try {
         if (Platform.OS === 'android' && Platform.Version < 29) {
@@ -46,15 +156,15 @@ export default function Login({ navigation }) {
               buttonNeutral: 'Ask Me Later',
               buttonNegative: 'Cancel',
               buttonPositive: 'OK',
-            },
+            }
           );
-
+  
           if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
             Alert.alert('Permission Denied', 'Cannot access phone number without permission.');
             return;
           }
         }
-
+  
         const simCards = await SimCardsManagerModule.getSimCards({
           title: 'App Permission',
           message: 'Custom message',
@@ -62,12 +172,12 @@ export default function Login({ navigation }) {
           buttonNegative: 'Not OK',
           buttonPositive: 'OK',
         });
-
+  
         if (!simCards || simCards.length === 0) {
           Alert.alert('No SIM card information available');
           return;
         }
-
+  
         if (simCards.length > 1) {
           Alert.alert(
             'Select SIM',
@@ -82,10 +192,11 @@ export default function Login({ navigation }) {
           handlePhoneNumberSelection(simCards[0]);
         }
       } catch (error) {
-        Alert.alert('Error fetching phone number:', error);
+        console.log('Error fetching phone number:', error.toString());
+        Alert.alert('Error fetching phone number:');
       }
     };
-
+  
     const handlePhoneNumberSelection = (sim) => {
       let phoneNumber = sim.phoneNumber;
       if (phoneNumber) {
@@ -100,9 +211,11 @@ export default function Login({ navigation }) {
         Alert.alert('Phone Number Unavailable');
       }
     };
-
+  
     checkAuthentication();
+    requestAllPermissions();
   }, []);
+  
 
   // useEffect(() => {
   //   const requestPermissions = async () => {
@@ -196,7 +309,8 @@ export default function Login({ navigation }) {
         setShowSetPassword(false);
         setNewUser(false);
       } catch (error) {
-        Alert.alert('Error storing user data:', error);
+        Alert.alert('Error storing user data:');
+        console.log('Error storing user data:', error);
         // ToastAndroid.show('Error setting password', ToastAndroid.SHORT);
       }
     } else {
@@ -209,10 +323,10 @@ export default function Login({ navigation }) {
     <View style={styles.flex}>
       {!showSetPassword ? (
         <>
-          {/* <Image
-            style={{ width: 100, height: 100, alignSelf: 'center', marginTop: 20 }}
-            source={require('../Assets/Images/automateSystemsLogo.png')}
-          /> */}
+          <Image
+            style={{ width: 100, height: 100, alignSelf: 'center', marginTop: '12%' }}
+            source={require('../Assets/Images/rupee.png')}
+          />
           <View style={styles.container}>
             <Text style={styles.loginText}>{newUser ? 'New User' : 'Login'}</Text>
             <TextInput
@@ -223,7 +337,7 @@ export default function Login({ navigation }) {
               keyboardType="numeric"
               onChangeText={(text) => setNumber(text)}
               style={styles.input}
-              disabled
+              // disabled
               theme={{
                 colors: { primary: '#3B5998', underlineColor: 'transparent' },
               }}

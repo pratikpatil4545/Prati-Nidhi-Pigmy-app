@@ -79,7 +79,8 @@ export default function TransactionCard(props) {
                     setBrCode(dataObject.MstrData?.BrCode);
                 }
             } catch (error) {
-                Alert.alert("Error fetching data from AsyncStorage:", error);
+                console.log("Error fetching data from AsyncStorage:", error);
+                Alert.alert("Error fetching data from AsyncStorage:");
             }
         };
     

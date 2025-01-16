@@ -130,7 +130,8 @@ export default function DataCard(props) {
         const mobileNumber = transactionTable.find(entry => entry.AccountNo === props.item.AccountNo)?.MobileNo;
         setmobileNumber(mobileNumber || '');
       } catch (error) {
-        Alert.alert("Error in fetchDataAndCalculate:", error);
+        console.log("Error in fetchDataAndCalculate:", error);
+        Alert.alert("Error in fetchDataAndCalculate:");
       }
     };
 

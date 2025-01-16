@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Image, StatusBar, Pressable, BackHandler, ScrollView } from 'react-native'
+import { View, Text, StyleSheet, Image, StatusBar, Pressable, BackHandler, ScrollView, Linking } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import { COLORS, windowHeight, windowWidth } from '../../../Common/Constants'
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -47,11 +47,11 @@ export default function AccountSetting({ navigation }) {
                     <MaterialCommunityIcons4 onPress={() => { navigation.navigate("Profile") }} name='angle-left' style={{ left: windowWidth * 0.05, top: windowHeight * 0.02, position: 'absolute' }} color={COLORS.white} size={40} />
                 </View>
                 <View style={styles.profileIcon}>
-                    <Image style={{ width: '100%', height: '100%', resizeMode: 'contain' }} source={require('../../Assets/Images/automateSystemsLogo.png')} />
+                    <Image style={{ width: '100%', height: '100%', resizeMode: 'contain' }} source={require('../../Assets/Images/rupee.png')} />
                 </View>
             </View>
 
-            <Text style={[styles.keyName, { marginTop:15, textAlign: 'center', fontSize: 20, fontFamily: 'Montserrat-Bold' }]}>Agent Profile</Text>
+            <Text style={[styles.keyName, { marginTop: 15, textAlign: 'center', fontSize: 20, fontFamily: 'Montserrat-Bold' }]}>Agent Profile</Text>
 
             <View style={{ width: '80%', alignSelf: 'center', marginTop: '10%' }}>
                 <View style={{ display: 'flex', flexDirection: 'row', marginVertical: 15 }}>
@@ -81,6 +81,37 @@ export default function AccountSetting({ navigation }) {
                 </View>
 
                 <View style={{ width: windowWidth * 0.85, marginTop: 10, alignSelf: 'center', borderBottomWidth: 1, borderBottomColor: COLORS.lightGrey }} />
+            </View>
+
+            <View style={{
+                position: 'absolute',
+                bottom: windowHeight * 0.08,
+                alignSelf: 'center',
+                justifyContent: 'center',
+                width: '100%',
+                display: 'flex',
+                flexDirection: 'row'
+            }}>
+                <Text
+                    allowFontScaling={false}
+                    style={{
+                        // position: 'absolute',
+                        // bottom: windowHeight * 0.08,
+                        fontFamily: 'Montserrat-Bold',
+                        color: COLORS.gray,
+                        // alignSelf: 'center',
+                        fontSize: 8,
+                    }}
+                >
+                    Logo Credit:{" "}
+
+                    <Text
+                    style={{ color: COLORS.blue, textDecorationLine: 'underline', fontSize: 8 }} 
+                    >
+                    https://www.flaticon.com/free-icons/rupee
+                    </Text>
+                </Text>
+                {/* <Image style={{ width: 30, height: 30, resizeMode: 'contain' }} source={require('../../Assets/Images/rupee.png')} /> */}
             </View>
         </View>
     )

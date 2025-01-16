@@ -4,6 +4,7 @@ import { Dimensions } from 'react-native';
 export const COLORS = {
     // primary: '#1076F2',
     primary: '#2d70e2',
+    // primary: '#fe6a16',
     primaryAccent: '#87BAF8',
     Secondary: '#dd137b',
     secondaryAccent: '#f7d7e8',

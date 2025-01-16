@@ -36,7 +36,7 @@ export default function Profile({ navigation, route }) {
         }
         // console.log("transaction data", transactionTableData.length)
       } catch (error) {
-        Alert.alert('Error fetching transaction table from AsyncStorage:', error);
+        Alert.alert('Error fetching transaction table from AsyncStorage:', error.message);
       }
     };
 
@@ -63,7 +63,7 @@ export default function Profile({ navigation, route }) {
         </View>
         {/* <Text style={{ position: 'absolute', zIndex: 5, top: windowHeight * 0.04, color: COLORS.white, fontFamily: 'Montserrat-Bold', fontSize: 22 }}>Profile</Text> */}
         <View style={styles.profileIcon}>
-          <Image style={{ width: '100%', height: '100%', resizeMode: 'contain' }} source={require('../../Assets/Images/automateSystemsLogo.png')} />
+          <Image style={{ width: '100%', height: '100%', resizeMode: 'contain' }} source={require('../../Assets/Images/rupee.png')} />
         </View>
       </View>
 
@@ -128,7 +128,7 @@ export default function Profile({ navigation, route }) {
           </View>
         </View>
       </ScrollView>
-      <Text  allowFontScaling={false} style={{ position: 'absolute', bottom: windowHeight * 0.08, fontFamily: 'Montserrat-Bold', color: COLORS.gray, alignSelf: 'center', fontSize: 16, }}>Version - 1.2 (03-01-2025)</Text>
+      <Text  allowFontScaling={false} style={{ position: 'absolute', bottom: windowHeight * 0.08, fontFamily: 'Montserrat-Bold', color: COLORS.gray, alignSelf: 'center', fontSize: 16, }}>Version - 1.3 (08-01-2025)</Text>
 
     </View>
   )

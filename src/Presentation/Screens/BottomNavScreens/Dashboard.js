@@ -12,9 +12,7 @@ import SearchPopup from '../../Components/SearchPopup';
 import TransactionCard from '../../Components/TransactionCard';
 import NetInfo from '@react-native-community/netinfo';
 import { Buffer } from 'buffer';
-import DeviceInfo from 'react-native-device-info';
 import RNFS from 'react-native-fs';
-import DocumentPicker from 'react-native-document-picker';
 
 export default function Dashboard({ navigation, route }) {
 
@@ -64,6 +62,7 @@ export default function Dashboard({ navigation, route }) {
     const [isConnected, setConnected] = useState(true);
     const [maxAmountLimit, setMaxAmountLimit] = useState(null);
     // console.log('max amount add', maxAmountLimit)
+    const [fileData, setFileData] = useState(null);
 
     useEffect(() => {
         if (route.params?.search === true) {
@@ -71,7 +70,7 @@ export default function Dashboard({ navigation, route }) {
         }
         setSearchQuery('');
     }, [isFocused])
- 
+
     useEffect(() => {
         if (!fileCreatedDate || !noOfDaysAllowed) return;
 
@@ -142,7 +141,7 @@ export default function Dashboard({ navigation, route }) {
         // setIsFirstLogin(true); 
         // getApi();
     }
- 
+
     const getFileContent = async () => {
         setLoading(true);
         const firstLoginComplete = await AsyncStorage.getItem('firstLoginComplete');
@@ -177,7 +176,7 @@ export default function Dashboard({ navigation, route }) {
                         const timeDiff = expiryDate.getTime() - currentDate.getTime();
                         const daysLeft = Math.ceil(timeDiff / (1000 * 3600 * 24));
 
-                        if (daysLeft <= 0) {
+                        if (daysLeft < 0) {
                             Alert.alert('License expired!', 'Your license has expired. Please pay subscription.');
                             // setLicenseExpired(true);
                             // setLoading(false);
@@ -185,7 +184,7 @@ export default function Dashboard({ navigation, route }) {
                             // return;
                         }
 
-                        if (daysLeft <= 15 && daysLeft > 0) {
+                        if (daysLeft <= 15 && daysLeft >= 0) {
                             Alert.alert('License Reminder', `Your license is about to expire in ${daysLeft} day(s). Please renew it soon.`);
                         }
 
@@ -201,7 +200,8 @@ export default function Dashboard({ navigation, route }) {
                         setBranchName(dataObject.MstrData?.BrNameE);
                         setBranchCode(dataObject.MstrData?.BrCode);
                         setAgentName(dataObject.MstrData?.AgNameE);
-                        setIsActive(dataObject.MstrData?.IsActive ? true : false);
+                        // setIsActive(dataObject.MstrData?.IsActive ? true : false);
+                        setIsActive(false);
                         setAllowNewUser((dataObject.MstrData?.NewAcOpenAllowed === 'True') ? true : false);
                         setFileCreatedDate(dataObject.MstrData?.FileCreateDate);
                         setNoOfDaysAllowed(dataObject.MstrData?.NoOfDaysAllowed);
@@ -275,7 +275,7 @@ export default function Dashboard({ navigation, route }) {
                         const timeDiff = expiryDate.getTime() - currentDate.getTime();
                         const daysLeft = Math.ceil(timeDiff / (1000 * 3600 * 24));
                         console.log("days left when api called", daysLeft)
-                        if (daysLeft <= 0) {
+                        if (daysLeft < 0) {
                             Alert.alert('License expired!', 'Your license has expired. Please pay subscription.');
                             // setLicenseExpired(true);
                             // setLoading(false);
@@ -283,7 +283,7 @@ export default function Dashboard({ navigation, route }) {
                             // return;
                         }
 
-                        if (daysLeft <= 15 && daysLeft > 0) {
+                        if (daysLeft <= 15 && daysLeft >= 0) {
                             Alert.alert('License Reminder', `Your license is about to expire in ${daysLeft} day(s). Please renew it soon.`);
                         }
 
@@ -299,7 +299,8 @@ export default function Dashboard({ navigation, route }) {
                         setBranchName(dataObject.MstrData?.BrNameE);
                         setBranchCode(dataObject.MstrData?.BrCode);
                         setAgentName(dataObject.MstrData?.AgNameE);
-                        setIsActive(dataObject.MstrData?.IsActive ? true : false);
+                        // setIsActive(dataObject.MstrData?.IsActive ? true : false);
+                        setIsActive(false);
                         setAllowNewUser((dataObject.MstrData?.NewAcOpenAllowed === 'True') ? true : false);
                         setFileCreatedDate(dataObject.MstrData?.FileCreateDate);
                         setNoOfDaysAllowed(dataObject.MstrData?.NoOfDaysAllowed);
@@ -344,7 +345,7 @@ export default function Dashboard({ navigation, route }) {
             } catch (error) {
                 setDataAvailable(false);
                 // Capture error details
-                Alert.alert('Error occurred:', error);
+                Alert.alert('Error occurred:', error.message);
                 await AsyncStorage.removeItem('firstLoginComplete');
 
                 if (!isConnected) {
@@ -356,7 +357,7 @@ export default function Dashboard({ navigation, route }) {
             }
         }
     };
- 
+
     useEffect(() => {
         let unsubscribe
         let currentState
@@ -397,16 +398,10 @@ export default function Dashboard({ navigation, route }) {
         const dataObject = JSON.parse(savedData);
 
         if (!isConnected || pendingTransactions.length === 0) {
-            // console.log("No pending transactions or not connected to the internet.");
             return;
         }
 
-        // if (!ClientID || !BrAgCode  || !BrCode || !AgCode || FileCreateDate || InputFileType) {
-        //     console.log("Null values.");
-        //     return;
-        // } 
         const transactionsWithoutPending = pendingTransactions.map(({ pending, ...rest }) => rest);
-        // setpendingCount(pendingTransactions.length);
         const newArray = {
             ClientID: dataObject.MstrData?.ClientID,
             BrCode: dataObject.MstrData?.BrCode,
@@ -419,16 +414,12 @@ export default function Dashboard({ navigation, route }) {
         };
 
         console.log("Transaction table data to send:", newArray);
+        // const newFormData = new FormData();
+        // newFormData.append('DataFromApp', JSON.stringify(newArray));
 
         try {
-            // const response = await fetch(`http://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp`, {
-            //     method: 'POST',
-            //     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            //     body: new URLSearchParams({ DataFromApp: JSON.stringify(newArray) }).toString(),
-            // });
-
             const response = await fetch(
-                `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp?DataFromApp=${JSON.stringify(newArray).toString()}`,
+                `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp`,
                 {
                     method: 'POST',
                     headers: {
@@ -437,41 +428,258 @@ export default function Dashboard({ navigation, route }) {
                     body: new URLSearchParams({ DataFromApp: JSON.stringify(newArray) }).toString(),
                 }
             );
-            const responseText = await response.text();
-            const parser = new XMLParser();
-            const jsonResponse = parser.parse(responseText);
-            const jsonString = jsonResponse.string;
-            const dataObject = JSON.parse(jsonString);
-            const responseString = dataObject.ResonseCode;
-            console.log("Response in auto send data:", responseText, 'resp code new is : ', responseString);
-            // If the API call succeeds, update AsyncStorage
-            if (responseString === '0000') {
-                const updatedTransactionTable = parsedData.map((item) => {
-                    if (item.pending) {
-                        const { pending, ...rest } = item;
-                        return rest;
-                    }
-                    return item;
-                });
 
-                await AsyncStorage.setItem('transactionTable', JSON.stringify(updatedTransactionTable));
-                fetchTransactionTable();
-                // ToastAndroid.show("Uploaded pending transactions", ToastAndroid.SHORT);
-                console.log("Updated transaction table stored successfully.");
+            const responseText = await response.text(); // Get the raw response text
+            console.log("Raw response text:", responseText);
+
+            try {
+                const parser = new XMLParser();
+                const jsonResponse = parser.parse(responseText);
+                const jsonString = jsonResponse.string; // Adjust this to your XML structure
+                const dataObject = JSON.parse(jsonString);
+                const responseString = dataObject.ResonseCode;
+
+                console.log("Parsed response:", jsonResponse, "Response code:", responseString);
+
+                if (responseString === '0000') {
+                    const updatedTransactionTable = parsedData.map((item) => {
+                        if (item.pending) {
+                            const { pending, ...rest } = item;
+                            return rest;
+                        }
+                        return item;
+                    });
+
+                    await AsyncStorage.setItem('transactionTable', JSON.stringify(updatedTransactionTable));
+                    fetchTransactionTable();
+                    console.log("Updated transaction table stored successfully.");
+                } else {
+                    Alert.alert(
+                        'Error:',
+                        `Response Code : ${responseString}, ${dataObject.ResponseString}`
+                    );
+                }
+            } catch (parseError) {
+                console.log("Error parsing response as JSON:", parseError, "Response text:", responseText);
+                Alert.alert("Error", `Failed to upload offline reciepts : ${responseText}`);
             }
         } catch (error) {
-            Alert.alert("Error during API call:", error);
+            console.log("Error during API call:", error);
+            Alert.alert("Error", `Unexpected error during API call: ${error.message}`);
         }
+
+
+        // try {
+        //     const response = await fetch(
+        //         `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp`,
+        //         {
+        //             method: 'POST',
+        //             headers: {
+        //                 'Content-Type': 'application/x-www-form-urlencoded',
+        //             },
+        //             body: new URLSearchParams({ DataFromApp: JSON.stringify(newArray) }).toString()
+        //         }
+        //     );
+        //     // console.log("Final Payload:", JSON.stringify(newArray, null, 2));
+        //     // console.log("Request Body:", new URLSearchParams({ DataFromApp: JSON.stringify(newArray) }).toString());
+
+        //     const responseText = await response.text();
+        //     const parser = new XMLParser();
+        //     const jsonResponse = parser.parse(responseText);
+        //     const jsonString = jsonResponse.string;
+        //     const dataObject = JSON.parse(jsonString);
+        //     const responseString = dataObject.ResonseCode;
+        //     console.log("Response in auto send data:", responseText, 'resp code new is : ', responseString);
+        //     // If the API call succeeds, update AsyncStorage
+        //     if (responseString === '0000') {
+        //         const updatedTransactionTable = parsedData.map((item) => {
+        //             if (item.pending) {
+        //                 const { pending, ...rest } = item;
+        //                 return rest;
+        //             }
+        //             return item;
+        //         });
+
+        //         await AsyncStorage.setItem('transactionTable', JSON.stringify(updatedTransactionTable));
+        //         fetchTransactionTable();
+        //         // ToastAndroid.show("Uploaded pending transactions", ToastAndroid.SHORT);
+        //         console.log("Updated transaction table stored successfully.");
+        //     }
+        //     else {
+        //         // Alert.alert('Error', '')
+        //         Alert.alert(
+        //             'Error:',/*  */
+        //             `Response Code : ${dataObject.ResonseCode}, ${dataObject.ResponseString}`
+        //         );
+        //     }
+        // } catch (error) {
+        //     console.log("Error during API call:", error.message);
+        //     Alert.alert("Error during API call:", error.message);
+        // }
     };
+
+    // const sendDataInBackground = async () => {
+    //     const transactionTableData = await AsyncStorage.getItem('transactionTable');
+    //     const parsedData = JSON.parse(transactionTableData) || [];
+    //     const pendingTransactions = parsedData.filter((item) => item.pending === true);
+    //     // console.log("Internet on data:", pendingTransactions);
+
+    //     const savedData = await AsyncStorage.getItem('dataObject');
+    //     const dataObject = JSON.parse(savedData);
+
+    //     if (!isConnected || pendingTransactions.length === 0) {
+    //         return;
+    //     }
+
+    //     const transactionsWithoutPending = pendingTransactions.map(({ pending, ...rest }) => rest);
+    //     const newArray = {
+    //         ClientID: dataObject.MstrData?.ClientID,
+    //         BrCode: dataObject.MstrData?.BrCode,
+    //         AgCode: dataObject.MstrData?.AgCode,
+    //         BrAgCode: dataObject.MstrData?.BrAgCode,
+    //         FileCreateDate: dataObject.MstrData?.FileCreateDate,
+    //         InputFileType: dataObject.MstrData?.InputFileType,
+    //         NoOfRecords: pendingTransactions.length.toString(),
+    //         CollectionData: transactionsWithoutPending,
+    //     };
+
+    //     console.log("Transaction table data to send:", newArray);
+
+    //     // if (transactionsWithoutPending.length >= 7) {
+
+    //     const chunkSize = 5;
+    //     for (let i = 0; i < transactionsWithoutPending.length; i += chunkSize) {
+    //         const chunk = transactionsWithoutPending.slice(i, i + chunkSize);
+    //         // do whatever
+    //         const newArray = {
+    //             ClientID: dataObject.MstrData?.ClientID,
+    //             BrCode: dataObject.MstrData?.BrCode,
+    //             AgCode: dataObject.MstrData?.AgCode,
+    //             BrAgCode: dataObject.MstrData?.BrAgCode,
+    //             FileCreateDate: dataObject.MstrData?.FileCreateDate,
+    //             InputFileType: dataObject.MstrData?.InputFileType,
+    //             NoOfRecords: chunk.length.toString(),
+    //             CollectionData: chunk,
+    //         };
+    //         // console.log(' chunks chunks newArray: ', newArray);
+
+    //         try {
+    //             const response = await fetch(
+    //                 `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp`,
+    //                 {
+    //                     method: 'POST',
+    //                     headers: {
+    //                         'Content-Type': 'application/x-www-form-urlencoded',
+    //                     },
+    //                     body: new URLSearchParams({ DataFromApp: JSON.stringify(newArray) }).toString(),
+    //                 }
+    //             );
+
+    //             const responseText = await response.text(); // Get the raw response text
+    //             // console.log("Raw response text:", responseText);
+    //             console.log("Final Payload:", JSON.stringify(newArray, null, 2));
+    //             console.log("Request Body:", new URLSearchParams({ DataFromApp: JSON.stringify(newArray) }).toString());
+    //             try {
+    //                 const parser = new XMLParser();
+    //                 const jsonResponse = parser.parse(responseText);
+    //                 const jsonString = jsonResponse.string; // Adjust this to your XML structure
+    //                 const dataObject = JSON.parse(jsonString);
+    //                 const responseString = dataObject.ResonseCode;
+
+    //                 console.log("Response code:", responseString);
+
+    //                 if (responseString === '0000') {
+    //                     const updatedTransactionTable = parsedData.map((item) => {
+    //                         if (item.pending) {
+    //                             const { pending, ...rest } = item;
+    //                             return rest;
+    //                         }
+    //                         return item;
+    //                     });
+
+    //                     await AsyncStorage.setItem('transactionTable', JSON.stringify(updatedTransactionTable));
+    //                     fetchTransactionTable();
+    //                     console.log("Updated transaction table stored successfully.");
+    //                 } else {
+    //                     Alert.alert(
+    //                         'Error:',
+    //                         `Response Code : ${responseString}, ${dataObject.ResponseString}`
+    //                     );
+    //                 }
+    //             } catch (parseError) {
+    //                 console.log("Error parsing response as JSON:", parseError, "Response text:", responseText);
+    //                 Alert.alert("Error", `Failed to upload offline reciepts : ${responseText}`);
+    //             }
+    //         } catch (error) {
+    //             console.log("Error during API call:", error);
+    //             Alert.alert("Error", `Unexpected error during API call: ${error.message}`);
+    //         }
+    //     }
+
+    //     // }
+
+    //     // try {
+    //     //     const response = await fetch(
+    //     //         `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp?DataFromApp=${JSON.stringify(newArray).toString()}`,
+    //     //         {
+    //     //             method: 'POST',
+    //     //             headers: {
+    //     //                 'Content-Type': 'application/x-www-form-urlencoded',
+    //     //             },
+    //     //             body: new URLSearchParams({ DataFromApp: JSON.stringify(newArray) }).toString(),
+    //     //         }
+    //     //     );
+
+    //     //     const responseText = await response.text(); // Get the raw response text
+    //     //     console.log("Raw response text:", responseText);
+
+    //     //     try {
+    //     //         const parser = new XMLParser();
+    //     //         const jsonResponse = parser.parse(responseText);
+    //     //         const jsonString = jsonResponse.string; // Adjust this to your XML structure
+    //     //         const dataObject = JSON.parse(jsonString);
+    //     //         const responseString = dataObject.ResonseCode;
+
+    //     //         console.log("Parsed response:", jsonResponse, "Response code:", responseString);
+
+    //     //         if (responseString === '0000') {
+    //     //             const updatedTransactionTable = parsedData.map((item) => {
+    //     //                 if (item.pending) {
+    //     //                     const { pending, ...rest } = item;
+    //     //                     return rest;
+    //     //                 }
+    //     //                 return item;
+    //     //             });
+
+    //     //             await AsyncStorage.setItem('transactionTable', JSON.stringify(updatedTransactionTable));
+    //     //             fetchTransactionTable();
+    //     //             console.log("Updated transaction table stored successfully.");
+    //     //         } else {
+    //     //             Alert.alert(
+    //     //                 'Error:',
+    //     //                 `Response Code : ${responseString}, ${dataObject.ResponseString}`
+    //     //             );
+    //     //         }
+    //     //     } catch (parseError) {
+    //     //         console.log("Error parsing response as JSON:", parseError, "Response text:", responseText);
+    //     //         Alert.alert("Error", `Failed to upload offline reciepts : ${responseText}`);
+    //     //     }
+    //     // } catch (error) {
+    //     //     console.log("Error during API call:", error);
+    //     //     Alert.alert("Error", `Unexpected error during API call: ${error.message}`);
+    //     // }
+    // };
+
 
     const fetchTransactionTable = async () => {
         try {
             const transactionTableData = await AsyncStorage.getItem('transactionTable');
+            // retrieveJsonData();
             if (transactionTableData) {
                 const parsedData = JSON.parse(transactionTableData);  // Parse the stored data
                 setTransactionTable(parsedData);
+                // console.log("pending data,", parsedData, typeof parsedData)
                 const pendingTransactions = parsedData.filter((item) => item.pending === true);
-                console.log("pending data,", pendingTransactions.length)
                 setpendingCount(pendingTransactions.length);
                 const total = parsedData.reduce((sum, transaction) => {
                     return sum + (parseFloat(transaction.Collection) || 0);
@@ -481,14 +689,14 @@ export default function Dashboard({ navigation, route }) {
                 setTotalAmount(total);
             }
         } catch (error) {
-            Alert.alert('Error fetching transaction table from Local storage:', error);
+            Alert.alert('Error fetching transaction table from Local storage:', error.message);
         }
     };
 
     useEffect(() => {
         fetchTransactionTable();
     }, [isFocused]);
- 
+
     const handleCloseCollection = async () => {
         setButtonLoading(true);
 
@@ -512,6 +720,7 @@ export default function Dashboard({ navigation, route }) {
 
                             const closeCollectionUrl = `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/CloseCollection_FromApp`;
                             const dummyCloseCycleUrl = `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/Dummy_CloseCycle`;
+                            // let tempCount = 25;
                             let tempCount = parseInt(transactionTable.length);
                             console.log("transacion count", tempCount)
                             try {
@@ -602,7 +811,7 @@ export default function Dashboard({ navigation, route }) {
             ]
         );
     };
- 
+
     const handleCancel = () => {
         setModalVisible(false);
     };
@@ -797,7 +1006,7 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
                                                     `Code : ${dataObject.ResonseCode}, ${dataObject.ResponseString}`
                                                 );
                                             }
-                                            Alert.alert("Error parsing the response:", error);
+                                            Alert.alert("Error parsing the response:", error.message);
                                         }
                                         transactionTable.push(transactionData);
                                         await AsyncStorage.setItem('transactionTable', JSON.stringify(transactionTable));
@@ -807,7 +1016,7 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
                                         console.log("Response:", responseText);
                                     } catch (error) {
 
-                                        Alert.alert("Error during API call:", error);
+                                        Alert.alert("Error during API call:", error.message);
                                     }
                                 }
                             }
@@ -911,7 +1120,7 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
             Alert.alert("Error", "Unable to open SMS app.");
         }
     };
- 
+
     const handleSubmit2 = () => {
         setModalVisible(false);
         setModalVisible2(false);
@@ -919,7 +1128,38 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
         setmobileNumber(null);
         setAmount(null);
     }
- 
+    const filePath = RNFS.DownloadDirectoryPath + '/AppData.txt';
+
+    const retrieveJsonData = () => {
+        // Retrieve the JSON string from external storage and parse it
+        console.log("transactionTable in history", typeof (transactionTable))
+        RNFS.readFile(filePath, 'utf8')
+            .then((data) => {
+                let parsedData = JSON.parse(data);
+
+                // Check if parsedData is still a string
+                if (typeof parsedData === 'string') {
+                    parsedData = JSON.parse(parsedData);
+                }
+
+                if (Array.isArray(parsedData)) {
+                    parsedData.forEach((item, index) => {
+                        console.log(`Item ${index}:`, item);
+                    });
+                } else {
+                    console.error('Parsed data is not an array:', parsedData);
+                }
+
+                console.log('Final Parsed Data:', parsedData, 'Type:', typeof parsedData, typeof transactionTable);
+
+                setTransactionTable(parsedData);
+            })
+            .catch((error) => {
+                Alert.alert('No data found or error reading file', error.message);
+            });
+    };
+
+
     return (
         <View style={styles.dashView}>
             <StatusBar backgroundColor={COLORS.primaryAccent} barStyle="light-content" />
@@ -1071,9 +1311,9 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
                                         {transactionTable && transactionTable?.length > 0 ? (
                                             transactionTable
                                                 ?.sort((a, b) => {
-                                                    const dateA = new Date(a.CollDateTime); // Convert to Date object
-                                                    const dateB = new Date(b.CollDateTime); // Convert to Date object
-                                                    return dateB - dateA; // Sort from latest (newer) to oldest (older)
+                                                    const dateA = new Date(a.CollDateTime);
+                                                    const dateB = new Date(b.CollDateTime);
+                                                    return dateB - dateA;
                                                 })
                                                 ?.map((item, index) => (
                                                     <TransactionCard InputFileType={InputFileType} searchQuery={searchQuery} item={item} key={index} index={index} />
