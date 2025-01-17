@@ -82,7 +82,7 @@ export default function Profile({ navigation, route }) {
                   <Text style={{ fontFamily: 'Montserrat-Bold', color: COLORS.gray, alignSelf: 'center', fontSize: 16 }}>   Collection History </Text>
                 </View>
               </Pressable>
-              <MaterialCommunityIcons name='chevron-right' color={COLORS.gray} size={30} />
+              <MaterialCommunityIcons onPress={() => { navigation.navigate('CollectionHistory') }} name='chevron-right' color={COLORS.gray} size={30} />
             </View>
 
             <View style={{ display: 'flex', paddingLeft: 10, paddingRight: 10, backgroundColor: COLORS.white, borderRadius: 10, height: 70, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: '0%', marginBottom: 10, }}>
@@ -92,7 +92,7 @@ export default function Profile({ navigation, route }) {
                   <Text style={{ fontFamily: 'Montserrat-Bold', color: COLORS.gray, alignSelf: 'center', fontSize: 16, }}>   Agent Profile   </Text>
                 </View>
               </Pressable>
-              <MaterialCommunityIcons name={'chevron-right'} color={COLORS.gray} size={30} />
+              <MaterialCommunityIcons onPress={() => { navigation.navigate('AccountSetting') }} name={'chevron-right'} color={COLORS.gray} size={30} />
             </View>
 
             <View style={{ display: 'flex', paddingLeft: 10, paddingRight: 10, backgroundColor: COLORS.white, borderRadius: 10, height: 70, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: '0%', marginBottom: 10, }}>
@@ -102,7 +102,7 @@ export default function Profile({ navigation, route }) {
                   <Text style={{ fontFamily: 'Montserrat-Bold', color: COLORS.gray, alignSelf: 'center', fontSize: 16, }}>   Client Details   </Text>
                 </View>
               </Pressable>
-              <MaterialCommunityIcons name={'chevron-right'} color={COLORS.gray} size={30} />
+              <MaterialCommunityIcons onPress={() => { navigation.navigate('BankDetails') }} name={'chevron-right'} color={COLORS.gray} size={30} />
             </View>
 
             {/* <View style={{ display: 'flex', paddingLeft: 10, paddingRight: 10, backgroundColor: COLORS.white, borderRadius: 10, height: 70, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: '0%', marginBottom: 10, }}>
@@ -128,7 +128,7 @@ export default function Profile({ navigation, route }) {
           </View>
         </View>
       </ScrollView>
-      <Text  allowFontScaling={false} style={{ position: 'absolute', bottom: windowHeight * 0.08, fontFamily: 'Montserrat-Bold', color: COLORS.gray, alignSelf: 'center', fontSize: 16, }}>Version - 1.3 (08-01-2025)</Text>
+      <Text  allowFontScaling={false} style={{ position: 'absolute', bottom: windowHeight * 0.08, fontFamily: 'Montserrat-Bold', color: COLORS.gray, alignSelf: 'center', fontSize: 16, }}>Version - 1.4 (17-01-2025)</Text>
 
     </View>
   )

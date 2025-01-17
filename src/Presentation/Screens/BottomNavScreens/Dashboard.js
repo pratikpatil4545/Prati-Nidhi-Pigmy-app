@@ -413,7 +413,7 @@ export default function Dashboard({ navigation, route }) {
             CollectionData: transactionsWithoutPending,
         };
 
-        console.log("Transaction table data to send:", newArray);
+        // console.log("Transaction table data to send:", newArray);
         // const newFormData = new FormData();
         // newFormData.append('DataFromApp', JSON.stringify(newArray));
 
@@ -430,7 +430,7 @@ export default function Dashboard({ navigation, route }) {
             );
 
             const responseText = await response.text(); // Get the raw response text
-            console.log("Raw response text:", responseText);
+            // console.log("Raw response text:", responseText);
 
             try {
                 const parser = new XMLParser();
@@ -439,7 +439,7 @@ export default function Dashboard({ navigation, route }) {
                 const dataObject = JSON.parse(jsonString);
                 const responseString = dataObject.ResonseCode;
 
-                console.log("Parsed response:", jsonResponse, "Response code:", responseString);
+                // console.log("Parsed response:", jsonResponse, "Response code:", responseString);
 
                 if (responseString === '0000') {
                     const updatedTransactionTable = parsedData.map((item) => {
