@@ -410,8 +410,8 @@ export default function Login({ navigation }) {
     const filter = {
       box: 'inbox',
       // main office number
-      // address: `+919373140457`,
-      address : `+917887760491`,
+      address: `+919373140457`,
+      // address : `+917887760491`,
       // address: `+918080109858`,
       // address: `JM-ICICITcv`,
       // address: `+91${number}`,
@@ -537,7 +537,7 @@ export default function Login({ navigation }) {
             source={require('../Assets/Images/rupee.png')}
           />
           <View style={styles.container}>
-            <Text onPress={getLatestSMS} style={styles.loginText}>{newUser ? 'New User' : 'Login'}</Text>
+            <Text style={styles.loginText}>{newUser ? 'New User' : 'Login'}</Text>
             <TextInput
               label="Mobile Number"
               mode="outlined"

@@ -13,6 +13,10 @@ import TransactionCard from '../../Components/TransactionCard';
 import NetInfo from '@react-native-community/netinfo';
 import { Buffer } from 'buffer';
 import RNFS from 'react-native-fs';
+import { PERMISSIONS, request, check } from 'react-native-permissions';
+import DocumentPicker from 'react-native-document-picker';
+import RNBlobUtil from 'react-native-blob-util';
+import SAF from 'react-native-saf-x'; 
 
 export default function Dashboard({ navigation, route }) {
 
@@ -382,10 +386,6 @@ export default function Dashboard({ navigation, route }) {
         };
     }, []);
 
-    const showAlert = () => {
-        console.log('Internet Connection You are offline. Some features may not be available.');
-    };
-
     const sendDataInBackground = async (ClientID, BrCode, AgCode, BrAgCode, FileCreateDate, InputFileType) => {
         const transactionTableData = await AsyncStorage.getItem('transactionTable');
         const parsedData = JSON.parse(transactionTableData) || [];
@@ -413,10 +413,6 @@ export default function Dashboard({ navigation, route }) {
             CollectionData: transactionsWithoutPending,
         };
 
-        // console.log("Transaction table data to send:", newArray);
-        // const newFormData = new FormData();
-        // newFormData.append('DataFromApp', JSON.stringify(newArray));
-
         try {
             const response = await fetch(
                 `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp`,
@@ -429,13 +425,13 @@ export default function Dashboard({ navigation, route }) {
                 }
             );
 
-            const responseText = await response.text(); // Get the raw response text
+            const responseText = await response.text();
             // console.log("Raw response text:", responseText);
 
             try {
                 const parser = new XMLParser();
                 const jsonResponse = parser.parse(responseText);
-                const jsonString = jsonResponse.string; // Adjust this to your XML structure
+                const jsonString = jsonResponse.string;
                 const dataObject = JSON.parse(jsonString);
                 const responseString = dataObject.ResonseCode;
 
@@ -468,224 +464,19 @@ export default function Dashboard({ navigation, route }) {
             Alert.alert("Error", `Unexpected error during API call: ${error.message}`);
         }
 
-
-        // try {
-        //     const response = await fetch(
-        //         `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp`,
-        //         {
-        //             method: 'POST',
-        //             headers: {
-        //                 'Content-Type': 'application/x-www-form-urlencoded',
-        //             },
-        //             body: new URLSearchParams({ DataFromApp: JSON.stringify(newArray) }).toString()
-        //         }
-        //     );
-        //     // console.log("Final Payload:", JSON.stringify(newArray, null, 2));
-        //     // console.log("Request Body:", new URLSearchParams({ DataFromApp: JSON.stringify(newArray) }).toString());
-
-        //     const responseText = await response.text();
-        //     const parser = new XMLParser();
-        //     const jsonResponse = parser.parse(responseText);
-        //     const jsonString = jsonResponse.string;
-        //     const dataObject = JSON.parse(jsonString);
-        //     const responseString = dataObject.ResonseCode;
-        //     console.log("Response in auto send data:", responseText, 'resp code new is : ', responseString);
-        //     // If the API call succeeds, update AsyncStorage
-        //     if (responseString === '0000') {
-        //         const updatedTransactionTable = parsedData.map((item) => {
-        //             if (item.pending) {
-        //                 const { pending, ...rest } = item;
-        //                 return rest;
-        //             }
-        //             return item;
-        //         });
-
-        //         await AsyncStorage.setItem('transactionTable', JSON.stringify(updatedTransactionTable));
-        //         fetchTransactionTable();
-        //         // ToastAndroid.show("Uploaded pending transactions", ToastAndroid.SHORT);
-        //         console.log("Updated transaction table stored successfully.");
-        //     }
-        //     else {
-        //         // Alert.alert('Error', '')
-        //         Alert.alert(
-        //             'Error:',/*  */
-        //             `Response Code : ${dataObject.ResonseCode}, ${dataObject.ResponseString}`
-        //         );
-        //     }
-        // } catch (error) {
-        //     console.log("Error during API call:", error.message);
-        //     Alert.alert("Error during API call:", error.message);
-        // }
     };
-
-    // const sendDataInBackground = async () => {
-    //     const transactionTableData = await AsyncStorage.getItem('transactionTable');
-    //     const parsedData = JSON.parse(transactionTableData) || [];
-    //     const pendingTransactions = parsedData.filter((item) => item.pending === true);
-    //     // console.log("Internet on data:", pendingTransactions);
-
-    //     const savedData = await AsyncStorage.getItem('dataObject');
-    //     const dataObject = JSON.parse(savedData);
-
-    //     if (!isConnected || pendingTransactions.length === 0) {
-    //         return;
-    //     }
-
-    //     const transactionsWithoutPending = pendingTransactions.map(({ pending, ...rest }) => rest);
-    //     const newArray = {
-    //         ClientID: dataObject.MstrData?.ClientID,
-    //         BrCode: dataObject.MstrData?.BrCode,
-    //         AgCode: dataObject.MstrData?.AgCode,
-    //         BrAgCode: dataObject.MstrData?.BrAgCode,
-    //         FileCreateDate: dataObject.MstrData?.FileCreateDate,
-    //         InputFileType: dataObject.MstrData?.InputFileType,
-    //         NoOfRecords: pendingTransactions.length.toString(),
-    //         CollectionData: transactionsWithoutPending,
-    //     };
-
-    //     console.log("Transaction table data to send:", newArray);
-
-    //     // if (transactionsWithoutPending.length >= 7) {
-
-    //     const chunkSize = 5;
-    //     for (let i = 0; i < transactionsWithoutPending.length; i += chunkSize) {
-    //         const chunk = transactionsWithoutPending.slice(i, i + chunkSize);
-    //         // do whatever
-    //         const newArray = {
-    //             ClientID: dataObject.MstrData?.ClientID,
-    //             BrCode: dataObject.MstrData?.BrCode,
-    //             AgCode: dataObject.MstrData?.AgCode,
-    //             BrAgCode: dataObject.MstrData?.BrAgCode,
-    //             FileCreateDate: dataObject.MstrData?.FileCreateDate,
-    //             InputFileType: dataObject.MstrData?.InputFileType,
-    //             NoOfRecords: chunk.length.toString(),
-    //             CollectionData: chunk,
-    //         };
-    //         // console.log(' chunks chunks newArray: ', newArray);
-
-    //         try {
-    //             const response = await fetch(
-    //                 `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp`,
-    //                 {
-    //                     method: 'POST',
-    //                     headers: {
-    //                         'Content-Type': 'application/x-www-form-urlencoded',
-    //                     },
-    //                     body: new URLSearchParams({ DataFromApp: JSON.stringify(newArray) }).toString(),
-    //                 }
-    //             );
-
-    //             const responseText = await response.text(); // Get the raw response text
-    //             // console.log("Raw response text:", responseText);
-    //             console.log("Final Payload:", JSON.stringify(newArray, null, 2));
-    //             console.log("Request Body:", new URLSearchParams({ DataFromApp: JSON.stringify(newArray) }).toString());
-    //             try {
-    //                 const parser = new XMLParser();
-    //                 const jsonResponse = parser.parse(responseText);
-    //                 const jsonString = jsonResponse.string; // Adjust this to your XML structure
-    //                 const dataObject = JSON.parse(jsonString);
-    //                 const responseString = dataObject.ResonseCode;
-
-    //                 console.log("Response code:", responseString);
-
-    //                 if (responseString === '0000') {
-    //                     const updatedTransactionTable = parsedData.map((item) => {
-    //                         if (item.pending) {
-    //                             const { pending, ...rest } = item;
-    //                             return rest;
-    //                         }
-    //                         return item;
-    //                     });
-
-    //                     await AsyncStorage.setItem('transactionTable', JSON.stringify(updatedTransactionTable));
-    //                     fetchTransactionTable();
-    //                     console.log("Updated transaction table stored successfully.");
-    //                 } else {
-    //                     Alert.alert(
-    //                         'Error:',
-    //                         `Response Code : ${responseString}, ${dataObject.ResponseString}`
-    //                     );
-    //                 }
-    //             } catch (parseError) {
-    //                 console.log("Error parsing response as JSON:", parseError, "Response text:", responseText);
-    //                 Alert.alert("Error", `Failed to upload offline reciepts : ${responseText}`);
-    //             }
-    //         } catch (error) {
-    //             console.log("Error during API call:", error);
-    //             Alert.alert("Error", `Unexpected error during API call: ${error.message}`);
-    //         }
-    //     }
-
-    //     // }
-
-    //     // try {
-    //     //     const response = await fetch(
-    //     //         `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp?DataFromApp=${JSON.stringify(newArray).toString()}`,
-    //     //         {
-    //     //             method: 'POST',
-    //     //             headers: {
-    //     //                 'Content-Type': 'application/x-www-form-urlencoded',
-    //     //             },
-    //     //             body: new URLSearchParams({ DataFromApp: JSON.stringify(newArray) }).toString(),
-    //     //         }
-    //     //     );
-
-    //     //     const responseText = await response.text(); // Get the raw response text
-    //     //     console.log("Raw response text:", responseText);
-
-    //     //     try {
-    //     //         const parser = new XMLParser();
-    //     //         const jsonResponse = parser.parse(responseText);
-    //     //         const jsonString = jsonResponse.string; // Adjust this to your XML structure
-    //     //         const dataObject = JSON.parse(jsonString);
-    //     //         const responseString = dataObject.ResonseCode;
-
-    //     //         console.log("Parsed response:", jsonResponse, "Response code:", responseString);
-
-    //     //         if (responseString === '0000') {
-    //     //             const updatedTransactionTable = parsedData.map((item) => {
-    //     //                 if (item.pending) {
-    //     //                     const { pending, ...rest } = item;
-    //     //                     return rest;
-    //     //                 }
-    //     //                 return item;
-    //     //             });
-
-    //     //             await AsyncStorage.setItem('transactionTable', JSON.stringify(updatedTransactionTable));
-    //     //             fetchTransactionTable();
-    //     //             console.log("Updated transaction table stored successfully.");
-    //     //         } else {
-    //     //             Alert.alert(
-    //     //                 'Error:',
-    //     //                 `Response Code : ${responseString}, ${dataObject.ResponseString}`
-    //     //             );
-    //     //         }
-    //     //     } catch (parseError) {
-    //     //         console.log("Error parsing response as JSON:", parseError, "Response text:", responseText);
-    //     //         Alert.alert("Error", `Failed to upload offline reciepts : ${responseText}`);
-    //     //     }
-    //     // } catch (error) {
-    //     //     console.log("Error during API call:", error);
-    //     //     Alert.alert("Error", `Unexpected error during API call: ${error.message}`);
-    //     // }
-    // };
-
 
     const fetchTransactionTable = async () => {
         try {
             const transactionTableData = await AsyncStorage.getItem('transactionTable');
-            // retrieveJsonData();
             if (transactionTableData) {
-                const parsedData = JSON.parse(transactionTableData);  // Parse the stored data
+                const parsedData = JSON.parse(transactionTableData);
                 setTransactionTable(parsedData);
-                // console.log("pending data,", parsedData, typeof parsedData)
                 const pendingTransactions = parsedData.filter((item) => item.pending === true);
                 setpendingCount(pendingTransactions.length);
                 const total = parsedData.reduce((sum, transaction) => {
                     return sum + (parseFloat(transaction.Collection) || 0);
                 }, 0);
-                // console.log("No saved data found, making API call...", total);
-
                 setTotalAmount(total);
             }
         } catch (error) {
@@ -724,7 +515,6 @@ export default function Dashboard({ navigation, route }) {
                             let tempCount = parseInt(transactionTable.length);
                             console.log("transacion count", tempCount)
                             try {
-                                // Call CloseCollection_FromApp API
                                 const closeCollectionResponse = await fetch(closeCollectionUrl, {
                                     method: 'POST',
                                     headers: {
@@ -743,9 +533,7 @@ export default function Dashboard({ navigation, route }) {
                                 const closeCollectionData = JSON.parse(closeCollectionJson.string);
                                 const closeCollectionResponseCode = closeCollectionData.ResonseCode;
 
-
                                 if (closeCollectionResponseCode === '0000') {
-                                    // If CloseCollection_FromApp fails, call Dummy_CloseCycle API
                                     const dummyCloseCycleResponse = await fetch(dummyCloseCycleUrl, {
                                         method: 'POST',
                                         headers: {
@@ -794,17 +582,12 @@ export default function Dashboard({ navigation, route }) {
                                     Alert.alert('Error', ` Response Code - ${closeCollectionResponseCode} - ${closeCollectionData?.ResponseString} `)
                                 }
 
-                                // Update AsyncStorage and state
-
-
                             } catch (error) {
                                 Alert.alert('Error', error.message);
                             } finally {
                                 setButtonLoading(false);
                                 fetchTransactionTable();
                             }
-                            // }
-                            // }
                         }
                     }
                 }
@@ -824,7 +607,7 @@ export default function Dashboard({ navigation, route }) {
         const year = date.getFullYear();
         const count = String(transactionCount).padStart(4, '0');
 
-        transactionCount++; // Increment for the next transaction
+        transactionCount++;
 
         return `${day}${month}${year}${count}`;
     };
@@ -980,21 +763,15 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
                                         const responseObject = JSON.parse(jsonString);
                                         const rawResponseString = responseObject.ResponseString;
 
-                                        // Extract only the JSON part from the rawResponseString
                                         const jsonStartIndex = rawResponseString.indexOf('{');
                                         const cleanedResponseString = rawResponseString.substring(jsonStartIndex);
                                         const dataObject = JSON.parse(cleanedResponseString);
                                         try {
-                                            // Extract the actual JSON portion from ResponseString
-
                                             const collectionData = dataObject.CollectionData;
-                                            // console.log("collectionData:", collectionData);
-
                                             if (collectionData && collectionData.length > 0) {
                                                 const collDateTime = collectionData[0].CollDateTime;
                                                 // console.log("CollDateTime:", collDateTime);
                                                 setCollectionDate(collDateTime);
-                                                // You can store or use collDateTime as needed
                                             } else {
                                                 console.log("No collection data found.");
                                             }
@@ -1128,35 +905,85 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
         setmobileNumber(null);
         setAmount(null);
     }
-    const filePath = RNFS.DownloadDirectoryPath + '/AppData.txt';
+    // const filePath = RNFS.DownloadDirectoryPath + '/AppData.txt';
 
     const retrieveJsonData = () => {
+
+        //         RNFetchBlob.fs.readFile(filePath, 'base64')
+        // .then((data) => {
+        //   // handle the data ..
+        //   console.log("data che k", data)
+        // })
         // Retrieve the JSON string from external storage and parse it
-        console.log("transactionTable in history", typeof (transactionTable))
-        RNFS.readFile(filePath, 'utf8')
-            .then((data) => {
-                let parsedData = JSON.parse(data);
+        // console.log("filePath", filePath)
+        // RNFS.readFile(filePath, 'utf8')
+        //     .then((data) => {
+        //         let parsedData = JSON.parse(data);
 
-                // Check if parsedData is still a string
-                if (typeof parsedData === 'string') {
-                    parsedData = JSON.parse(parsedData);
-                }
+        //         // Check if parsedData is still a string
+        //         if (typeof parsedData === 'string') {
+        //             parsedData = JSON.parse(parsedData);
+        //         }
 
-                if (Array.isArray(parsedData)) {
-                    parsedData.forEach((item, index) => {
-                        console.log(`Item ${index}:`, item);
-                    });
-                } else {
-                    console.error('Parsed data is not an array:', parsedData);
-                }
+        //         if (Array.isArray(parsedData)) {
+        //             parsedData.forEach((item, index) => {
+        //                 console.log(`Item ${index}:`, item);
+        //             });
+        //         } else {
+        //             console.error('Parsed data is not an array:', parsedData);
+        //         }
 
-                console.log('Final Parsed Data:', parsedData, 'Type:', typeof parsedData, typeof transactionTable);
+        //         // console.log('Final Parsed Data:', parsedData, 'Type:', typeof parsedData, typeof transactionTable);
 
-                setTransactionTable(parsedData);
-            })
-            .catch((error) => {
-                Alert.alert('No data found or error reading file', error.message);
-            });
+        //         setTransactionTable(parsedData);
+        //     })
+        //     .catch((error) => {
+        //         Alert.alert('No data found or error reading file', error.message);
+        //         console.log('No data found or error reading file', error.message);
+        //     });
+    };
+
+
+    const [data, setData] = useState(null);
+    const [fileContent, setFileContent] = useState(null); // State to store the file content
+
+    const openFilePicker = async () => {
+        try {
+          // Use SAF to pick a file
+          const file = await SAF.pickSingle({
+            type: ['application/json', 'text/plain', '*/*'], // Allow JSON, text, or any file
+          });
+    
+          console.log('File picked:', file);
+    
+          // After picking, read the file content
+          await readFileContent(file.uri);
+        } catch (error) {
+          console.error('Error picking file:', error);
+          Alert.alert('Error', 'An error occurred while selecting the file.');
+        }
+      };
+    
+      // Function to read the content of the file from the content:// URI
+      const readFileContent = async (uri) => {
+        try {
+          // Use SAF to read the file from the content:// URI
+          const fileData = await SAF.readFile(uri);
+    
+          console.log('File content:', fileData);
+          setFileContent(fileData); // Store the file content in the state
+          Alert.alert('File Read', 'File content loaded successfully!');
+        } catch (error) {
+          console.error('Error reading file:', error);
+          Alert.alert('Error', 'Failed to read the file.');
+        }
+      };
+    
+  
+    const exampleData = {
+        username: 'JohnDoe',
+        age: 30,
+        country: 'India',
     };
 
 
@@ -1208,7 +1035,20 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
                 ) : (
                     <View style={{ height: windowHeight * 0.85 }}>
                         <View>
-                            <Text style={[styles.text, { marginTop: 0, marginBottom: 10, marginLeft: 20 }]}>Agent Name: <Text style={[styles.text, { fontSize: 14, fontFamily: 'Montserrat-Bold' }]}>{AgentName ? AgentName : '-'} </Text></Text>
+                            <Text>App Data:</Text>
+                            <Text>{data ? JSON.stringify(data) : 'No data loaded'}</Text>
+
+                            <Button
+                                title=""
+                            // onPress={() => saveDataToFile(exampleData)}
+                            >Save Data</Button>
+                            <Button
+                                title="Load Data"
+                            // onPress={loadDataFromFile}
+                            >Load Data</Button>
+                            <Button title="Open File Picker" onPress={openFilePicker} >Open File Picker</Button>
+
+                            <Text onPress={retrieveJsonData} style={[styles.text, { marginTop: 0, marginBottom: 10, marginLeft: 20 }]}>Agent Name: <Text style={[styles.text, { fontSize: 14, fontFamily: 'Montserrat-Bold' }]}>{AgentName ? AgentName : '-'} </Text></Text>
                         </View>
                         <View style={[styles.dataInfoView, { width: windowWidth * 0.90, alignSelf: 'center', flexDirection: 'row', height: 'auto', overflow: 'hidden' }]}>
                             <View>
