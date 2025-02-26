@@ -120,7 +120,7 @@ export default function UserProfile({ route, navigation }) {
       const collectionDate = `${fullYear}-${month}-${day}`;
       const todayDate = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
 
-      console.log("collectionDate and today:", transaction, transaction.AccountNo, item.AccountNo, transaction.GLCode, item.GLCode);
+      // console.log("collectionDate and today:", transaction, transaction.AccountNo, item.AccountNo, transaction.GLCode, item.GLCode);
 
       return collectionDate === todayDate
         && transaction.AccountNo === item.AccountNo
@@ -128,7 +128,7 @@ export default function UserProfile({ route, navigation }) {
     });
 
 
-    console.log("last transaction made", lastTransactionToday)
+    // console.log("last transaction made", lastTransactionToday)
     if (lastTransactionToday) {
       setCollectionMadeToday(true);
       setLoading(false);
@@ -436,7 +436,7 @@ export default function UserProfile({ route, navigation }) {
           const responseObject = JSON.parse(jsonString);
           const rawResponseString = responseObject.ResponseString;
 
-          console.log("Response for submit api xml parse:", responseObject);
+          // console.log("Response for submit api xml parse:", responseObject);
 
           if (responseObject.ResonseCode != '0000') {
             Alert.alert(
@@ -446,17 +446,12 @@ export default function UserProfile({ route, navigation }) {
           }
           else {
 
-            // Extract only the JSON part from the rawResponseString
             const jsonStartIndex = rawResponseString.indexOf('{');
             const cleanedResponseString = rawResponseString.substring(jsonStartIndex);
             const dataObject = JSON.parse(cleanedResponseString);
-            console.log("Response for submit api json pare:", dataObject);
-
+            // console.log("Response for submit api json pare:", dataObject);
             const collectionData = dataObject.CollectionData;
-            // console.log("collectionData:", dataObject);
-
             try {
-              // Extract the actual JSON portion from ResponseString
 
               if (collectionData && collectionData.length > 0) {
                 const collDateTime = collectionData[0].CollDateTime;
@@ -469,10 +464,9 @@ export default function UserProfile({ route, navigation }) {
                 setCollectionMadeToday(true);
                 setModalVisible2(true);
                 setCustomLoaderModal(false);
-
-                // You can store or use collDateTime as needed
               } else {
                 Alert.alert("No collection date found.");
+                setCustomLoaderModal(false);
               }
             }
             catch (error) {
@@ -487,7 +481,9 @@ export default function UserProfile({ route, navigation }) {
           }
 
         } catch (error) {
-          Alert.alert("Error during API call:");
+          // Alert.alert("Warning", "Please check your Internet Connection and try again");
+          Alert.alert("Warning", "Internet connection has changed. Please check and try again.");
+          setCustomLoaderModal(false);
         }
       } else {
         const currentTransactions = JSON.parse(await AsyncStorage.getItem('transactionTable')) || [];
@@ -514,7 +510,7 @@ export default function UserProfile({ route, navigation }) {
       setButtonLoading(false);
       return;
     }
-    console.log("mobile numeber checkingh", route.params.item.Mobile1, ' and ', mobileNumber)
+    // console.log("mobile numeber checkingh", route.params.item.Mobile1, ' and ', mobileNumber)
     const { openingBalance, transactionTable, closingBalance } = transactionDetails;
     const transactionData = {
       GLCode,
@@ -535,7 +531,7 @@ export default function UserProfile({ route, navigation }) {
       CollectionData: [transactionData]
     };
 
-    console.log("collection array when amount collected", newArray);
+    // console.log("collection array when amount collected", newArray);
 
     if (newArray.CollectionData && newArray.CollectionData.length > 0) {
       const collDateTime = newArray.CollectionData[0].CollDateTime;
@@ -589,20 +585,20 @@ Total Account Balance: ${closingBalance ? `₹${new Intl.NumberFormat('en-IN').f
     setButtonLoading(false);
   };
 
-  const filePath = RNFS.DownloadDirectoryPath + '/AppData.txt';
+  // const filePath = RNFS.DownloadDirectoryPath + '/AppData.txt';
 
-  const createFile = async (data) => {
-    // const data = { key: 'value', anotherKey: 123 }; // Example JSON data
-    try {
-      const jsonData = JSON.stringify(data, null, 2);
-      await RNFS.writeFile(filePath, jsonData, 'utf8');
-      Alert.alert('File Created', `File successfully created at: ${filePath}`);
-      console.log('File created at:', filePath);
-    } catch (error) {
-      console.error('Error creating file:', error);
-      Alert.alert('Error', 'Could not create the file.');
-    }
-  };
+  // const createFile = async (data) => {
+  //   // const data = { key: 'value', anotherKey: 123 }; // Example JSON data
+  //   try {
+  //     const jsonData = JSON.stringify(data, null, 2);
+  //     await RNFS.writeFile(filePath, jsonData, 'utf8');
+  //     Alert.alert('File Created', `File successfully created at: ${filePath}`);
+  //     console.log('File created at:', filePath);
+  //   } catch (error) {
+  //     console.error('Error creating file:', error);
+  //     Alert.alert('Error', 'Could not create the file.');
+  //   }
+  // };
 
   const handleSubmit2 = () => {
     setModalVisible(false);

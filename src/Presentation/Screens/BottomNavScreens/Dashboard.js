@@ -11,12 +11,7 @@ import { XMLParser } from 'fast-xml-parser';
 import SearchPopup from '../../Components/SearchPopup';
 import TransactionCard from '../../Components/TransactionCard';
 import NetInfo from '@react-native-community/netinfo';
-import { Buffer } from 'buffer';
-import RNFS from 'react-native-fs';
-import { PERMISSIONS, request, check } from 'react-native-permissions';
-import DocumentPicker from 'react-native-document-picker';
-import RNBlobUtil from 'react-native-blob-util';
-import SAF from 'react-native-saf-x'; 
+import { Buffer } from 'buffer'; 
 
 export default function Dashboard({ navigation, route }) {
 
@@ -91,19 +86,19 @@ export default function Dashboard({ navigation, route }) {
         }
     }, [fileCreatedDate, noOfDaysAllowed]);
 
-    useEffect(() => {
-        let len1 = parseInt(mappedMasterData?.length);
-        let len2 = parseInt(NoOfRecords);
-        if (len1 && len2) {
-            if (len1 != len2) {
-                setIsDataValid(false);
-                Alert.alert('Something went wrong while recieving data or data may be currupted please try again!')
-            }
-            else {
-                setIsDataValid(true);
-            }
-        }
-    }, [NoOfRecords, mappedMasterData?.length])
+    // useEffect(() => {
+    //     let len1 = parseInt(mappedMasterData?.length);
+    //     let len2 = parseInt(NoOfRecords);
+    //     if (len1 && len2) {
+    //         if (len1 === len2) {
+    //             setIsDataValid(false);
+    //             Alert.alert('Something went wrong while recieving data or data may be currupted please try again!')
+    //         }
+    //         else {
+    //             setIsDataValid(true);
+    //         }
+    //     }
+    // }, [NoOfRecords, mappedMasterData?.length])
 
     useEffect(() => {
         const handleBackPress = () => {
@@ -192,6 +187,19 @@ export default function Dashboard({ navigation, route }) {
                             Alert.alert('License Reminder', `Your license is about to expire in ${daysLeft} day(s). Please renew it soon.`);
                         }
 
+                        let len1 = parseInt(dataObject.MstrData?.MstrRecs?.length);
+                        let len2 = parseInt(dataObject.MstrData?.NoOfRecords);
+                        if (len1 && len2) {
+                            if (len1 != len2) {
+                                setIsDataValid(false);
+                                Alert.alert('Error','Something went wrong while recieving data or data may be currupted please try again!')
+                                return;
+                            }
+                            // else {
+                            //     setIsDataValid(true);
+                            // }
+                        }
+
                         setLicenseExpired(false);
                         setMappedMasterData(dataObject.MstrData?.MstrRecs);
                         setHeaderLastAccNo(dataObject.MstrData?.HdrLastAcNo);
@@ -267,7 +275,7 @@ export default function Dashboard({ navigation, route }) {
 
                 if (savedData) {
                     const dataObject = JSON.parse(savedData);
-                    console.log("responseText local storage:");
+                    // console.log("responseText local storage:");
 
                     if (dataObject.ResonseCode === '0000') {
                         await AsyncStorage.setItem('dataObject', JSON.stringify(dataObject));
@@ -391,7 +399,7 @@ export default function Dashboard({ navigation, route }) {
         const parsedData = JSON.parse(transactionTableData) || [];
         const pendingTransactions = parsedData.filter((item) => item.pending === true);
         // console.log("checking data null::", BrCode, AgCode, FileCreateDate, ClientID, BrAgCode, InputFileType)
-        console.log("interent on data", pendingTransactions)
+        // console.log("interent on data", pendingTransactions)
 
         const savedData = await AsyncStorage.getItem('dataObject');
 
@@ -513,7 +521,7 @@ export default function Dashboard({ navigation, route }) {
                             const dummyCloseCycleUrl = `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/Dummy_CloseCycle`;
                             // let tempCount = 25;
                             let tempCount = parseInt(transactionTable.length);
-                            console.log("transacion count", tempCount)
+                            // console.log("transacion count", tempCount)
                             try {
                                 const closeCollectionResponse = await fetch(closeCollectionUrl, {
                                     method: 'POST',
@@ -790,7 +798,7 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
                                         setModalVisible2(true);
                                         fetchTransactionTable();
 
-                                        console.log("Response:", responseText);
+                                        // console.log("Response:", responseText);
                                     } catch (error) {
 
                                         Alert.alert("Error during API call:", error.message);
@@ -944,48 +952,179 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
     };
 
 
-    const [data, setData] = useState(null);
-    const [fileContent, setFileContent] = useState(null); // State to store the file content
+    // const [data, setData] = useState("Hello, this is data new");
+    // const [fileContent, setFileContent] = useState(null); // State to store the file content
 
-    const openFilePicker = async () => {
-        try {
-          // Use SAF to pick a file
-          const file = await SAF.pickSingle({
-            type: ['application/json', 'text/plain', '*/*'], // Allow JSON, text, or any file
-          });
-    
-          console.log('File picked:', file);
-    
-          // After picking, read the file content
-          await readFileContent(file.uri);
-        } catch (error) {
-          console.error('Error picking file:', error);
-          Alert.alert('Error', 'An error occurred while selecting the file.');
-        }
-      };
-    
-      // Function to read the content of the file from the content:// URI
-      const readFileContent = async (uri) => {
-        try {
-          // Use SAF to read the file from the content:// URI
-          const fileData = await SAF.readFile(uri);
-    
-          console.log('File content:', fileData);
-          setFileContent(fileData); // Store the file content in the state
-          Alert.alert('File Read', 'File content loaded successfully!');
-        } catch (error) {
-          console.error('Error reading file:', error);
-          Alert.alert('Error', 'Failed to read the file.');
-        }
-      };
-    
-  
-    const exampleData = {
-        username: 'JohnDoe',
-        age: 30,
-        country: 'India',
-    };
+    // const openFilePicker = async () => {
+    //     try {
+    //         // Use SAF to pick a file
+    //         const file = await SAF.pickSingle({
+    //             type: ['application/json', 'text/plain', '*/*'], // Allow JSON, text, or any file
+    //         });
 
+    //         console.log('File picked:', file);
+
+    //         // After picking, read the file content
+    //         await readFileContent(file.uri);
+    //     } catch (error) {
+    //         console.error('Error picking file:', error);
+    //         Alert.alert('Error', 'An error occurred while selecting the file.');
+    //     }
+    // };
+
+    // Function to read the content of the file from the content:// URI
+    // const readFileContent = async (uri) => {
+    //     try {
+    //         // Use SAF to read the file from the content:// URI
+    //         const fileData = await SAF.readFile(uri);
+
+    //         console.log('File content:', fileData);
+    //         setFileContent(fileData); // Store the file content in the state
+    //         Alert.alert('File Read', 'File content loaded successfully!');
+    //     } catch (error) {
+    //         console.error('Error reading file:', error);
+    //         Alert.alert('Error', 'Failed to read the file.');
+    //     }
+    // };
+
+
+    // const exampleData = {
+    //     username: 'JohnDoe',
+    //     age: 30,
+    //     country: 'India',
+    // };
+
+
+    // const [savedContent, setSavedContent] = useState("");
+    // const [directoryUri, setDirectoryUri] = useState(null);
+    // const [fileName, setFileName] = useState("test.text");
+
+    // const requestPermission = async (directoryId) => {
+    //     let dir = ScopedStorage.FileType = await ScopedStorage.openDocumentTree(true);
+    //     await AsyncStorage.setItem(directoryId, JSON.stringify(dir));
+    //     return dir;
+    // }
+
+    // const getAndroidDir = async (directoryId) => {
+    //     let dir = ScopedStorage.FileType;
+    //     try {
+    //         let dirPath = await AsyncStorage.getItem(directoryId)
+    //         if (!dirPath) {
+    //             dir = await requestPermission(directoryId)
+    //         }
+    //         else {
+    //             dir = JSON.parse(dirPath)
+    //         }
+    //         const persistedUris = await ScopedStorage.getPersistedUriPermission
+    //         if (persistedUris.infexOf(dir.uri) !== -1) {
+    //             return dir;
+    //         }
+    //         return await requestPermission(directoryId);
+    //     } catch (error) {
+    //         console.log("error ", error);
+    //         return null;
+    //     }
+    // }
+
+    // // Function to request directory access and save a file
+    // const handleSaveFile = async () => {
+    //     // let file = await ScopedStorage.openDocument(true);
+    //     let dir = await getAndroidDir('dataDir');
+    //     await ScopedStorage.writeFile(dir?.uri, data, fileName, 'text/plain');
+    // };
+
+    // const handleReadFile = async () => {
+    //     let file = await ScopedStorage.openDocument(true);
+    //     setFileName(file.name);
+    //     setData(file.data);
+    // };
+
+    // // Function to read the file content
+    // // const handleReadFile = async () => {
+    // //     try {
+    // //         // Get the saved directory URI from AsyncStorage
+    // //         const dir = await AsyncStorage.getItem("userMediaDirectory");
+    // //         if (!dir) {
+    // //             Alert.alert("Error", "No directory found. Save a file first.");
+    // //             return;
+    // //         }
+
+    // //         const parsedDir = JSON.parse(dir);
+
+    // //         // Check if the directory URI is still valid
+    // //         const persistedUris = await ScopedStorage.getPersistedUriPermissions();
+    // //         if (!persistedUris.includes(parsedDir.uri)) {
+    // //             Alert.alert("Error", "Directory access has been revoked. Please save the file again.");
+    // //             return;
+    // //         }
+
+    // //         // Read the file content
+    // //         const fileName = "example.txt";
+    // //         const filePath = `${parsedDir.uri}/${fileName}`;
+    // //         const content = await ScopedStorage.readFile(filePath);
+
+    // //         setSavedContent(content);
+    // //         Alert.alert("Success", "File content read successfully.");
+    // //     } catch (error) {
+    // //         console.error("Error reading file:", error);
+    // //         Alert.alert("Error", "An error occurred while reading the file.");
+    // //     }
+    // // };
+
+    // const requestDirectoryAccess = async () => {
+    //     try {
+    //       const dir = await ScopedStorage.openDocumentTree(true);
+    //       if (dir) {
+    //         await AsyncStorage.setItem('userSelectedDirectory', JSON.stringify(dir));
+    //         console.log('Directory access granted:', dir);
+    //       } else {
+    //         console.log('Directory access was not granted.');
+    //       }
+    //     } catch (error) {
+    //       console.error('Error accessing directory:', error);
+    //     }
+    //   };
+      
+    //   const getPersistedDirectoryUri = async () => {
+    //     try {
+    //       const dir = await AsyncStorage.getItem('userSelectedDirectory');
+    //       if (dir) {
+    //         const parsedDir = JSON.parse(dir);
+    //         console.log("path saved", parsedDir.uri)
+    //         const persistedUris = await ScopedStorage.getPersistedUriPermissions();
+    //         const hasPermission = persistedUris.some(
+    //           (persistedUri) => decodeURIComponent(persistedUri) === decodeURIComponent(parsedDir.uri)
+    //         );
+    //         if (hasPermission) {
+    //           return parsedDir.uri;
+    //         } else {
+    //           console.log('Persisted URI permissions do not include the directory.');
+    //         }
+    //       } else {
+    //         console.log('No directory URI found in storage.');
+    //       }
+    //     } catch (error) {
+    //       console.error('Error retrieving persisted directory URI:', error);
+    //     }
+    //     return null;
+    //   };
+      
+    //   const readFileInDirectory = async () => {
+    //     try {
+    //       const dirUri = await getPersistedDirectoryUri();
+    //       if (dirUri) {
+    //         const fileUri = `content://com.android.externalstorage.documents/document/primary%3ADownload%2FTelegram%2Fhelloworld%20(3).txt`;
+    //         const fileData = await ScopedStorage.readFile(fileUri, 'utf8');
+    //         console.log('File data:', fileData);
+    //       } else {
+    //         console.log('Unable to access the directory. Requesting permission...');
+    //         await requestDirectoryAccess();
+    //       }
+    //     } catch (error) {
+    //       console.error('Error reading file:', error);
+    //     }
+    //   };
+      
 
     return (
         <View style={styles.dashView}>
@@ -1034,22 +1173,89 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
                     </>
                 ) : (
                     <View style={{ height: windowHeight * 0.85 }}>
-                        <View>
+                        {/* <ScrollView> 
                             <Text>App Data:</Text>
                             <Text>{data ? JSON.stringify(data) : 'No data loaded'}</Text>
 
                             <Button
                                 title=""
-                            // onPress={() => saveDataToFile(exampleData)}
+                                // onPress={handleSaveFile}
+                                onPress={async () => {
+                                    try {
+                                        let dir = await ScopedStorage.openDocumentTree(true);
+                                        let text = 'Hello world';
+                                        if (dir) {
+                                            await ScopedStorage.writeFile(
+                                                dir.uri,
+                                                'helloworld.txt',
+                                                'text/plain',
+                                                text,
+                                            );
+                                        }
+                                        console.log("saved directory path00", dir.uri)
+                                    } catch (e) {
+                                        console.log(e);
+                                    }
+                                }}
                             >Save Data</Button>
                             <Button
                                 title="Load Data"
-                            // onPress={loadDataFromFile}
+                                // onPress={loadDataFromFile}
+                                onPress={async () => {
+                                    try {
+                                        let file = await ScopedStorage.openDocument(true, 'utf8');
+                                        console.log(file);
+                                    } catch (e) {
+                                        console.log(e);
+                                    }
+                                }}
                             >Load Data</Button>
-                            <Button title="Open File Picker" onPress={openFilePicker} >Open File Picker</Button>
+                            <Button title="Open File Picker"
+                                onPress={async () => {
+                                    try {
+                                        let file = await ScopedStorage.createDocument(
+                                            'helloworld.txt',
+                                            'text/plain',
+                                            'hello world new one now updated',
+                                        );
+                                        console.log('File saved!', file);
+                                    } catch (e) {
+                                        console.log(e);
+                                    }
+                                }}
+                            //  onPress={handleReadFile} 
+                            >Open File Picker</Button>
+
+                            <Button
+                                title="Read Data"
+                                // onPress={loadDataFromFile}
+                                // onPress={async () => {
+                                //     try {
+                                //         // Specify the file path to Downloads folder and the filename
+                                //         const filePath = '/storage/emulated/0/Download/appdata.txt'; // Path to Downloads and file name
+
+                                //         // Read the file directly
+                                //         const fileData = await ScopedStorage.readFile('content://com.android.externalstorage.documents/document/primary%3ADownload%2FTelegram%2Fhelloworld%20(3).txt', 'utf8');
+                                //         setData(fileData.data);
+                                //         console.log(fileData); // Log or process the file data here
+                                //     } catch (e) {
+                                //         console.log('Error reading file:', e);
+                                //     }
+                                // }}
+                                onPress={readFileInDirectory}
+                                // onPress={async () => {
+                                //     try {
+                                //         let file = await ScopedStorage.c(true, 'utf8');
+                                //         // let file = await ScopedStorage.openDocument(true);
+                                //         console.log(file);
+                                //     } catch (e) {
+                                //         console.log(e);
+                                //     }
+                                // }}
+                            >Read Data</Button>
 
                             <Text onPress={retrieveJsonData} style={[styles.text, { marginTop: 0, marginBottom: 10, marginLeft: 20 }]}>Agent Name: <Text style={[styles.text, { fontSize: 14, fontFamily: 'Montserrat-Bold' }]}>{AgentName ? AgentName : '-'} </Text></Text>
-                        </View>
+                        </ScrollView> */}
                         <View style={[styles.dataInfoView, { width: windowWidth * 0.90, alignSelf: 'center', flexDirection: 'row', height: 'auto', overflow: 'hidden' }]}>
                             <View>
                                 {/* <Text style={styles.text}>Client Name</Text> */}
