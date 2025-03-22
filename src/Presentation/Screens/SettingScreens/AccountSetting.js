@@ -1,7 +1,6 @@
-import { View, Text, StyleSheet, Image, StatusBar, Pressable, BackHandler, ScrollView, Linking } from 'react-native'
+import { View, Text, StyleSheet, Image } from 'react-native'
 import React, { useEffect, useState } from 'react'
-import { COLORS, windowHeight, windowWidth } from '../../../Common/Constants'
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { COLORS, windowHeight, windowWidth } from '../../../Common/Constants' 
 import MaterialCommunityIcons2 from 'react-native-vector-icons/FontAwesome5';
 import MaterialCommunityIcons3 from 'react-native-vector-icons/MaterialIcons';
 import MaterialCommunityIcons4 from 'react-native-vector-icons/FontAwesome6';
@@ -57,15 +56,12 @@ export default function AccountSetting({ navigation }) {
                 <View style={{ display: 'flex', flexDirection: 'row', marginVertical: 15 }}>
                     <MaterialCommunityIcons2 name='user' style={{ alignSelf: 'center' }} color={COLORS.gray} size={20} />
                     <Text style={styles.keyName}>   Agent Name:  </Text>
-                    <Text style={styles.keyValue}>{agentName ? agentName : '-'}</Text>
-                    {/* <MaterialCommunityIcons name='pencil' style={{ marginStart: 'auto' }} color={COLORS.gray} size={25} /> */}
+                    <Text style={styles.keyValue}>{agentName ? agentName : '-'}</Text> 
                 </View>
                 <View style={{ display: 'flex', flexDirection: 'row', marginVertical: 15 }}>
                     <MaterialCommunityIcons3 name='call' style={{ alignSelf: 'center' }} color={COLORS.gray} size={20} />
                     <Text style={styles.keyName}>   Phone No: </Text>
-                    <Text style={styles.keyValue}>{mobileNumber}</Text>
-                    {/* <MaterialCommunityIcons name='pencil' style={{ marginStart: 'auto' }} color={COLORS.gray} size={25} /> */}
-
+                    <Text style={styles.keyValue}>{mobileNumber}</Text> 
                 </View>
 
                 <View style={{ display: 'flex', flexDirection: 'row', marginVertical: 15 }}>
@@ -78,8 +74,7 @@ export default function AccountSetting({ navigation }) {
                     <MaterialCommunityIcons2 name='calendar-check' style={{ alignSelf: 'center' }} color={COLORS.gray} size={20} />
                     <Text style={styles.keyName}>   Licence Valid Upto:  </Text>
                     <Text style={[styles.keyValue, { textDecorationLine: 'none' }]}>{licenceValidUpto ? licenceValidUpto : '-'}</Text>
-                </View>
-
+                </View> 
                 <View style={{ width: windowWidth * 0.85, marginTop: 10, alignSelf: 'center', borderBottomWidth: 1, borderBottomColor: COLORS.lightGrey }} />
             </View>
 
@@ -95,23 +90,18 @@ export default function AccountSetting({ navigation }) {
                 <Text
                     allowFontScaling={false}
                     style={{
-                        // position: 'absolute',
-                        // bottom: windowHeight * 0.08,
                         fontFamily: 'Montserrat-Bold',
                         color: COLORS.gray,
-                        // alignSelf: 'center',
                         fontSize: 8,
                     }}
                 >
                     Logo Credit:{" "}
-
                     <Text
-                    style={{ color: COLORS.blue, textDecorationLine: 'underline', fontSize: 8 }} 
+                        style={{ color: COLORS.blue, textDecorationLine: 'underline', fontSize: 8 }}
                     >
-                    https://www.flaticon.com/free-icons/rupee
+                        https://www.flaticon.com/free-icons/rupee
                     </Text>
                 </Text>
-                {/* <Image style={{ width: 30, height: 30, resizeMode: 'contain' }} source={require('../../Assets/Images/rupee.png')} /> */}
             </View>
         </View>
     )

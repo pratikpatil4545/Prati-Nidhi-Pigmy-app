@@ -18,7 +18,6 @@ export default function Login({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [verificationText, setVerificationText] = useState('');
   const [showSetPassword, setShowSetPassword] = useState(false);
-  const [sentOtp, setSentOtp] = useState(null);
   const [enableMblNo, setEnableMblNo] = useState(true);
   const [isVerifying, setIsVerifying] = useState(false);
   const [customeLoaderModal, setCustomLoaderModal] = useState(false);
@@ -113,19 +112,6 @@ export default function Login({ navigation }) {
           return;
         }
 
-        // if (simCards.length > 1) {
-        //   Alert.alert(
-        //     'Select SIM',
-        //     'Please choose a SIM card to retrieve the phone number.',
-        //     simCards.map((sim, index) => ({
-        //       text: `SIM ${index + 1}: ${sim.phoneNumber || 'No number available'}`,
-        //       onPress: () => handlePhoneNumberSelection(sim),
-        //     })),
-        //     { cancelable: true }
-        //   );
-        // } else {
-        //   handlePhoneNumberSelection(simCards[0]);
-        // }
         if (simCards.length > 1) {
           Alert.alert(
             'Select SIM',
@@ -183,123 +169,65 @@ export default function Login({ navigation }) {
     checkAuthentication();
   }, []);
 
-
-  // useEffect(() => {
-  //   const checkAuthentication = async () => {
-  //     try {
-  //       const storedMobileNumber = await AsyncStorage.getItem('mobileNumber');
-  //       const storedPassword = await AsyncStorage.getItem('password');
-
-  //       if (storedMobileNumber && storedPassword) {
-  //         setNewUser(false);
-  //         setNumber(storedMobileNumber);
-  //       } else {
-  //         fetchPhoneNumber();
-  //         setNewUser(true);
-  //       }
-  //     } catch (error) {
-  //       console.log('Error checking authentication:', error.toString());
-  //       Alert.alert('Error checking authentication:');
-  //     }
-  //   };
-
-  //   const requestAllPermissions = async () => {
-  //     try {
-  //       // const storagePermissionGranted = await requestStoragePermission();
-  //       // if (storagePermissionGranted) {
-  //       await fetchPhoneNumber();
-  //       // } else {
-  //       //   Alert.alert('Permission Required', 'The app needs permissions to function properly.');
-  //       // }
-  //     } catch (error) {
-  //       console.log('Error requesting permissions:', error.toString());
-  //       Alert.alert('Error requesting permissions:');
-  //     }
-  //   };
-
-  //   const fetchPhoneNumber = async () => {
-  //     try {
-  //       if (Platform.OS === 'android' && Platform.Version < 29) {
-  //         const granted = await PermissionsAndroid.request(
-  //           PermissionsAndroid.PERMISSIONS.READ_PHONE_STATE,
-  //           {
-  //             title: 'Phone Permission',
-  //             message: 'This app needs access to your phone number for verification purposes.',
-  //             buttonNeutral: 'Ask Me Later',
-  //             buttonNegative: 'Cancel',
-  //             buttonPositive: 'OK',
-  //           }
-  //         );
-
-  //         if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-  //           Alert.alert('Permission Denied', 'Cannot access phone number without permission.');
-  //           return;
-  //         }
-  //       }
-
-  //       const simCards = await SimCardsManagerModule.getSimCards({
-  //         title: 'App Permission',
-  //         message: 'Custom message',
-  //         buttonNeutral: 'Not now',
-  //         buttonNegative: 'Not OK',
-  //         buttonPositive: 'OK',
-  //       });
-
-  //       if (!simCards || simCards.length === 0) {
-  //         Alert.alert('No SIM card information available');
-  //         return;
-  //       }
-
-  //       if (simCards.length > 1) {
-  //         Alert.alert(
-  //           'Select SIM',
-  //           'Please choose a SIM card to retrieve the phone number.',
-  //           simCards.map((sim, index) => ({
-  //             text: `SIM ${index + 1}: ${sim.phoneNumber || 'No number available'}`,
-  //             onPress: () => handlePhoneNumberSelection(sim),
-  //           })),
-  //           { cancelable: true }
-  //         );
-  //       } else {
-  //         handlePhoneNumberSelection(simCards[0]);
-  //       }
-  //     } catch (error) {
-  //       console.log('Error fetching phone number:', error.toString());
-  //       Alert.alert('Error fetching phone number:');
-  //     }
-  //   };
-
-  //   const handlePhoneNumberSelection = (sim) => {
-  //     let phoneNumber = sim.phoneNumber;
-  //     if (phoneNumber) {
-  //       phoneNumber = phoneNumber.replace(/\D/g, '');
-  //       if (phoneNumber.length > 10) phoneNumber = phoneNumber.slice(-10);
-  //       if (phoneNumber.length === 10) {
-  //         setNumber(phoneNumber);
-  //       } else {
-  //         Alert.alert('Invalid Phone Number', 'The phone number should be exactly 10 digits.');
-  //       }
-  //     } else {
-  //       Alert.alert('Phone Number Unavailable');
-  //     }
-  //   };
-
-  //   checkAuthentication();
-  //   requestAllPermissions();
-  // }, []);
+  const requestSmsPermission = async () => {
+    try {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.READ_SMS,
+        {
+          title: 'SMS Permission',
+          message: 'This app needs access to your SMS messages to continue.',
+          buttonNeutral: 'Ask Me Later',
+          buttonNegative: 'Cancel',
+          buttonPositive: 'OK',
+        }
+      );
+  
+      if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+        return true;
+      } else if (granted === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) {
+        Alert.alert(
+          'Permission Denied',
+          'You have permanently denied SMS permission. Please enable it in Settings.',
+          [
+            {
+              text: 'Cancel',
+              style: 'cancel',
+            },
+            {
+              text: 'Open Settings',
+              onPress: () => Linking.openSettings(),
+            },
+          ],
+          { cancelable: false }
+        );
+        return false;
+      } else {
+        return false;
+      }
+    } catch (err) {
+      console.warn(err);
+      return false;
+    }
+  };
 
   const handleNext = async () => {
-    // navigation.navigate('BottomTabs');
     setCustomLoaderModal(true);
     setLoading(true);
     setVerificationText('Verifying...');
-
+    // await requestSmsPermission();
     if (newUser) {
       setLoading(false);
-      getLatestSMS();
-      // setVerificationText('Verified');
-      // setShowSetPassword(true);
+      const grantedSms = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.READ_SMS
+      );
 
+      if (grantedSms !== PermissionsAndroid.RESULTS.GRANTED) {
+        await requestSmsPermission();
+        setLoading(false);
+        setCustomLoaderModal(false);
+        return;
+      }
+      getLatestSMS();
     } else {
 
       const filter = {
@@ -328,7 +256,6 @@ export default function Login({ navigation }) {
 
               if (password === storedPassword && storedNumber === number) {
                 setVerificationText('Verified');
-                // ToastAndroid.show('Authentication Successful!', ToastAndroid.SHORT);
                 navigation.navigate('Dashboard');
               } else {
                 setVerificationText('Invalid credentials');
@@ -337,7 +264,6 @@ export default function Login({ navigation }) {
             } catch (error) {
               Alert.alert('Error accessing stored password:', error);
               setVerificationText('Error logging in');
-              // ToastAndroid.show('Error logging in', ToastAndroid.SHORT);
             } finally {
               setLoading(false);
             }
@@ -360,49 +286,15 @@ export default function Login({ navigation }) {
       try {
         await AsyncStorage.setItem('mobileNumber', number);
         await AsyncStorage.setItem('password', password);
-        // ToastAndroid.show('Password has been set successfully!', ToastAndroid.SHORT);
         setShowSetPassword(false);
         setNewUser(false);
       } catch (error) {
         Alert.alert('Error storing user data:');
         console.log('Error storing user data:', error);
-        // ToastAndroid.show('Error setting password', ToastAndroid.SHORT);
       }
     } else {
       setPasswordMatched(false);
       Alert.alert('Warning', 'Passwords did not match!');
-    }
-  };
-
-  // const sendOtp = () => {
-  //   setIsVerifying(true); // Set to true to start verification process
-  //   // handleSmsPress();
-  //   const phoneNumber = `+917887760491`;
-  //   const message = `Hello, This is just for verification purpose, You can use the Pigmy App now! 🎉 😊`;
-
-  //   SmsAndroid.autoSend(
-  //     phoneNumber,
-  //     message,
-  //     (fail) => {
-  //       console.log('Failed with this error: ' + fail);
-  //     },
-  //     (success) => {
-  //       console.log('SMS sent successfully');
-  //     },
-  //   );
-  // };
-
-  const handleSmsPress = async () => {
-    const getNumber = number;
-    const phoneNumber = `+91${getNumber}`;
-    const message = `Hello, This is just for verification purpose, You can use the Pigmy App now! 🎉 😊`;
-
-    const smsUrl = `sms:${phoneNumber}?body=${encodeURIComponent(message)}`;
-    try {
-      await Linking.openURL(smsUrl);
-    } catch (error) {
-      Alert.alert('Error', 'Unable to open SMS app.');
-      setIsVerifying(false);
     }
   };
 
@@ -411,17 +303,13 @@ export default function Login({ navigation }) {
       box: 'inbox',
       // main office number
       address: `+919373140457`,
-      // address : `+917887760491`,
-      // address: `+918080109858`,
-      // address: `JM-ICICITcv`,
-      // address: `+91${number}`,
+      // address : `+917887760491`, 
       bodyRegex: '(.*)PratiNidhi Online System(.*)',
-      // bodyRegex: '(.*)You can use the Pigmy App now!(.*)',
       maxCount: 2,
     };
 
     SmsAndroid.list(JSON.stringify(filter), (fail) => {
-      console.log('failed to get sms',fail);
+      console.log('failed to get sms', fail);
       setIsVerifying(false);
     },
       (smsList, count) => {
@@ -429,45 +317,6 @@ export default function Login({ navigation }) {
         let fetchedNumber = smsArray[0]?.address;
         console.log("getting msgs", count)
         if (fetchedNumber) {
-
-          // if (fetchedNumber === `+91${number}`)
-
-          // Alert.alert(
-          //   'Confirm Number',
-          //   `Is this your number: ${fetchedNumber}?`,
-          //   [
-          //     {
-          //       text: 'No',
-          //       onPress: () => {
-          //         console.log('Number not confirmed');
-          //         setVerificationText('Number not confirmed');
-          //         setIsVerifying(false);
-          //       },
-          //       style: 'cancel',
-          //     },
-          //     {
-          //       text: 'Yes',
-          //       onPress: () => {
-          //         if (fetchedNumber === `+91${number}`) {
-          //           console.log('Verified');
-          //           // setVerificationText('Verified');
-          //           // setEnableMblNo(true);
-          //           // setShowSetPassword(true);
-          //           setVerificationText('Verified');
-          //           setShowSetPassword(true);
-          //         } else {
-          //           console.log('Not verified');
-          //           setVerificationText('Not Verified');
-          //         }
-          //         setIsVerifying(false);
-          //       },
-          //     },
-          //   ]
-          // );
-
-
-          // setVerificationText('Verified');
-          // setShowSetPassword(true);
 
           let smsBody = smsArray[0]?.body;
 
@@ -493,9 +342,9 @@ export default function Login({ navigation }) {
           else {
             console.log("number not matched", matchedNumber)
             setShowSetPassword(false);
-              setCustomLoaderModal(false);
-              // console.log("number is not matched matched", number, matchedNumber)
-              Alert.alert('Warning', 'The entered number and verified number does not matched. Please check number')
+            setCustomLoaderModal(false);
+            // console.log("number is not matched matched", number, matchedNumber)
+            Alert.alert('Warning', 'The entered number and verified number does not matched. Please check number')
           }
 
         } else {
@@ -507,25 +356,6 @@ export default function Login({ navigation }) {
         }
       }
     );
-    // (smsList, count) => {
-    //   let smsArray = JSON.parse(count);
-    //   let inputedNumber = `+91${number}`;
-
-    //   if (inputedNumber === smsArray[0]?.address) {
-    //     console.log('Verified');
-    //     setVerificationText('Verified');
-    //     setVerificationText('Verified');
-    //     setEnableMblNo(true);
-    //     setShowSetPassword(true);
-    //   } else {
-    //     console.log('Not verified');
-    //     setVerificationText('Not Verified');
-    //   }
-    //   console.log('Count: ', smsArray[0]?.address);
-    //   console.log('List: ', smsList);
-    //   setIsVerifying(false);
-    // }
-    // );
   };
 
   return (
@@ -575,7 +405,6 @@ export default function Login({ navigation }) {
                 }
                 autoCapitalize="none"
                 error={verificationText === 'User not found'}
-
               />
             }
 
@@ -605,7 +434,6 @@ export default function Login({ navigation }) {
         <View style={styles.container}>
           <MaterialCommunityIcons4 onPress={() => { setNewUser(true), setShowSetPassword(false) }} style={{ position: 'absolute', top: 45, left: 30 }} name='angle-left' color={COLORS.primary} size={40} />
           <Text style={styles.loginText}>Set Password</Text>
-
           <TextInput
             label="Enter Password"
             mode="outlined"

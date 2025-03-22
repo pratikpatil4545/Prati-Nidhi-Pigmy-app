@@ -18,7 +18,7 @@ class MainApplication : Application(), ReactApplication {
         override fun getPackages(): List<ReactPackage> =
             PackageList(this).packages.apply {
               // Add custom packages manually here:
-              add(FtpPackage()) // Add your custom FTP package
+              // add(FtpPackage()) // Add your custom FTP package
             }
 
         override fun getJSMainModuleName(): String = "index"

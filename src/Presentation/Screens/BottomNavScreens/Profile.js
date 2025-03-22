@@ -3,15 +3,9 @@ import React, { useEffect, useState } from 'react'
 import { COLORS, windowHeight, windowWidth } from '../../../Common/Constants'
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import MaterialCommunityIcons4 from 'react-native-vector-icons/FontAwesome6';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useIsFocused } from '@react-navigation/native';
 
+export default function Profile({ navigation }) {
 
-export default function Profile({ navigation, route }) {
-
-  const isFocused = useIsFocused();
-  const [transactionTable, setTransactionTable] = useState([]);
-  // console.log("routes", route.params, transactionTable.length)
   useEffect(() => {
     const handleBackPress = () => {
       navigation.navigate('Dashboard');
@@ -21,39 +15,6 @@ export default function Profile({ navigation, route }) {
     return () => backHandler.remove();
   }, []);
 
-  const handleLogout = () => {
-    navigation.navigate('LogIn');
-    AsyncStorage.clear();
-  }
-
-  useEffect(() => {
-    const fetchTransactionTable = async () => {
-      try {
-        const transactionTableData = await AsyncStorage.getItem('transactionTable');
-        if (transactionTableData) {
-          const parsedData = JSON.parse(transactionTableData);  // Parse the stored data
-          setTransactionTable(parsedData);
-        }
-        // console.log("transaction data", transactionTableData.length)
-      } catch (error) {
-        Alert.alert('Error fetching transaction table from AsyncStorage:', error.message);
-      }
-    };
-
-    fetchTransactionTable();
-  }, [isFocused]);
-
-  const handleCollectionHistory = () => {
-    // let validDay = route.params?.collectionAllowed;
-    // console.log("first", validDay) 
-    if (route.params?.collectionAllowed === true) {
-      Alert.alert('Closing collection', `You have collected ${transactionTable.length} reciepts out of ${route.params.count}. and total collected amount is Rs ${route.params.amount}.00/-`)
-    }
-    else if (route.params?.collectionAllowed == false) {
-      Alert.alert('Cannot Close collection!', `Collection is not allowed, allowed day's are expired`)
-    }
-  }
-
   return (
     <View style={styles.mainView}>
       <StatusBar backgroundColor={COLORS.primaryAccent} barStyle="light-content" />
@@ -61,7 +22,6 @@ export default function Profile({ navigation, route }) {
         <View style={styles.curveView} >
           <MaterialCommunityIcons4 onPress={() => { navigation.navigate("Dashboard") }} name='angle-left' style={{ left: windowWidth * 0.05, top: windowHeight * 0.02, position: 'absolute' }} color={COLORS.white} size={40} />
         </View>
-        {/* <Text style={{ position: 'absolute', zIndex: 5, top: windowHeight * 0.04, color: COLORS.white, fontFamily: 'Montserrat-Bold', fontSize: 22 }}>Profile</Text> */}
         <View style={styles.profileIcon}>
           <Image style={{ width: '100%', height: '100%', resizeMode: 'contain' }} source={require('../../Assets/Images/rupee.png')} />
         </View>
@@ -74,7 +34,6 @@ export default function Profile({ navigation, route }) {
           </View>
 
           <View style={styles.profileInfo}>
-
             <View style={{ display: 'flex', paddingLeft: 10, paddingRight: 10, backgroundColor: COLORS.white, borderRadius: 10, height: 70, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: '10%', marginBottom: 10 }}>
               <Pressable style={{ width: '90%', height: '100%', display: 'flex', justifyContent: 'center' }} onPress={() => { navigation.navigate('CollectionHistory') }}>
                 <View style={{ display: 'flex', flexDirection: 'row' }}>
@@ -104,32 +63,10 @@ export default function Profile({ navigation, route }) {
               </Pressable>
               <MaterialCommunityIcons onPress={() => { navigation.navigate('BankDetails') }} name={'chevron-right'} color={COLORS.gray} size={30} />
             </View>
-
-            {/* <View style={{ display: 'flex', paddingLeft: 10, paddingRight: 10, backgroundColor: COLORS.white, borderRadius: 10, height: 70, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: '0%', marginBottom: 10, }}>
-              <Pressable style={{ width: '90%', height: '100%', display: 'flex', justifyContent: 'center' }} onPress={() => { navigation.navigate('GeneralSetting') }}>
-                <View style={{ display: 'flex', flexDirection: 'row' }}>
-                  <MaterialCommunityIcons name='cog-outline' color={COLORS.gray} size={25} />
-                  <Text style={{ fontFamily: 'Montserrat-Bold', color: COLORS.gray, alignSelf: 'center', fontSize: 16, }}>   General Setting   </Text>
-                </View>
-              </Pressable>
-              <MaterialCommunityIcons name={'chevron-right'} color={COLORS.gray} size={30} />
-            </View> */}
-
-            {/* <View style={{ display: 'flex', paddingLeft: 10, paddingRight: 10, backgroundColor: COLORS.white, borderRadius: 10, height: 70, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: '0%', marginBottom: 10, }}>
-              <Pressable style={{ width: '90%', height: '100%', display: 'flex', justifyContent: 'center' }} onPress={handleLogout}>
-                <View style={{ display: 'flex', flexDirection: 'row' }}>
-                  <MaterialCommunityIcons name='logout' color={COLORS.gray} size={25} />
-                  <Text style={{ fontFamily: 'Montserrat-Bold', color: COLORS.gray, alignSelf: 'center', fontSize: 16, }}>   Sign out   </Text>
-                </View>
-              </Pressable>
-            </View> */}
-
-
           </View>
         </View>
       </ScrollView>
-      <Text  allowFontScaling={false} style={{ position: 'absolute', bottom: windowHeight * 0.08, fontFamily: 'Montserrat-Bold', color: COLORS.gray, alignSelf: 'center', fontSize: 16, }}>Version - 1.7 (24-02-2025)</Text>
-
+      <Text allowFontScaling={false} style={{ position: 'absolute', bottom: windowHeight * 0.08, fontFamily: 'Montserrat-Bold', color: COLORS.gray, alignSelf: 'center', fontSize: 16, }}>Version - 1.8 (22-03-2025)</Text>
     </View>
   )
 }

@@ -6,7 +6,6 @@ import { useIsFocused } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import HistoryCards from '../../Components/HistoryCards';
 import { Searchbar } from 'react-native-paper';
-import MaterialCommunityIcons2 from 'react-native-vector-icons/FontAwesome5';
 
 export default function CollectionHistory({ navigation }) {
     const [transactionTable, setTransactionTable] = useState([]);
@@ -37,7 +36,7 @@ export default function CollectionHistory({ navigation }) {
             const transactionTableData = await AsyncStorage.getItem('transactionHistoryTable');
             if (transactionTableData) {
                 const parsedData = JSON.parse(transactionTableData);
- 
+
                 const sevenDaysAgo = new Date();
                 sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
@@ -45,7 +44,7 @@ export default function CollectionHistory({ navigation }) {
                     const transactionDate = new Date(transaction.CollDateTime);
                     return transactionDate >= sevenDaysAgo;
                 });
- 
+
                 await AsyncStorage.setItem('transactionHistoryTable', JSON.stringify(filteredData));
 
                 setTransactionTable(filteredData);
@@ -60,7 +59,6 @@ export default function CollectionHistory({ navigation }) {
             Alert.alert('Error fetching transaction table from AsyncStorage:', error.message);
         }
     };
-
 
     return (
         <View style={styles.mainView}>

@@ -13,13 +13,10 @@ import { Buffer } from 'buffer';
 import RNFS from 'react-native-fs';
 
 export default function UserProfile({ route, navigation }) {
-
-  const { index } = route.params;
-  // console.log("routes",route.params)
+ 
   const [item, setItem] = useState(route.params.item);
   const [mobileInputVisible, setmobileInputVisible] = useState(false);
-  const [mobileNumber, setmobileNumber] = useState(null);
-  // console.log("mobile number main", mobileNumber)
+  const [mobileNumber, setmobileNumber] = useState(null); 
   const [modalVisible, setModalVisible] = useState(false);
   const [modalVisible2, setModalVisible2] = useState(false);
   const [customeLoaderModal, setCustomLoaderModal] = useState(false);
@@ -62,17 +59,14 @@ export default function UserProfile({ route, navigation }) {
   const showAlert = () => {
     console.log('Internet Connection You are offline. Some features may not be available.');
   };
-
-  // console.log("check", route.params.collectionAllowed)
+ 
   useEffect(() => {
     let existingNumber = (route.params.mobileNumber).toString();
-    // console.log("existingNumber",typeof(existingNumber), typeof(route.params.item.Mobile1), route.params.mobileNumber, route.params.Mobile1)
-    if ((route.params.item.Mobile1 === '0' || !route.params.item.Mobile1) && !existingNumber) {
+     if ((route.params.item.Mobile1 === '0' || !route.params.item.Mobile1) && !existingNumber) {
       setmobileInputVisible(true);
     }
     else {
-      // console.log("new console for mobile number",existingNumber, route.params.mobileNumber, route.params.Mobile1)
-      setmobileInputVisible(false);
+       setmobileInputVisible(false);
       setmobileNumber(existingNumber ? existingNumber : route.params.item.Mobile1)
     }
   }, [route.params.item])
@@ -92,36 +86,20 @@ export default function UserProfile({ route, navigation }) {
     }
   }, [item, modalVisible]);
 
-  useEffect(() => {
-    // setLoading(true);
+  useEffect(() => { 
     const filteredTransactions = transactionTableData?.filter((transaction) =>
       transaction.AccountNo === item.AccountNo && transaction.GLCode === item.GLCode
     );
-    setupdatedBalance(route.params?.openingBalance ? route.params.openingBalance : 0);
-    // console.log("filtered data", filteredTransactions,"00000000000", route.params?.item);
-    // const lastTransactionToday = filteredTransactions?.some((transaction) => {
-    //   let item = route.params?.item;
-    //   const [day, month, year] = transaction.CollDateTime?.split(' ')[0]?.split('-');
-    //   const fullYear = year.length === 2 ? `20${year}` : year;
-    //   const collectionDate = new Date(`${fullYear}-${month}-${day}`);
-    //   console.log("today and collectionDate",collectionDate,today)
-    //   return collectionDate.toLocaleDateString() === today
-    //     && transaction.accNo === item.AccountNo
-    //     && transaction.glCode === item.GLCode;
-    // });
-
+    setupdatedBalance(route.params?.openingBalance ? route.params.openingBalance : 0); 
     const lastTransactionToday = filteredTransactions?.some((transaction) => {
       let item = route.params?.item;
       const [datePart] = transaction.CollDateTime?.split(' '); // Extract only the date part
       const [year, month, day] = datePart.split('-');
       const fullYear = year.length === 2 ? `20${year}` : year;
-
-      // Construct the collection date as a string for direct comparison
+ 
       const collectionDate = `${fullYear}-${month}-${day}`;
       const todayDate = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
-
-      // console.log("collectionDate and today:", transaction, transaction.AccountNo, item.AccountNo, transaction.GLCode, item.GLCode);
-
+ 
       return collectionDate === todayDate
         && transaction.AccountNo === item.AccountNo
         && transaction.GLCode === item.GLCode;
@@ -143,22 +121,14 @@ export default function UserProfile({ route, navigation }) {
   useEffect(() => {
     const checkLicense = async () => {
       try {
-        const licenseValidUpto = await AsyncStorage.getItem('LicenseValidUpto');
-        // if (!licenseValidUpto) {
-        //   Alert.alert('License expired!', 'License validity date not found. Please pay subscription.');
-        //   setLicenseExpired(true);
-        //   setLoading(false);
-        //   return;
-        // }
-
+        const licenseValidUpto = await AsyncStorage.getItem('LicenseValidUpto');  
         const expiryDate = new Date(licenseValidUpto);
         const currentDate = new Date();
         const timeDiff = expiryDate.getTime() - currentDate.getTime();
         const daysLeft = Math.ceil(timeDiff / (1000 * 3600 * 24));
 
         console.log("License valid up to:", licenseValidUpto);
-        if (daysLeft < 0) {
-          // Alert.alert('License expired!', 'Your license has expired. Please pay subscription.');
+        if (daysLeft < 0) { 
           setLicenseExpired(true);
         } else {
           setLicenseExpired(false);
@@ -196,12 +166,9 @@ export default function UserProfile({ route, navigation }) {
     const ColldateTime = formatDateTime(new Date());
     const ruidString = `${clId},${Brid},${Agid},${glcod},${acno}`;
     const ruid = Buffer.from(ruidString).toString('base64');
-    const encodedDateTime = collectionDate.replace(' ', '%20');
-    // console.log("time new", encodedDateTime)
-
+    const encodedDateTime = collectionDate.replace(' ', '%20'); 
     const encodedURL = `https://app.automatesystemsdataservice.in/Customer/api/Receipt?ruid=${ruid}&ColldateTime=${encodedDateTime}`;
-
-    // console.log(encodedURL);
+ 
     const getNumber = mobileInputVisible ? mobileNumber : (mobileNumber ? mobileNumber : parseInt(route.params.item.Mobile1));
     const phoneNumber = `+91${getNumber}`;
     const message = `Hi, Please click on the link Below for the Receipt of your Transaction. ${encodedURL} `;
@@ -232,12 +199,9 @@ export default function UserProfile({ route, navigation }) {
     const ColldateTime = formatDateTime(new Date());
     const ruidString = `${clId},${Brid},${Agid},${glcod},${acno}`;
     const ruid = Buffer.from(ruidString).toString('base64');
-    const encodedDateTime = collectionDate.replace(' ', '%20');
-    // console.log("time new", encodedDateTime)
-
+    const encodedDateTime = collectionDate.replace(' ', '%20'); 
     const encodedURL = `https://app.automatesystemsdataservice.in/Customer/api/Receipt?ruid=${ruid}&ColldateTime=${encodedDateTime}`;
-
-    // console.log(encodedURL);
+ 
     const getNumber = mobileInputVisible ? mobileNumber : (mobileNumber ? mobileNumber : parseInt(route.params.item.Mobile1));
     const phoneNumber = `+91${getNumber}`;
     const message = `Hi, Please click on the link Below for the Receipt of your Transaction. ${encodedURL} `;
@@ -253,8 +217,7 @@ export default function UserProfile({ route, navigation }) {
 
   const checkAsyncStorageForData = async () => {
     try {
-      const savedData = await AsyncStorage.getItem('transactionTable');
-
+      const savedData = await AsyncStorage.getItem('transactionTable'); 
       const savedMasterData = await AsyncStorage.getItem('dataObject');
       const dataObject = JSON.parse(savedMasterData);
 
@@ -264,18 +227,10 @@ export default function UserProfile({ route, navigation }) {
       setBrAgCode(dataObject.MstrData?.BrAgCode);
       setFileCreateDate(dataObject.MstrData?.FileCreateDate);
       setInputFileType(dataObject.MstrData?.InputFileType);
-
-
+ 
       if (savedData) {
-        const dataObject = JSON.parse(savedData);
-        // let data = JSON.parse(storedData); // Ensure JSON parsing
-        // console.log("data for refresh", dataObject)
-        setTransactionTableData(dataObject);
-        // setItem(data[index]);
-        // data.forEach(transaction => {
-        //   // console.log("9th index value:", transaction[9]);
-        //   setCurrentBalance(transaction.M_Field5);
-        // });
+        const dataObject = JSON.parse(savedData); 
+        setTransactionTableData(dataObject); 
       }
     } catch (e) {
       Alert.alert('Failed to fetch data from Local Storage', e.message);
@@ -427,40 +382,31 @@ export default function UserProfile({ route, navigation }) {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: new URLSearchParams({ DataFromApp: newArrayString }).toString(),
           });
-          const responseText = await response.text();
-
+          const responseText = await response.text(); 
           const parser = new XMLParser();
-          const jsonResponse = parser.parse(responseText);
-
+          const jsonResponse = parser.parse(responseText); 
           const jsonString = jsonResponse.string;
           const responseObject = JSON.parse(jsonString);
           const rawResponseString = responseObject.ResponseString;
-
-          // console.log("Response for submit api xml parse:", responseObject);
-
+ 
           if (responseObject.ResonseCode != '0000') {
             Alert.alert(
               'Error:',
               `Response Code : ${responseObject.ResonseCode}, ${responseObject.ResponseString}`
             );
           }
-          else {
-
+          else { 
             const jsonStartIndex = rawResponseString.indexOf('{');
             const cleanedResponseString = rawResponseString.substring(jsonStartIndex);
-            const dataObject = JSON.parse(cleanedResponseString);
-            // console.log("Response for submit api json pare:", dataObject);
+            const dataObject = JSON.parse(cleanedResponseString); 
             const collectionData = dataObject.CollectionData;
             try {
 
               if (collectionData && collectionData.length > 0) {
-                const collDateTime = collectionData[0].CollDateTime;
-                // console.log("CollDateTime:", collDateTime);
+                const collDateTime = collectionData[0].CollDateTime; 
                 setCollectionDate(collDateTime);
                 const currentTransactions = JSON.parse(await AsyncStorage.getItem('transactionTable')) || [];
-                await AsyncStorage.setItem('transactionTable', JSON.stringify([...currentTransactions, transactionData]));
-                // await createFile(JSON.stringify([...currentTransactions, transactionData]));
-                // setupdatedBalance(newBalance);
+                await AsyncStorage.setItem('transactionTable', JSON.stringify([...currentTransactions, transactionData])); 
                 setCollectionMadeToday(true);
                 setModalVisible2(true);
                 setCustomLoaderModal(false);
@@ -480,8 +426,7 @@ export default function UserProfile({ route, navigation }) {
             }
           }
 
-        } catch (error) {
-          // Alert.alert("Warning", "Please check your Internet Connection and try again");
+        } catch (error) { 
           Alert.alert("Warning", "Internet connection has changed. Please check and try again.");
           setCustomLoaderModal(false);
         }
@@ -493,10 +438,7 @@ export default function UserProfile({ route, navigation }) {
         setModalVisible2(true);
         setCustomLoaderModal(false);
         const pendingTransactions = JSON.parse(await AsyncStorage.getItem('pendingTransactions')) || [];
-        await AsyncStorage.setItem('pendingTransactions', JSON.stringify([...pendingTransactions, transactionData]));
-        // await createFile(JSON.stringify([...pendingTransactions, transactionData]));
-
-        // Alert.alert('Offline', 'No internet connection. Transaction saved as pending.');
+        await AsyncStorage.setItem('pendingTransactions', JSON.stringify([...pendingTransactions, transactionData])); 
       }
     };
 
@@ -509,8 +451,7 @@ export default function UserProfile({ route, navigation }) {
     if (!transactionDetails) {
       setButtonLoading(false);
       return;
-    }
-    // console.log("mobile numeber checkingh", route.params.item.Mobile1, ' and ', mobileNumber)
+    } 
     const { openingBalance, transactionTable, closingBalance } = transactionDetails;
     const transactionData = {
       GLCode,
@@ -525,18 +466,14 @@ export default function UserProfile({ route, navigation }) {
       MobileNo: mobileInputVisible ? mobileNumber : (route.params.item.Mobile1 != '0') ? parseInt(route.params.item.Mobile1) : mobileNumber,
     };
 
-    const newArray = {
-      // FileCreateDate
+    const newArray = { 
       ClientID, BrCode, AgCode, BrAgCode, InputFileType, FileCreateDate, NoOfRecords: '1',
       CollectionData: [transactionData]
     };
-
-    // console.log("collection array when amount collected", newArray);
-
+ 
     if (newArray.CollectionData && newArray.CollectionData.length > 0) {
       const collDateTime = newArray.CollectionData[0].CollDateTime;
-      setCollectionDate(collDateTime);
-      // console.log("CollDateTime:", collDateTime);
+      setCollectionDate(collDateTime); 
     } else {
       console.log("CollDateTime not available");
     }
@@ -558,20 +495,11 @@ Total Account Balance: ${closingBalance ? `₹${new Intl.NumberFormat('en-IN').f
             setCustomLoaderModal(true);
             setNewBalance(closingBalance);
             setupdatedBalance(closingBalance);
-            setOpeningBalinPop(openingBalance);
-            // await AsyncStorage.setItem('transactionTable', JSON.stringify([...transactionTable, transactionData]));
+            setOpeningBalinPop(openingBalance); 
             const updatedTransactionData = {
               ...transactionData,
               pending: !isConnected // Add pending flag if offline
-            };
-
-            // const currentTransactions = JSON.parse(await AsyncStorage.getItem('transactionTable')) || [];
-            // await AsyncStorage.setItem('transactionTable', JSON.stringify([...currentTransactions, updatedTransactionData]));
-            // // setupdatedBalance(newBalance);
-            // setCollectionMadeToday(true);
-            // setModalVisible2(true);
-            // await submitData(transactionData, JSON.stringify(newArray));
-
+            }; 
             if (isConnected) {
               await submitData(updatedTransactionData, JSON.stringify(newArray), true);
             } else {
@@ -584,22 +512,7 @@ Total Account Balance: ${closingBalance ? `₹${new Intl.NumberFormat('en-IN').f
 
     setButtonLoading(false);
   };
-
-  // const filePath = RNFS.DownloadDirectoryPath + '/AppData.txt';
-
-  // const createFile = async (data) => {
-  //   // const data = { key: 'value', anotherKey: 123 }; // Example JSON data
-  //   try {
-  //     const jsonData = JSON.stringify(data, null, 2);
-  //     await RNFS.writeFile(filePath, jsonData, 'utf8');
-  //     Alert.alert('File Created', `File successfully created at: ${filePath}`);
-  //     console.log('File created at:', filePath);
-  //   } catch (error) {
-  //     console.error('Error creating file:', error);
-  //     Alert.alert('Error', 'Could not create the file.');
-  //   }
-  // };
-
+ 
   const handleSubmit2 = () => {
     setModalVisible(false);
     setModalVisible2(false);
@@ -608,8 +521,7 @@ Total Account Balance: ${closingBalance ? `₹${new Intl.NumberFormat('en-IN').f
     navigation.navigate('Dashboard', { refreshData: true });
   }
 
-  useEffect(() => {
-
+  useEffect(() => { 
     const handleBackPress = () => {
       navigation.navigate("Dashboard")
     };
@@ -617,19 +529,14 @@ Total Account Balance: ${closingBalance ? `₹${new Intl.NumberFormat('en-IN').f
     const backHandler = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
     return () => backHandler.remove();
   }, [isFocused]);
-
-  // console.log("route.params.multipleCollection ,collectionMadeToday", route.params.multipleCollection ,collectionMadeToday)
-
+ 
   return (
     <View style={styles.mainView}>
       <StatusBar backgroundColor={COLORS.primaryAccent} barStyle="light-content" />
 
       <View style={styles.profileView}>
         <MaterialCommunityIcons4 onPress={() => { navigation.navigate("Dashboard") }} style={{ zIndex: 454 }} name='angle-left' color={COLORS.primaryAccent} size={40} />
-        <View style={styles.profileName}>
-          {/* <Text style={styles.text} >{item.EnglishName ? item.EnglishName : ''}</Text> */}
-          {/* <Text style={[styles.text, {fontFamily: 'Montserrat-Regular', fontSize: 14}]} >A/C No. : {item.EnglishName ? item.EnglishName : ''}</Text> */}
-          {/* <Text style={[styles.text, { fontFamily: 'Montserrat-Regular', fontSize: 14 }]} >Address : Aundh, Pune</Text> */}
+        <View style={styles.profileName}> 
         </View>
         <View style={styles.profileIcon}>
           <Image style={{ width: 70, height: 70, resizeMode: 'contain' }} source={require('../../Assets/Images/rupee.png')} />
@@ -677,8 +584,7 @@ Total Account Balance: ${closingBalance ? `₹${new Intl.NumberFormat('en-IN').f
             <Text style={[styles.text1, { color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>A/C Opened date. : </Text>
             <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold', marginHorizontal: 25 }]}>{item.AccOpenDt}</Text>
           </View>
-        )}
-
+        )} 
       </View>
 
       <View style={{ width: '95%', alignSelf: 'center' }}>
@@ -700,10 +606,7 @@ Total Account Balance: ${closingBalance ? `₹${new Intl.NumberFormat('en-IN').f
                     display: 'flex',
                     flexDirection: 'row',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    // minWidth: 100,
-                    // padding: 0,
-                    // margin: 0
+                    justifyContent: 'center', 
                   }}
                   icon={'plus'}
                   labelStyle={{ fontSize: 16, fontFamily: 'Montserrat-Bold' }}
@@ -715,19 +618,16 @@ Total Account Balance: ${closingBalance ? `₹${new Intl.NumberFormat('en-IN').f
                 </Button>
               )
             }
-          </>
-
+          </> 
         ) : (
-          <View style={{ width: '95%', alignSelf: 'center', height: windowHeight * 0.09, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {/* <Text style={[styles.text1, { alignSelf: 'center', fontFamily: 'Montserrat-Bold' }]}>Today's collection is received.</Text> */}
+          <View style={{ width: '95%', alignSelf: 'center', height: windowHeight * 0.09, display: 'flex', alignItems: 'center', justifyContent: 'center' }}> 
             {(route.params.collectionAllowed === 'false' || route.params.collectionAllowed === false) ? (
               <Text style={[styles.text1, { alignSelf: 'center', fontFamily: 'Montserrat-Bold' }]}>The allowed days for collection have expired.</Text>
             ) : (
               <Text style={[styles.text1, { alignSelf: 'center', fontFamily: 'Montserrat-Bold' }]}>No collection required.</Text>
             )}
           </View>
-        )}
-
+        )} 
       </View>
 
       <Modal
@@ -767,15 +667,16 @@ Total Account Balance: ${closingBalance ? `₹${new Intl.NumberFormat('en-IN').f
               outlineColor="#8ABCF9"
               value={amount}
               keyboardType="numeric"
-              onChangeText={text => setAmount(text)}
-              // onFocus={() => setIsFocusedInput(true)}
+              onChangeText={text => {
+                const filteredText = text.replace(/[^0-9]/g, ""); 
+                setAmount(filteredText);
+              }} 
               onFocus={() => {
                 if (!hasCleared) {
                   setAmount('');
                   setHasCleared(true);
                 }
-              }}
-              // onBlur={() => setIsFocusedInput(false)}
+              }} 
               style={{
                 width: "100%",
                 marginBottom: 20,
@@ -790,23 +691,8 @@ Total Account Balance: ${closingBalance ? `₹${new Intl.NumberFormat('en-IN').f
                 fontFamily: "Montserrat-Bold",
               }}
               contentStyle={{ fontFamily: "Montserrat-SemiBold" }}
-            />
-            {/* <TextInput
-              label="Enter amount"
-              mode='outlined'
-              outlineColor='#8ABCF9'
-              // autoFocus={true}
-              // ref={textInputRef} 
-              value={amount}
-              keyboardType='numeric'
-              onChangeText={text => setAmount(text)}
-              style={{ width: "100%", marginBottom: 20, fontSize: 18, marginTop: 20, backgroundColor: COLORS.white }}
-              outlineStyle={{ borderRadius: 15, fontSize: 18, color: COLORS.darkGrey, fontFamily: "Montserrat-Bold", }}
-              contentStyle={{ fontFamily: "Montserrat-SemiBold", }}
-            /> */}
-            <View style={styles.buttonContainer}>
-              {/* <Button style={{ width: '48%', marginTop: 5 }} mode="contained" labelStyle={{ fontSize: 16, fontFamily: 'Montserrat-Bold' }} loading={buttonLoading} disabled={buttonLoading} onPress={comfirmCheck} >Okay</Button> */}
-
+            /> 
+            <View style={styles.buttonContainer}> 
               <Button style={{ width: '48%', marginTop: 5 }} mode="contained" labelStyle={{ fontSize: 16, fontFamily: 'Montserrat-Bold' }} loading={buttonLoading} disabled={buttonLoading} onPress={handleSubmit} >Submit</Button>
               <Button style={{ width: '48%', marginTop: 5, borderColor: COLORS.primaryAccent }} labelStyle={{ fontSize: 16, fontFamily: 'Montserrat-Bold' }} mode="outlined" onPress={handleCancel} >Cancel</Button>
             </View>
@@ -860,40 +746,10 @@ Total Account Balance: ${closingBalance ? `₹${new Intl.NumberFormat('en-IN').f
                 <Text style={[styles.text1, { color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>Total Account Balance : </Text>
                 <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold', marginHorizontal: 25 }]}>{newBalance ? `₹${new Intl.NumberFormat('en-IN').format(newBalance)}` : 0}</Text>
               </View>
-            </View>
-
-            {/* <View style={[styles.buttonContainer, { marginTop: 30 }]}> */}
-            {/* <Button
-                style={styles.modalButton}
-                mode="contained"
-                labelStyle={styles.buttonLabel}
-                onPress={handleSubmit2}
-              >
-                Close
-              </Button> */}
-            {/* <View style={styles.modalButton}>
-                <Text style={styles.buttonLabel}>No Receipt</Text>
-              </View> */}
-            {/* <Button
-                icon={'printer'}
-                style={styles.modalButton}
-                mode="outlined"
-                labelStyle={styles.buttonLabel}
-                onPress={() => { Alert.alert("Printing") }}
-              >
-                Print
-              </Button>
-            </View> */}
+            </View> 
 
             <View style={[styles.buttonContainer, { marginTop: 10, justifyContent: 'space-evenly' }]}>
-              {/* <Button
-                style={styles.modalButton}
-                mode="contained"
-                labelStyle={styles.buttonLabel}
-                onPress={handleNext}
-              >
-                Next
-              </Button> */}
+ 
               <MaterialCommunityIcons
                 onPress={handleWhatsAppPress}
                 style={styles.whatsappIcon}
@@ -909,10 +765,7 @@ Total Account Balance: ${closingBalance ? `₹${new Intl.NumberFormat('en-IN').f
                 color={COLORS.white}
                 size={35}
               />
-              <Text style={{ alignSelf: 'center', fontSize: 26, fontWeight: 'thin', color: '#999999' }}>|</Text>
-              {/* <Pressable onPress={handleSubmit2} style={styles.noReceipt}>
-                <Text style={styles.buttonLabel}>No Receipt</Text>
-              </Pressable> */}
+              <Text style={{ alignSelf: 'center', fontSize: 26, fontWeight: 'thin', color: '#999999' }}>|</Text> 
               <Button
                 style={{ marginHorizontal: 0, marginVertical: 10, borderColor: COLORS.primaryAccent }}
                 mode="contained"

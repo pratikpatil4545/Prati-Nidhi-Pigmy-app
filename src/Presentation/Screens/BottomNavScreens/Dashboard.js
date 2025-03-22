@@ -11,7 +11,7 @@ import { XMLParser } from 'fast-xml-parser';
 import SearchPopup from '../../Components/SearchPopup';
 import TransactionCard from '../../Components/TransactionCard';
 import NetInfo from '@react-native-community/netinfo';
-import { Buffer } from 'buffer'; 
+import { Buffer } from 'buffer';
 
 export default function Dashboard({ navigation, route }) {
 
@@ -45,7 +45,6 @@ export default function Dashboard({ navigation, route }) {
     const [GlLastAcc, setGlLastAcc] = useState(null);
     const [GLCode, setGLCode] = useState(null);
     const [pendingCount, setpendingCount] = useState(null);
-    // console.log("pening ocunbg", pendingCount)
     const [collectionAllowed, setCollectionAllowed] = useState(true);
     const [multipleCollection, setMultipleCollection] = useState(false);
     const [totalAmount, setTotalAmount] = useState(0);
@@ -60,8 +59,6 @@ export default function Dashboard({ navigation, route }) {
     const [isFirstLogin, setIsFirstLogin] = useState(false);
     const [isConnected, setConnected] = useState(true);
     const [maxAmountLimit, setMaxAmountLimit] = useState(null);
-    // console.log('max amount add', maxAmountLimit)
-    const [fileData, setFileData] = useState(null);
 
     useEffect(() => {
         if (route.params?.search === true) {
@@ -78,27 +75,12 @@ export default function Dashboard({ navigation, route }) {
         endDate.setDate(fileDate.getDate() + parseInt(noOfDaysAllowed));
 
         const currentDate = new Date();
-        // console.log("allowed dates checking", fileDate, currentDate, endDate)
         if (currentDate >= fileDate && currentDate < endDate) {
             setCollectionAllowed(true);
         } else {
             setCollectionAllowed(false);
         }
     }, [fileCreatedDate, noOfDaysAllowed]);
-
-    // useEffect(() => {
-    //     let len1 = parseInt(mappedMasterData?.length);
-    //     let len2 = parseInt(NoOfRecords);
-    //     if (len1 && len2) {
-    //         if (len1 === len2) {
-    //             setIsDataValid(false);
-    //             Alert.alert('Something went wrong while recieving data or data may be currupted please try again!')
-    //         }
-    //         else {
-    //             setIsDataValid(true);
-    //         }
-    //     }
-    // }, [NoOfRecords, mappedMasterData?.length])
 
     useEffect(() => {
         const handleBackPress = () => {
@@ -122,23 +104,17 @@ export default function Dashboard({ navigation, route }) {
         const checkFirstLogin = async () => {
             const firstLoginComplete = await AsyncStorage.getItem('firstLoginComplete');
             if (firstLoginComplete === 'true') {
-                // console.log("setIsFirstLogin(true)")
-                getFileContent();  // Automatically load data if not first login
+                getFileContent();
             }
             else {
-                // console.log("setIsFirstLogin(true)")
-                setIsFirstLogin(true);  // Show "Start collection" button
+                setIsFirstLogin(true);
             }
         };
         checkFirstLogin();
     }, []);
 
     const handleGetData = async () => {
-        // setLoading(true);
-        // ToastAndroid.show('Getting latest data', ToastAndroid.SHORT);
         getFileContent();
-        // setIsFirstLogin(true); 
-        // getApi();
     }
 
     const getFileContent = async () => {
@@ -177,10 +153,6 @@ export default function Dashboard({ navigation, route }) {
 
                         if (daysLeft < 0) {
                             Alert.alert('License expired!', 'Your license has expired. Please pay subscription.');
-                            // setLicenseExpired(true);
-                            // setLoading(false);
-                            // setSearchedResults(false);
-                            // return;
                         }
 
                         if (daysLeft <= 15 && daysLeft >= 0) {
@@ -192,12 +164,9 @@ export default function Dashboard({ navigation, route }) {
                         if (len1 && len2) {
                             if (len1 != len2) {
                                 setIsDataValid(false);
-                                Alert.alert('Error','Something went wrong while recieving data or data may be currupted please try again!')
+                                Alert.alert('Error', 'Something went wrong while recieving data or data may be currupted please try again!')
                                 return;
                             }
-                            // else {
-                            //     setIsDataValid(true);
-                            // }
                         }
 
                         setLicenseExpired(false);
@@ -212,8 +181,8 @@ export default function Dashboard({ navigation, route }) {
                         setBranchName(dataObject.MstrData?.BrNameE);
                         setBranchCode(dataObject.MstrData?.BrCode);
                         setAgentName(dataObject.MstrData?.AgNameE);
-                        // setIsActive(dataObject.MstrData?.IsActive ? true : false);
-                        setIsActive(false);
+                        setIsActive(dataObject.MstrData?.IsActive ? true : false);
+                        // setIsActive(false);
                         setAllowNewUser((dataObject.MstrData?.NewAcOpenAllowed === 'True') ? true : false);
                         setFileCreatedDate(dataObject.MstrData?.FileCreateDate);
                         setNoOfDaysAllowed(dataObject.MstrData?.NoOfDaysAllowed);
@@ -249,20 +218,15 @@ export default function Dashboard({ navigation, route }) {
                         Alert.alert('Failed getting data!', 'Please check your internet connection and try again.');
                     }
                     await AsyncStorage.removeItem('firstLoginComplete');
-                    // console.warn('No mobile number found in AsyncStorage.');
-                    // ToastAndroid.show('No mobile number found!', ToastAndroid.SHORT);
-                    // }
                 }
             } catch (error) {
                 setDataAvailable(false);
-                // Capture error details
                 Alert.alert('Error occurred:', error.message);
                 await AsyncStorage.removeItem('firstLoginComplete');
 
                 if (!isConnected) {
                     Alert.alert('Failed getting data!', 'Please check your internet connection and try again.');
                 }
-                // ToastAndroid.show('Error occurred!', ToastAndroid.SHORT);
             } finally {
                 setLoading(false);
             }
@@ -270,16 +234,12 @@ export default function Dashboard({ navigation, route }) {
 
         else if (firstLoginComplete === 'true') {
             try {
-                // console.log("No saved data found, making API call...");
                 const savedData = await AsyncStorage.getItem('dataObject');
 
                 if (savedData) {
                     const dataObject = JSON.parse(savedData);
-                    // console.log("responseText local storage:");
-
                     if (dataObject.ResonseCode === '0000') {
                         await AsyncStorage.setItem('dataObject', JSON.stringify(dataObject));
-
                         const licenseExpiryDate = dataObject.MstrData?.LicenseValidUpto;
                         setLicenseValidUpto(licenseExpiryDate);
                         const currentDate = new Date();
@@ -289,10 +249,6 @@ export default function Dashboard({ navigation, route }) {
                         console.log("days left when api called", daysLeft)
                         if (daysLeft < 0) {
                             Alert.alert('License expired!', 'Your license has expired. Please pay subscription.');
-                            // setLicenseExpired(true);
-                            // setLoading(false);
-                            // setSearchedResults(false);
-                            // return;
                         }
 
                         if (daysLeft <= 15 && daysLeft >= 0) {
@@ -304,15 +260,14 @@ export default function Dashboard({ navigation, route }) {
                         setHeaderLastAccNo(dataObject.MstrData?.HdrLastAcNo);
                         setDataAvailable(true);
                         setNoOfRecords(dataObject.MstrData?.NoOfRecords);
-                        // setLicenseValidUpto(dataObject.MstrData?.LicenseValidUpto);
-                        // setLicenseValidUpto('2024-12-31'); 
                         await AsyncStorage.setItem('LicenseValidUpto', (dataObject.MstrData?.LicenseValidUpto).toString());
                         setClientName(dataObject.MstrData?.ClientName);
                         setBranchName(dataObject.MstrData?.BrNameE);
                         setBranchCode(dataObject.MstrData?.BrCode);
                         setAgentName(dataObject.MstrData?.AgNameE);
-                        // setIsActive(dataObject.MstrData?.IsActive ? true : false);
-                        setIsActive(false);
+                        // console.log("is active??", dataObject.MstrData?.IsActive)
+                        setIsActive(dataObject.MstrData?.IsActive ? true : false);
+                        // setIsActive(false);
                         setAllowNewUser((dataObject.MstrData?.NewAcOpenAllowed === 'True') ? true : false);
                         setFileCreatedDate(dataObject.MstrData?.FileCreateDate);
                         setNoOfDaysAllowed(dataObject.MstrData?.NoOfDaysAllowed);
@@ -351,19 +306,14 @@ export default function Dashboard({ navigation, route }) {
                     await AsyncStorage.removeItem('firstLoginComplete');
 
                     console.warn('No mobile number found in AsyncStorage.');
-                    // ToastAndroid.show('No mobile number found!', ToastAndroid.SHORT);
-                    // }
                 }
             } catch (error) {
                 setDataAvailable(false);
-                // Capture error details
                 Alert.alert('Error occurred:', error.message);
                 await AsyncStorage.removeItem('firstLoginComplete');
-
                 if (!isConnected) {
                     Alert.alert('Failed getting data!', 'Please check your internet connection and try again.');
                 }
-                // ToastAndroid.show('Error occurred!', ToastAndroid.SHORT);
             } finally {
                 setLoading(false);
             }
@@ -374,7 +324,6 @@ export default function Dashboard({ navigation, route }) {
         let unsubscribe
         let currentState
 
-        // Subscribe NetInfo event
         unsubscribe = NetInfo.addEventListener(state => {
             if (currentState !== state.isConnected) {
                 currentState = state.isConnected
@@ -398,11 +347,7 @@ export default function Dashboard({ navigation, route }) {
         const transactionTableData = await AsyncStorage.getItem('transactionTable');
         const parsedData = JSON.parse(transactionTableData) || [];
         const pendingTransactions = parsedData.filter((item) => item.pending === true);
-        // console.log("checking data null::", BrCode, AgCode, FileCreateDate, ClientID, BrAgCode, InputFileType)
-        // console.log("interent on data", pendingTransactions)
-
         const savedData = await AsyncStorage.getItem('dataObject');
-
         const dataObject = JSON.parse(savedData);
 
         if (!isConnected || pendingTransactions.length === 0) {
@@ -434,7 +379,6 @@ export default function Dashboard({ navigation, route }) {
             );
 
             const responseText = await response.text();
-            // console.log("Raw response text:", responseText);
 
             try {
                 const parser = new XMLParser();
@@ -442,9 +386,6 @@ export default function Dashboard({ navigation, route }) {
                 const jsonString = jsonResponse.string;
                 const dataObject = JSON.parse(jsonString);
                 const responseString = dataObject.ResonseCode;
-
-                // console.log("Parsed response:", jsonResponse, "Response code:", responseString);
-
                 if (responseString === '0000') {
                     const updatedTransactionTable = parsedData.map((item) => {
                         if (item.pending) {
@@ -471,7 +412,6 @@ export default function Dashboard({ navigation, route }) {
             console.log("Error during API call:", error);
             Alert.alert("Error", `Unexpected error during API call: ${error.message}`);
         }
-
     };
 
     const fetchTransactionTable = async () => {
@@ -606,6 +546,7 @@ export default function Dashboard({ navigation, route }) {
     const handleCancel = () => {
         setModalVisible(false);
     };
+
     let transactionCount = 1;
 
     const generateReceiptNo = () => {
@@ -762,15 +703,11 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
 
                                         // const responseData = await response.text();
                                         const responseText = await response.text();
-
                                         const parser = new XMLParser();
                                         const jsonResponse = parser.parse(responseText);
-
                                         const jsonString = jsonResponse.string;
-
                                         const responseObject = JSON.parse(jsonString);
                                         const rawResponseString = responseObject.ResponseString;
-
                                         const jsonStartIndex = rawResponseString.indexOf('{');
                                         const cleanedResponseString = rawResponseString.substring(jsonStartIndex);
                                         const dataObject = JSON.parse(cleanedResponseString);
@@ -797,10 +734,7 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
                                         await AsyncStorage.setItem('transactionTable', JSON.stringify(transactionTable));
                                         setModalVisible2(true);
                                         fetchTransactionTable();
-
-                                        // console.log("Response:", responseText);
                                     } catch (error) {
-
                                         Alert.alert("Error during API call:", error.message);
                                     }
                                 }
@@ -808,9 +742,8 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
                             else {
                                 const updatedTransactionData = {
                                     ...transactionData,
-                                    pending: !isConnected // Add pending flag if offline
+                                    pending: !isConnected
                                 };
-
                                 const currentTransactions = JSON.parse(await AsyncStorage.getItem('transactionTable')) || [];
                                 await AsyncStorage.setItem('transactionTable', JSON.stringify([...currentTransactions, updatedTransactionData]));
                                 setModalVisible2(true);
@@ -822,7 +755,6 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
             );
 
         } catch (error) {
-            // Alert.alert("Error while processing transaction:", error);
             Alert.alert('Error', 'An error occurred while processing your transaction. Please try again.');
         }
 
@@ -913,218 +845,6 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
         setmobileNumber(null);
         setAmount(null);
     }
-    // const filePath = RNFS.DownloadDirectoryPath + '/AppData.txt';
-
-    const retrieveJsonData = () => {
-
-        //         RNFetchBlob.fs.readFile(filePath, 'base64')
-        // .then((data) => {
-        //   // handle the data ..
-        //   console.log("data che k", data)
-        // })
-        // Retrieve the JSON string from external storage and parse it
-        // console.log("filePath", filePath)
-        // RNFS.readFile(filePath, 'utf8')
-        //     .then((data) => {
-        //         let parsedData = JSON.parse(data);
-
-        //         // Check if parsedData is still a string
-        //         if (typeof parsedData === 'string') {
-        //             parsedData = JSON.parse(parsedData);
-        //         }
-
-        //         if (Array.isArray(parsedData)) {
-        //             parsedData.forEach((item, index) => {
-        //                 console.log(`Item ${index}:`, item);
-        //             });
-        //         } else {
-        //             console.error('Parsed data is not an array:', parsedData);
-        //         }
-
-        //         // console.log('Final Parsed Data:', parsedData, 'Type:', typeof parsedData, typeof transactionTable);
-
-        //         setTransactionTable(parsedData);
-        //     })
-        //     .catch((error) => {
-        //         Alert.alert('No data found or error reading file', error.message);
-        //         console.log('No data found or error reading file', error.message);
-        //     });
-    };
-
-
-    // const [data, setData] = useState("Hello, this is data new");
-    // const [fileContent, setFileContent] = useState(null); // State to store the file content
-
-    // const openFilePicker = async () => {
-    //     try {
-    //         // Use SAF to pick a file
-    //         const file = await SAF.pickSingle({
-    //             type: ['application/json', 'text/plain', '*/*'], // Allow JSON, text, or any file
-    //         });
-
-    //         console.log('File picked:', file);
-
-    //         // After picking, read the file content
-    //         await readFileContent(file.uri);
-    //     } catch (error) {
-    //         console.error('Error picking file:', error);
-    //         Alert.alert('Error', 'An error occurred while selecting the file.');
-    //     }
-    // };
-
-    // Function to read the content of the file from the content:// URI
-    // const readFileContent = async (uri) => {
-    //     try {
-    //         // Use SAF to read the file from the content:// URI
-    //         const fileData = await SAF.readFile(uri);
-
-    //         console.log('File content:', fileData);
-    //         setFileContent(fileData); // Store the file content in the state
-    //         Alert.alert('File Read', 'File content loaded successfully!');
-    //     } catch (error) {
-    //         console.error('Error reading file:', error);
-    //         Alert.alert('Error', 'Failed to read the file.');
-    //     }
-    // };
-
-
-    // const exampleData = {
-    //     username: 'JohnDoe',
-    //     age: 30,
-    //     country: 'India',
-    // };
-
-
-    // const [savedContent, setSavedContent] = useState("");
-    // const [directoryUri, setDirectoryUri] = useState(null);
-    // const [fileName, setFileName] = useState("test.text");
-
-    // const requestPermission = async (directoryId) => {
-    //     let dir = ScopedStorage.FileType = await ScopedStorage.openDocumentTree(true);
-    //     await AsyncStorage.setItem(directoryId, JSON.stringify(dir));
-    //     return dir;
-    // }
-
-    // const getAndroidDir = async (directoryId) => {
-    //     let dir = ScopedStorage.FileType;
-    //     try {
-    //         let dirPath = await AsyncStorage.getItem(directoryId)
-    //         if (!dirPath) {
-    //             dir = await requestPermission(directoryId)
-    //         }
-    //         else {
-    //             dir = JSON.parse(dirPath)
-    //         }
-    //         const persistedUris = await ScopedStorage.getPersistedUriPermission
-    //         if (persistedUris.infexOf(dir.uri) !== -1) {
-    //             return dir;
-    //         }
-    //         return await requestPermission(directoryId);
-    //     } catch (error) {
-    //         console.log("error ", error);
-    //         return null;
-    //     }
-    // }
-
-    // // Function to request directory access and save a file
-    // const handleSaveFile = async () => {
-    //     // let file = await ScopedStorage.openDocument(true);
-    //     let dir = await getAndroidDir('dataDir');
-    //     await ScopedStorage.writeFile(dir?.uri, data, fileName, 'text/plain');
-    // };
-
-    // const handleReadFile = async () => {
-    //     let file = await ScopedStorage.openDocument(true);
-    //     setFileName(file.name);
-    //     setData(file.data);
-    // };
-
-    // // Function to read the file content
-    // // const handleReadFile = async () => {
-    // //     try {
-    // //         // Get the saved directory URI from AsyncStorage
-    // //         const dir = await AsyncStorage.getItem("userMediaDirectory");
-    // //         if (!dir) {
-    // //             Alert.alert("Error", "No directory found. Save a file first.");
-    // //             return;
-    // //         }
-
-    // //         const parsedDir = JSON.parse(dir);
-
-    // //         // Check if the directory URI is still valid
-    // //         const persistedUris = await ScopedStorage.getPersistedUriPermissions();
-    // //         if (!persistedUris.includes(parsedDir.uri)) {
-    // //             Alert.alert("Error", "Directory access has been revoked. Please save the file again.");
-    // //             return;
-    // //         }
-
-    // //         // Read the file content
-    // //         const fileName = "example.txt";
-    // //         const filePath = `${parsedDir.uri}/${fileName}`;
-    // //         const content = await ScopedStorage.readFile(filePath);
-
-    // //         setSavedContent(content);
-    // //         Alert.alert("Success", "File content read successfully.");
-    // //     } catch (error) {
-    // //         console.error("Error reading file:", error);
-    // //         Alert.alert("Error", "An error occurred while reading the file.");
-    // //     }
-    // // };
-
-    // const requestDirectoryAccess = async () => {
-    //     try {
-    //       const dir = await ScopedStorage.openDocumentTree(true);
-    //       if (dir) {
-    //         await AsyncStorage.setItem('userSelectedDirectory', JSON.stringify(dir));
-    //         console.log('Directory access granted:', dir);
-    //       } else {
-    //         console.log('Directory access was not granted.');
-    //       }
-    //     } catch (error) {
-    //       console.error('Error accessing directory:', error);
-    //     }
-    //   };
-      
-    //   const getPersistedDirectoryUri = async () => {
-    //     try {
-    //       const dir = await AsyncStorage.getItem('userSelectedDirectory');
-    //       if (dir) {
-    //         const parsedDir = JSON.parse(dir);
-    //         console.log("path saved", parsedDir.uri)
-    //         const persistedUris = await ScopedStorage.getPersistedUriPermissions();
-    //         const hasPermission = persistedUris.some(
-    //           (persistedUri) => decodeURIComponent(persistedUri) === decodeURIComponent(parsedDir.uri)
-    //         );
-    //         if (hasPermission) {
-    //           return parsedDir.uri;
-    //         } else {
-    //           console.log('Persisted URI permissions do not include the directory.');
-    //         }
-    //       } else {
-    //         console.log('No directory URI found in storage.');
-    //       }
-    //     } catch (error) {
-    //       console.error('Error retrieving persisted directory URI:', error);
-    //     }
-    //     return null;
-    //   };
-      
-    //   const readFileInDirectory = async () => {
-    //     try {
-    //       const dirUri = await getPersistedDirectoryUri();
-    //       if (dirUri) {
-    //         const fileUri = `content://com.android.externalstorage.documents/document/primary%3ADownload%2FTelegram%2Fhelloworld%20(3).txt`;
-    //         const fileData = await ScopedStorage.readFile(fileUri, 'utf8');
-    //         console.log('File data:', fileData);
-    //       } else {
-    //         console.log('Unable to access the directory. Requesting permission...');
-    //         await requestDirectoryAccess();
-    //       }
-    //     } catch (error) {
-    //       console.error('Error reading file:', error);
-    //     }
-    //   };
-      
 
     return (
         <View style={styles.dashView}>
@@ -1173,97 +893,30 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
                     </>
                 ) : (
                     <View style={{ height: windowHeight * 0.85 }}>
-                        {/* <ScrollView> 
-                            <Text>App Data:</Text>
-                            <Text>{data ? JSON.stringify(data) : 'No data loaded'}</Text>
-
-                            <Button
-                                title=""
-                                // onPress={handleSaveFile}
-                                onPress={async () => {
-                                    try {
-                                        let dir = await ScopedStorage.openDocumentTree(true);
-                                        let text = 'Hello world';
-                                        if (dir) {
-                                            await ScopedStorage.writeFile(
-                                                dir.uri,
-                                                'helloworld.txt',
-                                                'text/plain',
-                                                text,
-                                            );
-                                        }
-                                        console.log("saved directory path00", dir.uri)
-                                    } catch (e) {
-                                        console.log(e);
-                                    }
-                                }}
-                            >Save Data</Button>
-                            <Button
-                                title="Load Data"
-                                // onPress={loadDataFromFile}
-                                onPress={async () => {
-                                    try {
-                                        let file = await ScopedStorage.openDocument(true, 'utf8');
-                                        console.log(file);
-                                    } catch (e) {
-                                        console.log(e);
-                                    }
-                                }}
-                            >Load Data</Button>
-                            <Button title="Open File Picker"
-                                onPress={async () => {
-                                    try {
-                                        let file = await ScopedStorage.createDocument(
-                                            'helloworld.txt',
-                                            'text/plain',
-                                            'hello world new one now updated',
-                                        );
-                                        console.log('File saved!', file);
-                                    } catch (e) {
-                                        console.log(e);
-                                    }
-                                }}
-                            //  onPress={handleReadFile} 
-                            >Open File Picker</Button>
-
-                            <Button
-                                title="Read Data"
-                                // onPress={loadDataFromFile}
-                                // onPress={async () => {
-                                //     try {
-                                //         // Specify the file path to Downloads folder and the filename
-                                //         const filePath = '/storage/emulated/0/Download/appdata.txt'; // Path to Downloads and file name
-
-                                //         // Read the file directly
-                                //         const fileData = await ScopedStorage.readFile('content://com.android.externalstorage.documents/document/primary%3ADownload%2FTelegram%2Fhelloworld%20(3).txt', 'utf8');
-                                //         setData(fileData.data);
-                                //         console.log(fileData); // Log or process the file data here
-                                //     } catch (e) {
-                                //         console.log('Error reading file:', e);
-                                //     }
-                                // }}
-                                onPress={readFileInDirectory}
-                                // onPress={async () => {
-                                //     try {
-                                //         let file = await ScopedStorage.c(true, 'utf8');
-                                //         // let file = await ScopedStorage.openDocument(true);
-                                //         console.log(file);
-                                //     } catch (e) {
-                                //         console.log(e);
-                                //     }
-                                // }}
-                            >Read Data</Button>
-
-                            <Text onPress={retrieveJsonData} style={[styles.text, { marginTop: 0, marginBottom: 10, marginLeft: 20 }]}>Agent Name: <Text style={[styles.text, { fontSize: 14, fontFamily: 'Montserrat-Bold' }]}>{AgentName ? AgentName : '-'} </Text></Text>
-                        </ScrollView> */}
-                        <View style={[styles.dataInfoView, { width: windowWidth * 0.90, alignSelf: 'center', flexDirection: 'row', height: 'auto', overflow: 'hidden' }]}>
-                            <View>
-                                {/* <Text style={styles.text}>Client Name</Text> */}
-                                <Text style={[styles.text, { fontSize: 14, fontFamily: 'Montserrat-Bold', marginLeft: 0 }]}>{ClientName ? ClientName : '-'} </Text>
+                        <View
+                            style={{
+                                width: windowWidth * 0.90,
+                                alignSelf: 'center',
+                                flexDirection: 'row',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                height: 'auto',
+                                overflow: 'hidden',
+                                backgroundColor: '#eef2fa',
+                                borderRadius: 10,
+                                elevation: 2,
+                            }}
+                        >
+                            <View style={{ flex: 1, marginRight: 8 }}>
+                                <Text style={[styles.text, { fontSize: 14, fontFamily: 'Montserrat-Bold', marginLeft: 0 }]}>
+                                    {ClientName ? ClientName : '-'}
+                                </Text>
                             </View>
-                            <View>
+                            <View style={{ flex: 1, marginLeft: 8 }}>
                                 <Text style={styles.text}>Branch</Text>
-                                <Text style={[styles.text, { fontSize: 14, fontFamily: 'Montserrat-Bold' }]}>{BranchName ? BranchName : "-"} {BranchCode ? `(${BranchCode})` : ''} </Text>
+                                <Text style={[styles.text, { fontSize: 14, fontFamily: 'Montserrat-Bold' }]}>
+                                    {BranchName ? BranchName : "-"} {BranchCode ? `(${BranchCode})` : ''}
+                                </Text>
                             </View>
                         </View>
 
@@ -1299,15 +952,6 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
                             </View>
                         </View>
 
-                        {/* {AllowNewUser && */}
-                        {/* <View style={{ width: '95%', height: 50, alignSelf: 'center', display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <View>
-                                <Text style={{ fontFamily: 'Montserrat-Regular', color: COLORS.gray, }}> <MaterialCommunityIcons name='upload-off' style={{ elevation: 5 }} elevation={5} color={COLORS.primary} size={20} /></Text>
-                            </View>
-                            <Button icon={'plus'} disabled={!AllowNewUser || !dataAvailable || isFirstLogin} onPress={addNewUser} labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }} style={{ marginTop: 5, marginBottom: -5, alignSelf: 'flex-end', minWidth: windowWidth * 0.45 }} mode="contained">Add new user</Button>
-                        </View> */}
-                        {/* } */}
-
                         {!collectionAllowed &&
                             <View>
                                 <Text style={{ color: '#CC5500', fontSize: 16, alignSelf: 'center', marginTop: 10, marginBottom: 10, fontFamily: 'Montserrat-Bold' }}>The allowed days for collection have expired.</Text>
@@ -1315,8 +959,6 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
                         }
 
                         <View style={{ width: '95%', alignSelf: 'center', display: 'flex', justifyContent: 'space-between', flexDirection: 'row' }}>
-                            {/* <View> */}
-                            {/* <Button icon={'play'} loading={loading} disabled={loading || dataAvailable || LicenseExpired} onPress={handleGetData} labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }} style={{ marginTop: '8%', minWidth: windowWidth * 0.45 }} mode="contained">Get Data</Button> */}
 
                             {loading ? (
                                 <ActivityIndicator size={30} color={COLORS.primary} style={{ margin: 'auto', marginTop: '8%' }} />
@@ -1324,7 +966,7 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
                                 <Button
                                     icon={'play'}
                                     // loading={loading}
-                                    disabled={loading || dataAvailable}
+                                    disabled={loading || dataAvailable || !IsActive}
                                     onPress={handleGetData}
                                     labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }}
                                     style={{ marginTop: '8%', minWidth: windowWidth * 0.45 }}
@@ -1333,18 +975,12 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
                                     Get Data
                                 </Button>
                             )}
-                            {/* </View>
-                                <View> */}
                             {buttonLoading ? (
                                 <ActivityIndicator size={30} color={COLORS.primary} style={{ margin: 'auto', marginTop: '8%' }} />
                             ) : (
                                 <Button icon={'arrow-up'} loading={buttonLoading} disabled={buttonLoading || !dataAvailable || isFirstLogin} onPress={handleCloseCollection} labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }} style={{ marginTop: '8%', minWidth: windowWidth * 0.45 }} mode="contained">Close collection</Button>
                             )}
-                            {/* <Button icon={'arrow-up'} loading={buttonLoading} disabled={buttonLoading || !dataAvailable || isFirstLogin} onPress={handleCloseCollection} labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }} style={{ marginTop: '8%', minWidth: windowWidth * 0.45 }} mode="contained">Close collection</Button> */}
-                            {/* <Button icon={'arrow-up'} loading={buttonLoading} disabled={buttonLoading || !dataAvailable || isFirstLogin || !collectionAllowed} onPress={handleCloseCollection} labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }} style={{ marginTop: '8%', minWidth: windowWidth * 0.45 }} mode="contained">Close collection</Button> */}
-                            {/* </View> */}
                         </View>
-                        {/*  } */}
 
                         {!LicenseExpired ? (
                             <>
@@ -1380,7 +1016,7 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
                 )}
             </>
 
-            <Modal
+            {/* <Modal
                 animationType="slide"
                 transparent={true}
                 visible={modalVisible}
@@ -1537,7 +1173,7 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
                         </View>
                     </View>
                 </View>
-            </Modal>
+            </Modal> */}
         </View>
     )
 }

@@ -43,7 +43,7 @@ export default function GeneralSetting({ navigation }) {
                     <MaterialCommunityIcons4 onPress={() => { navigation.navigate("Profile") }} name='angle-left' style={{ left: windowWidth * 0.05, top: windowHeight * 0.02, position: 'absolute' }} color={COLORS.white} size={40} />
                 </View>
                 <View style={styles.profileIcon}>
-                    <Image style={{ width: 125, height: 120, alignSelf: 'center', resizeMode: 'contain' }} source={require('../../Assets/Images/maestrotek_logo.png')} />
+                    {/* <Image style={{ width: 125, height: 120, alignSelf: 'center', resizeMode: 'contain' }} source={require('../../Assets/Images/maestrotek_logo.png')} /> */}
                 </View>
             </View>
             <Text style={[styles.keyName, { textAlign: 'center', fontSize: 20, fontFamily: 'Montserrat-Bold' }]}>General Settings</Text>
