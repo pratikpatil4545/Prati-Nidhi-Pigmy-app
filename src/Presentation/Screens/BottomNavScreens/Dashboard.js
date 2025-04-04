@@ -499,32 +499,39 @@ export default function Dashboard({ navigation, route }) {
                                     const dummyCloseCycleData = JSON.parse(dummyCloseCycleJson.string);
                                     const dummyCloseCycleResponseCode = dummyCloseCycleData.ResonseCode;
 
-                                    if (dummyCloseCycleResponseCode !== '0000') {
+                                    if (dummyCloseCycleResponseCode === '0000') {
+                                        Alert.alert("Success", "Successfully closed Collections"); 
+                                        let transactionHistoryTable = await AsyncStorage.getItem('transactionHistoryTable');
+                                        transactionHistoryTable = transactionHistoryTable ? JSON.parse(transactionHistoryTable) : [];
+                                        let transactionTableData = await AsyncStorage.getItem('transactionTable');
+                                        transactionTableData = transactionTableData ? JSON.parse(transactionTableData) : [];
+                                        transactionTableData.forEach(transaction => {
+                                            transactionHistoryTable.push(transaction);
+                                        });
+                                        await AsyncStorage.setItem('transactionHistoryTable', JSON.stringify(transactionHistoryTable));
+                                        await AsyncStorage.removeItem('transactionTable');
+
+                                        const remainingData = await AsyncStorage.getItem('transactionTable');
+                                        if (remainingData) {
+                                            await AsyncStorage.removeItem('transactionTable');
+                                            setTransactionTable([]);
+                                        }
+
+                                        setTransactionTable([]);
+                                        fetchTransactionTable();
+                                        setDataAvailable(false);
+                                        setMaxAmountLimit(null);
+                                        setNoOfDaysAllowed(null);
+                                        setTotalAmount(null);
+                                        setpendingCount(0)
+                                        await AsyncStorage.setItem('firstLoginComplete', 'false');
+                                    }
+
+                                    else {
                                         throw new Error(
                                             `DummyCloseCycle Error: Code ${dummyCloseCycleResponseCode}, ${dummyCloseCycleData.ResponseString}`
                                         );
                                     }
-
-                                    Alert.alert("Success", "Successfully closed Collections");
-
-                                    let transactionHistoryTable = await AsyncStorage.getItem('transactionHistoryTable');
-                                    transactionHistoryTable = transactionHistoryTable ? JSON.parse(transactionHistoryTable) : [];
-                                    let transactionTableData = await AsyncStorage.getItem('transactionTable');
-                                    transactionTableData = transactionTableData ? JSON.parse(transactionTableData) : [];
-                                    transactionTableData.forEach(transaction => {
-                                        transactionHistoryTable.push(transaction);
-                                    });
-
-                                    await AsyncStorage.setItem('transactionHistoryTable', JSON.stringify(transactionHistoryTable));
-                                    await AsyncStorage.removeItem('transactionTable');
-                                    setTransactionTable([]);
-                                    fetchTransactionTable();
-                                    setDataAvailable(false);
-                                    setMaxAmountLimit(null);
-                                    setNoOfDaysAllowed(null);
-                                    setTotalAmount(null);
-                                    setpendingCount(0)
-                                    await AsyncStorage.setItem('firstLoginComplete', 'false');
                                 }
                                 else {
                                     Alert.alert('Error', ` Response Code - ${closeCollectionResponseCode} - ${closeCollectionData?.ResponseString} `)
