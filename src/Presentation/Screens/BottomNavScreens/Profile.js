@@ -66,7 +66,7 @@ export default function Profile({ navigation }) {
           </View>
         </View>
       </ScrollView>
-      <Text allowFontScaling={false} style={{ position: 'absolute', bottom: windowHeight * 0.08, fontFamily: 'Montserrat-Bold', color: COLORS.gray, alignSelf: 'center', fontSize: 16, }}>Version - 1.9 (04-04-2025)</Text>
+      <Text allowFontScaling={false} style={{ position: 'absolute', bottom: windowHeight * 0.08, fontFamily: 'Montserrat-Bold', color: COLORS.gray, alignSelf: 'center', fontSize: 16, }}>Version - 1.11 (19-06-2025)</Text>
     </View>
   )
 }

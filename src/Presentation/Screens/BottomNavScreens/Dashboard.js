@@ -103,6 +103,8 @@ export default function Dashboard({ navigation, route }) {
     useEffect(() => {
         const checkFirstLogin = async () => {
             const firstLoginComplete = await AsyncStorage.getItem('firstLoginComplete');
+            const savedData = await AsyncStorage.getItem('dataObject');
+            // console.log("old local data chaeck", savedData)
             if (firstLoginComplete === 'true') {
                 getFileContent();
             }
@@ -125,7 +127,7 @@ export default function Dashboard({ navigation, route }) {
 
             try {
                 const mobileNumber = await AsyncStorage.getItem('mobileNumber');
-
+                console.log("try block executed")
                 if (mobileNumber) {
                     const url = `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/RequestData_App?MobileNo=${mobileNumber}`;
                     const response = await fetch(url, {
@@ -136,10 +138,12 @@ export default function Dashboard({ navigation, route }) {
                     });
 
                     const responseText = await response.text();
+                    // const responseText = `<?xml version="1.0" encoding="utf-8"?><string xmlns="http://automatesystemsdataservice.in/">{"ResonseCode":"0000","ResponseString":"REQUEST PROCESSED OK","MstrData":{"ClientID":"21","ClientName":"AUTOMATE SYSTEMS","ClientHeader1":"header1","ClientHeader2":"","BrCode":"2","BrNameE":"SWARGATE","BrNameL":"","AgCode":"13","AgNameE":"Pratik","AgNameL":"","BrAgCode":"0","NoOfRecords":"15","AmountLimit":"15000","NewAcOpenAllowed":"True","AllowMultipleColln":"True","IsActive":"True","NoOfDaysAllowed":"5","LicenseValidUpto":"2026-03-31","FileCreateDate":"2025-05-29","InputFileType":"2","HdrLastAcNo":"200036","GLLastAc":["5","100025","200036","999999","999999","999999","999999","999999","999999","999999"],"MstrRecs":[{"GLCode":"0","GLText":"PIGMY0","AccountNo":"1","EnglishName":"Manjunath kat-PG","LName":"","LastMthBal":"0","ThisMthBal":"400","MaxInstal":"0","DailyAmt":"200","OneShotLmt":"0","MaxBalance":"0","AccOpenDt":"2014-08-21","LienGLCode":"0","LienGLText":"","LienAcntNo":"0","LienAmt":"1000","Mobile1":"0","IsAmtToBeAdded":"True"},{"GLCode":"0","GLText":"PIGMY0","AccountNo":"2","EnglishName":"Lalasab Bagaw-PG","LName":"","LastMthBal":"0","ThisMthBal":"400","MaxInstal":"0","DailyAmt":"100","OneShotLmt":"0","MaxBalance":"0","AccOpenDt":"2014-08-21","LienGLCode":"0","LienGLText":"","LienAcntNo":"0","LienAmt":"5000","Mobile1":"0","IsAmtToBeAdded":"True"}]}}</string>`
                     const parser = new XMLParser();
                     const jsonResponse = parser.parse(responseText);
                     const jsonString = jsonResponse.string;
                     const dataObject = JSON.parse(jsonString);
+                    console.log("tdataObject.ResonseCode", dataObject, dataObject.MstrData?.FileCreateDate)
 
                     if (dataObject.ResonseCode === '0000') {
                         await AsyncStorage.setItem('dataObject', JSON.stringify(dataObject));
@@ -161,13 +165,16 @@ export default function Dashboard({ navigation, route }) {
 
                         let len1 = parseInt(dataObject.MstrData?.MstrRecs?.length);
                         let len2 = parseInt(dataObject.MstrData?.NoOfRecords);
-                        if (len1 && len2) {
-                            if (len1 != len2) {
-                                setIsDataValid(false);
-                                Alert.alert('Error', 'Something went wrong while recieving data or data may be currupted please try again!')
-                                return;
-                            }
+                        // console.log("length checking 1", len1, len2)
+                        // if (len1 && len2) {
+                        // console.log("length checking 2", len1, len2)
+                        if (len1 != len2) {
+                            console.log("length checking 3", len1, len2)
+                            setIsDataValid(false);
+                            Alert.alert('Error', 'Something went wrong while recieving data or data may be currupted please try again! or contact the main branch.')
+                            return;
                         }
+                        // }
 
                         setLicenseExpired(false);
                         setMappedMasterData(dataObject.MstrData?.MstrRecs);
@@ -207,6 +214,8 @@ export default function Dashboard({ navigation, route }) {
                             'Error:',/*  */
                             `Response Code : ${dataObject.ResonseCode}, ${dataObject.ResponseString}`
                         );
+                        console.log("error block", dataObject.ResonseCode, dataObject.ResponseString)
+
                         // }
                         setDataAvailable(false);
                         setIsAuth(false);
@@ -353,8 +362,9 @@ export default function Dashboard({ navigation, route }) {
         if (!isConnected || pendingTransactions.length === 0) {
             return;
         }
-
+        console.log("pending data", pendingTransactions)
         const transactionsWithoutPending = pendingTransactions.map(({ pending, ...rest }) => rest);
+        console.log("transactionsWithoutPending", transactionsWithoutPending)
         const newArray = {
             ClientID: dataObject.MstrData?.ClientID,
             BrCode: dataObject.MstrData?.BrCode,
@@ -419,6 +429,8 @@ export default function Dashboard({ navigation, route }) {
             const transactionTableData = await AsyncStorage.getItem('transactionTable');
             if (transactionTableData) {
                 const parsedData = JSON.parse(transactionTableData);
+        // console.log("transactions latest checking now", parsedData)
+
                 setTransactionTable(parsedData);
                 const pendingTransactions = parsedData.filter((item) => item.pending === true);
                 setpendingCount(pendingTransactions.length);
@@ -500,7 +512,7 @@ export default function Dashboard({ navigation, route }) {
                                     const dummyCloseCycleResponseCode = dummyCloseCycleData.ResonseCode;
 
                                     if (dummyCloseCycleResponseCode === '0000') {
-                                        Alert.alert("Success", "Successfully closed Collections"); 
+                                        Alert.alert("Success", "Successfully closed Collections");
                                         let transactionHistoryTable = await AsyncStorage.getItem('transactionHistoryTable');
                                         transactionHistoryTable = transactionHistoryTable ? JSON.parse(transactionHistoryTable) : [];
                                         let transactionTableData = await AsyncStorage.getItem('transactionTable');
@@ -953,7 +965,7 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
 
                             <View style={[styles.dataInfoView, { marginTop: 15, width: windowWidth * 0.90, alignSelf: 'center', flexDirection: 'row', height: 'auto', overflow: 'hidden' }]}>
                                 <View style={{ width: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                                    <Text style={[styles.text]}>Not Sent to server</Text>
+                                    <Text style={[styles.text]}>Pending</Text>
                                     <Text style={[styles.text, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>{pendingCount ? pendingCount : '0'} </Text>
                                 </View>
                             </View>

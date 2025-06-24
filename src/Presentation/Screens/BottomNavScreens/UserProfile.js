@@ -13,10 +13,10 @@ import { Buffer } from 'buffer';
 import RNFS from 'react-native-fs';
 
 export default function UserProfile({ route, navigation }) {
- 
+
   const [item, setItem] = useState(route.params.item);
   const [mobileInputVisible, setmobileInputVisible] = useState(false);
-  const [mobileNumber, setmobileNumber] = useState(null); 
+  const [mobileNumber, setmobileNumber] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalVisible2, setModalVisible2] = useState(false);
   const [customeLoaderModal, setCustomLoaderModal] = useState(false);
@@ -59,14 +59,14 @@ export default function UserProfile({ route, navigation }) {
   const showAlert = () => {
     console.log('Internet Connection You are offline. Some features may not be available.');
   };
- 
+
   useEffect(() => {
     let existingNumber = (route.params.mobileNumber).toString();
-     if ((route.params.item.Mobile1 === '0' || !route.params.item.Mobile1) && !existingNumber) {
+    if ((route.params.item.Mobile1 === '0' || !route.params.item.Mobile1) && !existingNumber) {
       setmobileInputVisible(true);
     }
     else {
-       setmobileInputVisible(false);
+      setmobileInputVisible(false);
       setmobileNumber(existingNumber ? existingNumber : route.params.item.Mobile1)
     }
   }, [route.params.item])
@@ -86,20 +86,20 @@ export default function UserProfile({ route, navigation }) {
     }
   }, [item, modalVisible]);
 
-  useEffect(() => { 
+  useEffect(() => {
     const filteredTransactions = transactionTableData?.filter((transaction) =>
       transaction.AccountNo === item.AccountNo && transaction.GLCode === item.GLCode
     );
-    setupdatedBalance(route.params?.openingBalance ? route.params.openingBalance : 0); 
+    setupdatedBalance(route.params?.openingBalance ? route.params.openingBalance : 0);
     const lastTransactionToday = filteredTransactions?.some((transaction) => {
       let item = route.params?.item;
       const [datePart] = transaction.CollDateTime?.split(' '); // Extract only the date part
       const [year, month, day] = datePart.split('-');
       const fullYear = year.length === 2 ? `20${year}` : year;
- 
+
       const collectionDate = `${fullYear}-${month}-${day}`;
       const todayDate = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
- 
+
       return collectionDate === todayDate
         && transaction.AccountNo === item.AccountNo
         && transaction.GLCode === item.GLCode;
@@ -121,14 +121,14 @@ export default function UserProfile({ route, navigation }) {
   useEffect(() => {
     const checkLicense = async () => {
       try {
-        const licenseValidUpto = await AsyncStorage.getItem('LicenseValidUpto');  
+        const licenseValidUpto = await AsyncStorage.getItem('LicenseValidUpto');
         const expiryDate = new Date(licenseValidUpto);
         const currentDate = new Date();
         const timeDiff = expiryDate.getTime() - currentDate.getTime();
         const daysLeft = Math.ceil(timeDiff / (1000 * 3600 * 24));
 
         console.log("License valid up to:", licenseValidUpto);
-        if (daysLeft < 0) { 
+        if (daysLeft < 0) {
           setLicenseExpired(true);
         } else {
           setLicenseExpired(false);
@@ -146,29 +146,16 @@ export default function UserProfile({ route, navigation }) {
 
   const handleWhatsAppPress = async () => {
 
-    const formatDateTime = (date) => {
-      const padZero = (num) => (num < 10 ? `0${num}` : num);
-      const year = date.getFullYear();
-      const month = padZero(date.getMonth() + 1);
-      const day = padZero(date.getDate());
-      const hours = padZero(date.getHours());
-      const minutes = padZero(date.getMinutes());
-      const seconds = padZero(date.getSeconds());
-
-      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-    };
-
     const clId = ClientID;
     const Brid = BrCode;
     const Agid = AgCode;
     const glcod = item.GLCode;
     const acno = item.AccountNo;
-    const ColldateTime = formatDateTime(new Date());
     const ruidString = `${clId},${Brid},${Agid},${glcod},${acno}`;
     const ruid = Buffer.from(ruidString).toString('base64');
-    const encodedDateTime = collectionDate.replace(' ', '%20'); 
+    const encodedDateTime = collectionDate.replace(' ', '%20');
     const encodedURL = `https://app.automatesystemsdataservice.in/Customer/api/Receipt?ruid=${ruid}&ColldateTime=${encodedDateTime}`;
- 
+
     const getNumber = mobileInputVisible ? mobileNumber : (mobileNumber ? mobileNumber : parseInt(route.params.item.Mobile1));
     const phoneNumber = `+91${getNumber}`;
     const message = `Hi, Please click on the link Below for the Receipt of your Transaction. ${encodedURL} `;
@@ -199,9 +186,9 @@ export default function UserProfile({ route, navigation }) {
     const ColldateTime = formatDateTime(new Date());
     const ruidString = `${clId},${Brid},${Agid},${glcod},${acno}`;
     const ruid = Buffer.from(ruidString).toString('base64');
-    const encodedDateTime = collectionDate.replace(' ', '%20'); 
+    const encodedDateTime = collectionDate.replace(' ', '%20');
     const encodedURL = `https://app.automatesystemsdataservice.in/Customer/api/Receipt?ruid=${ruid}&ColldateTime=${encodedDateTime}`;
- 
+
     const getNumber = mobileInputVisible ? mobileNumber : (mobileNumber ? mobileNumber : parseInt(route.params.item.Mobile1));
     const phoneNumber = `+91${getNumber}`;
     const message = `Hi, Please click on the link Below for the Receipt of your Transaction. ${encodedURL} `;
@@ -217,20 +204,21 @@ export default function UserProfile({ route, navigation }) {
 
   const checkAsyncStorageForData = async () => {
     try {
-      const savedData = await AsyncStorage.getItem('transactionTable'); 
+      const savedData = await AsyncStorage.getItem('transactionTable');
       const savedMasterData = await AsyncStorage.getItem('dataObject');
       const dataObject = JSON.parse(savedMasterData);
-
+      console.log("checking date and time in transactionTable from collection screen", savedData)
+      
       setClientId(dataObject.MstrData?.ClientID);
       setAgCode(dataObject.MstrData?.AgCode);
       setBrCode(dataObject.MstrData?.BrCode);
       setBrAgCode(dataObject.MstrData?.BrAgCode);
       setFileCreateDate(dataObject.MstrData?.FileCreateDate);
       setInputFileType(dataObject.MstrData?.InputFileType);
- 
+
       if (savedData) {
-        const dataObject = JSON.parse(savedData); 
-        setTransactionTableData(dataObject); 
+        const dataObject = JSON.parse(savedData);
+        setTransactionTableData(dataObject);
       }
     } catch (e) {
       Alert.alert('Failed to fetch data from Local Storage', e.message);
@@ -375,6 +363,10 @@ export default function UserProfile({ route, navigation }) {
     };
 
     const submitData = async (transactionData, newArrayString, isOnline) => {
+      const currentTransactions = JSON.parse(await AsyncStorage.getItem('transactionTable')) || [];
+      await AsyncStorage.setItem('transactionTable', JSON.stringify([...currentTransactions, transactionData]));
+      // const pendingTransactions = JSON.parse(await AsyncStorage.getItem('pendingTransactions')) || [];
+      // await AsyncStorage.setItem('pendingTransactions', JSON.stringify([...pendingTransactions, transactionData]));
       if (isOnline) {
         try {
           const response = await fetch(`https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp?DataFromApp=${newArrayString.toString()}`, {
@@ -382,31 +374,47 @@ export default function UserProfile({ route, navigation }) {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: new URLSearchParams({ DataFromApp: newArrayString }).toString(),
           });
-          const responseText = await response.text(); 
+          const responseText = await response.text();
           const parser = new XMLParser();
-          const jsonResponse = parser.parse(responseText); 
+          const jsonResponse = parser.parse(responseText);
           const jsonString = jsonResponse.string;
           const responseObject = JSON.parse(jsonString);
           const rawResponseString = responseObject.ResponseString;
- 
+
           if (responseObject.ResonseCode != '0000') {
             Alert.alert(
               'Error:',
               `Response Code : ${responseObject.ResonseCode}, ${responseObject.ResponseString}`
             );
           }
-          else { 
+          else {
+            var lastTransactionRecordSentToServer = JSON.parse(newArrayString);
+            var currentTransactionRecordsFromStorageAfterParse = JSON.parse(await AsyncStorage.getItem('transactionTable')) || [];
+            console.log("Transaction sent to server: ", lastTransactionRecordSentToServer);
+            var latestTransactionRecord = currentTransactionRecordsFromStorageAfterParse.filter(item => 
+              item.pending === true &&
+              item.accountNo === lastTransactionRecordSentToServer.accountNo &&  
+              item.collDateTime === lastTransactionRecordSentToServer.collDateTime
+            );
+            
+            if (latestTransactionRecord.length > 0) {
+              console.log("Before: ", latestTransactionRecord);
+              latestTransactionRecord[0].pending = false;
+              console.log("After: ", latestTransactionRecord);
+              await AsyncStorage.setItem('transactionTable', JSON.stringify(currentTransactionRecordsFromStorageAfterParse));  
+            }
+            
             const jsonStartIndex = rawResponseString.indexOf('{');
             const cleanedResponseString = rawResponseString.substring(jsonStartIndex);
-            const dataObject = JSON.parse(cleanedResponseString); 
+            const dataObject = JSON.parse(cleanedResponseString);
             const collectionData = dataObject.CollectionData;
             try {
-
               if (collectionData && collectionData.length > 0) {
-                const collDateTime = collectionData[0].CollDateTime; 
+                const collDateTime = collectionData[0].CollDateTime;
                 setCollectionDate(collDateTime);
-                const currentTransactions = JSON.parse(await AsyncStorage.getItem('transactionTable')) || [];
-                await AsyncStorage.setItem('transactionTable', JSON.stringify([...currentTransactions, transactionData])); 
+                
+                // const currentTransactions = JSON.parse(await AsyncStorage.getItem('transactionTable')) || [];
+                // await AsyncStorage.setItem('transactionTable', JSON.stringify([...currentTransactions, transactionData]));
                 setCollectionMadeToday(true);
                 setModalVisible2(true);
                 setCustomLoaderModal(false);
@@ -426,19 +434,23 @@ export default function UserProfile({ route, navigation }) {
             }
           }
 
-        } catch (error) { 
-          Alert.alert("Warning", "Internet connection has changed. Please check and try again.");
+        } catch (error) {
+          // Alert.alert("Warning", "Internet connection has changed. Please check and try again.");
+          setCollectionMadeToday(true);
+          setModalVisible2(true);
           setCustomLoaderModal(false);
+          // const pendingTransactions = JSON.parse(await AsyncStorage.getItem('pendingTransactions')) || [];
+          // await AsyncStorage.setItem('pendingTransactions', JSON.stringify([...pendingTransactions, transactionData]));
         }
       } else {
-        const currentTransactions = JSON.parse(await AsyncStorage.getItem('transactionTable')) || [];
-        await AsyncStorage.setItem('transactionTable', JSON.stringify([...currentTransactions, transactionData]));
+        // const currentTransactions = JSON.parse(await AsyncStorage.getItem('transactionTable')) || [];
+        // await AsyncStorage.setItem('transactionTable', JSON.stringify([...currentTransactions, transactionData]));
         // setupdatedBalance(newBalance);
         setCollectionMadeToday(true);
         setModalVisible2(true);
         setCustomLoaderModal(false);
-        const pendingTransactions = JSON.parse(await AsyncStorage.getItem('pendingTransactions')) || [];
-        await AsyncStorage.setItem('pendingTransactions', JSON.stringify([...pendingTransactions, transactionData])); 
+        // const pendingTransactions = JSON.parse(await AsyncStorage.getItem('pendingTransactions')) || [];
+        // await AsyncStorage.setItem('pendingTransactions', JSON.stringify([...pendingTransactions, transactionData]));
       }
     };
 
@@ -451,7 +463,7 @@ export default function UserProfile({ route, navigation }) {
     if (!transactionDetails) {
       setButtonLoading(false);
       return;
-    } 
+    }
     const { openingBalance, transactionTable, closingBalance } = transactionDetails;
     const transactionData = {
       GLCode,
@@ -466,14 +478,14 @@ export default function UserProfile({ route, navigation }) {
       MobileNo: mobileInputVisible ? mobileNumber : (route.params.item.Mobile1 != '0') ? parseInt(route.params.item.Mobile1) : mobileNumber,
     };
 
-    const newArray = { 
+    const newArray = {
       ClientID, BrCode, AgCode, BrAgCode, InputFileType, FileCreateDate, NoOfRecords: '1',
       CollectionData: [transactionData]
     };
- 
+
     if (newArray.CollectionData && newArray.CollectionData.length > 0) {
       const collDateTime = newArray.CollectionData[0].CollDateTime;
-      setCollectionDate(collDateTime); 
+      setCollectionDate(collDateTime);
     } else {
       console.log("CollDateTime not available");
     }
@@ -495,24 +507,24 @@ Total Account Balance: ${closingBalance ? `₹${new Intl.NumberFormat('en-IN').f
             setCustomLoaderModal(true);
             setNewBalance(closingBalance);
             setupdatedBalance(closingBalance);
-            setOpeningBalinPop(openingBalance); 
+            setOpeningBalinPop(openingBalance);
             const updatedTransactionData = {
               ...transactionData,
-              pending: !isConnected // Add pending flag if offline
-            }; 
-            if (isConnected) {
-              await submitData(updatedTransactionData, JSON.stringify(newArray), true);
-            } else {
-              await submitData(updatedTransactionData, JSON.stringify(newArray), false);
-            }
+              pending: true //!isConnected // Add pending flag if offline
+            };
+            await submitData(updatedTransactionData, JSON.stringify(newArray), isConnected);
+            // if () {
+            //   await submitData(updatedTransactionData, JSON.stringify(newArray), true);
+            // } else {
+            //   await submitData(updatedTransactionData, JSON.stringify(newArray), false);
+            // }
           }
         }
       ]
     );
-
     setButtonLoading(false);
   };
- 
+
   const handleSubmit2 = () => {
     setModalVisible(false);
     setModalVisible2(false);
@@ -521,7 +533,7 @@ Total Account Balance: ${closingBalance ? `₹${new Intl.NumberFormat('en-IN').f
     navigation.navigate('Dashboard', { refreshData: true });
   }
 
-  useEffect(() => { 
+  useEffect(() => {
     const handleBackPress = () => {
       navigation.navigate("Dashboard")
     };
@@ -529,14 +541,14 @@ Total Account Balance: ${closingBalance ? `₹${new Intl.NumberFormat('en-IN').f
     const backHandler = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
     return () => backHandler.remove();
   }, [isFocused]);
- 
+
   return (
     <View style={styles.mainView}>
       <StatusBar backgroundColor={COLORS.primaryAccent} barStyle="light-content" />
 
       <View style={styles.profileView}>
         <MaterialCommunityIcons4 onPress={() => { navigation.navigate("Dashboard") }} style={{ zIndex: 454 }} name='angle-left' color={COLORS.primaryAccent} size={40} />
-        <View style={styles.profileName}> 
+        <View style={styles.profileName}>
         </View>
         <View style={styles.profileIcon}>
           <Image style={{ width: 70, height: 70, resizeMode: 'contain' }} source={require('../../Assets/Images/rupee.png')} />
@@ -550,41 +562,35 @@ Total Account Balance: ${closingBalance ? `₹${new Intl.NumberFormat('en-IN').f
             <ActivityIndicator size="large" color={COLORS.primary} />
           </View>
         ) : (
-          <View style={styles.left}>
 
+          <View style={styles.left}>
             <Text style={[styles.text1, { color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>Account Name : </Text>
             <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold', marginHorizontal: 25, fontFamily: 'Montserrat-Bold', fontSize: 18 }]} >{item.EnglishName ? item.EnglishName : ''}</Text>
-
             <Text style={[styles.text1, { color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>Account Number : </Text>
             <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold', marginHorizontal: 25 }]}>{item.AccountNo}</Text>
-
             <Text style={[styles.text1, { color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>Name : </Text>
             <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold', marginHorizontal: 25 }]}>{item.EnglishName}</Text>
-
             <Text style={[styles.text1, { color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>Branch : </Text>
             <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold', marginHorizontal: 25 }]}>{route.params.BranchName} ({route.params.BranchCode})</Text>
-
             <Text style={[styles.text1, { color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>Opening Balance : </Text>
             <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold', marginHorizontal: 25 }]}>{(updatedBalances || updatedBalances === 0) ? `₹${new Intl.NumberFormat('en-IN').format(updatedBalances)}` : item.ThisMthBal}</Text>
-
             {parseInt(item.LastMthBal) != 0 &&
               <Text style={[styles.text1, { color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>Last Month Balance : </Text>
             }
             {parseInt(item.LastMthBal) != 0 &&
               <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold', marginHorizontal: 25 }]}>{item.LastMthBal}.00</Text>
             }
-
             {parseInt(item.LienAmt) != 0 &&
               <Text style={[styles.text1, { color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>Lien Amount : </Text>
             }
             {parseInt(item.LienAmt) != 0 &&
               <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold', marginHorizontal: 25 }]}>₹{new Intl.NumberFormat('en-IN').format(item.LienAmt)}</Text>
             }
-
             <Text style={[styles.text1, { color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>A/C Opened date. : </Text>
             <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold', marginHorizontal: 25 }]}>{item.AccOpenDt}</Text>
           </View>
-        )} 
+
+        )}
       </View>
 
       <View style={{ width: '95%', alignSelf: 'center' }}>
@@ -606,7 +612,7 @@ Total Account Balance: ${closingBalance ? `₹${new Intl.NumberFormat('en-IN').f
                     display: 'flex',
                     flexDirection: 'row',
                     alignItems: 'center',
-                    justifyContent: 'center', 
+                    justifyContent: 'center',
                   }}
                   icon={'plus'}
                   labelStyle={{ fontSize: 16, fontFamily: 'Montserrat-Bold' }}
@@ -618,16 +624,16 @@ Total Account Balance: ${closingBalance ? `₹${new Intl.NumberFormat('en-IN').f
                 </Button>
               )
             }
-          </> 
+          </>
         ) : (
-          <View style={{ width: '95%', alignSelf: 'center', height: windowHeight * 0.09, display: 'flex', alignItems: 'center', justifyContent: 'center' }}> 
+          <View style={{ width: '95%', alignSelf: 'center', height: windowHeight * 0.09, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {(route.params.collectionAllowed === 'false' || route.params.collectionAllowed === false) ? (
               <Text style={[styles.text1, { alignSelf: 'center', fontFamily: 'Montserrat-Bold' }]}>The allowed days for collection have expired.</Text>
             ) : (
-              <Text style={[styles.text1, { alignSelf: 'center', fontFamily: 'Montserrat-Bold' }]}>No collection required.</Text>
+              <Text style={[styles.text1, { alignSelf: 'center', fontFamily: 'Montserrat-Bold' }]}>Collection already done for today.</Text>
             )}
           </View>
-        )} 
+        )}
       </View>
 
       <Modal
@@ -668,15 +674,15 @@ Total Account Balance: ${closingBalance ? `₹${new Intl.NumberFormat('en-IN').f
               value={amount}
               keyboardType="numeric"
               onChangeText={text => {
-                const filteredText = text.replace(/[^0-9]/g, ""); 
+                const filteredText = text.replace(/[^0-9]/g, "");
                 setAmount(filteredText);
-              }} 
+              }}
               onFocus={() => {
                 if (!hasCleared) {
                   setAmount('');
                   setHasCleared(true);
                 }
-              }} 
+              }}
               style={{
                 width: "100%",
                 marginBottom: 20,
@@ -691,8 +697,8 @@ Total Account Balance: ${closingBalance ? `₹${new Intl.NumberFormat('en-IN').f
                 fontFamily: "Montserrat-Bold",
               }}
               contentStyle={{ fontFamily: "Montserrat-SemiBold" }}
-            /> 
-            <View style={styles.buttonContainer}> 
+            />
+            <View style={styles.buttonContainer}>
               <Button style={{ width: '48%', marginTop: 5 }} mode="contained" labelStyle={{ fontSize: 16, fontFamily: 'Montserrat-Bold' }} loading={buttonLoading} disabled={buttonLoading} onPress={handleSubmit} >Submit</Button>
               <Button style={{ width: '48%', marginTop: 5, borderColor: COLORS.primaryAccent }} labelStyle={{ fontSize: 16, fontFamily: 'Montserrat-Bold' }} mode="outlined" onPress={handleCancel} >Cancel</Button>
             </View>
@@ -718,6 +724,7 @@ Total Account Balance: ${closingBalance ? `₹${new Intl.NumberFormat('en-IN').f
           </View>
         </Modal>
       }
+
       <Modal
         animationType="slide"
         transparent={true}
@@ -746,10 +753,9 @@ Total Account Balance: ${closingBalance ? `₹${new Intl.NumberFormat('en-IN').f
                 <Text style={[styles.text1, { color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>Total Account Balance : </Text>
                 <Text style={[styles.text1, { fontFamily: 'Montserrat-SemiBold', marginHorizontal: 25 }]}>{newBalance ? `₹${new Intl.NumberFormat('en-IN').format(newBalance)}` : 0}</Text>
               </View>
-            </View> 
+            </View>
 
             <View style={[styles.buttonContainer, { marginTop: 10, justifyContent: 'space-evenly' }]}>
- 
               <MaterialCommunityIcons
                 onPress={handleWhatsAppPress}
                 style={styles.whatsappIcon}
@@ -765,7 +771,7 @@ Total Account Balance: ${closingBalance ? `₹${new Intl.NumberFormat('en-IN').f
                 color={COLORS.white}
                 size={35}
               />
-              <Text style={{ alignSelf: 'center', fontSize: 26, fontWeight: 'thin', color: '#999999' }}>|</Text> 
+              <Text style={{ alignSelf: 'center', fontSize: 26, fontWeight: 'thin', color: '#999999' }}>|</Text>
               <Button
                 style={{ marginHorizontal: 0, marginVertical: 10, borderColor: COLORS.primaryAccent }}
                 mode="contained"
@@ -800,31 +806,21 @@ const styles = StyleSheet.create({
     elevation: 5,
     display: 'flex',
     alignItems: 'center',
-    paddingLeft: 20,
-    // justifyContent: '',
+    paddingLeft: 20, 
     flexDirection: 'row'
   },
-  profileIcon: {
-    // width: 80,
-    width: '30%',
-
-    // height: 80,
-    // borderWidth: 1,
+  profileIcon: { 
+    width: '30%', 
     borderRadius: 60,
-    overflow: 'hidden',
-    // padding: 2,
-    borderColor: COLORS.lightGrey,
-    // elevation: 5,
-    // position: 'absolute',
-    // top: windowHeight * 0.1
+    overflow: 'hidden', 
+    borderColor: COLORS.lightGrey, 
   },
   profileName: {
     width: '70%',
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'center',
-    alignItems: 'center'
-    // backgroundColor: 'red'
+    alignItems: 'center' 
   },
   text: {
     fontFamily: 'Montserrat-Bold',
@@ -841,15 +837,12 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start'
   },
   dataInfoView: {
-    width: windowWidth * 0.85,
-    // height: 120,
+    width: windowWidth * 0.85, 
     borderRadius: 10,
     alignSelf: 'center',
     marginTop: 20,
     paddingTop: 10,
-    paddingBottom: 10,
-    // justifyContent: 'center',
-    // alignItems: 'center',
+    paddingBottom: 10, 
     display: 'flex',
     flexDirection: 'row',
     backgroundColor: '#eef2fa',
@@ -900,12 +893,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#25D366',
     borderRadius: 15,
     padding: 5,
-    elevation: 5,
-
+    elevation: 5, 
   },
-  noReceipt: {
-    // marginHorizontal: 5,
-    // marginVertical: 5,
+  noReceipt: { 
     backgroundColor: '#e1ebfa',
     elevation: 2,
     borderRadius: 10,
@@ -920,8 +910,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     borderRadius: 15,
     padding: 5,
-    elevation: 5,
-
-  }
-
+    elevation: 5, 
+  } 
 })

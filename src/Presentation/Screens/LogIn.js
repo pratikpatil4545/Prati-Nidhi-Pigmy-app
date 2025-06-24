@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Alert, ActivityIndicator, ToastAndroid, Image, PermissionsAndroid, Platform, Linking, Modal, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, Alert, ActivityIndicator, ToastAndroid, Image, PermissionsAndroid, Platform, Linking, Modal, StatusBar, TouchableOpacity } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import { TextInput, Button } from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -21,6 +21,8 @@ export default function Login({ navigation }) {
   const [enableMblNo, setEnableMblNo] = useState(true);
   const [isVerifying, setIsVerifying] = useState(false);
   const [customeLoaderModal, setCustomLoaderModal] = useState(false);
+  const [android15, setAndroid15] = useState(false);
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     const checkAuthentication = async () => {
@@ -181,25 +183,31 @@ export default function Login({ navigation }) {
           buttonPositive: 'OK',
         }
       );
-  
+
       if (granted === PermissionsAndroid.RESULTS.GRANTED) {
         return true;
       } else if (granted === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) {
-        Alert.alert(
-          'Permission Denied',
-          'You have permanently denied SMS permission. Please enable it in Settings.',
-          [
-            {
-              text: 'Cancel',
-              style: 'cancel',
-            },
-            {
-              text: 'Open Settings',
-              onPress: () => Linking.openSettings(),
-            },
-          ],
-          { cancelable: false }
-        );
+        if (android15) {
+          setVisible(true);
+        }
+
+        else {
+          Alert.alert(
+            'Permission Denied',
+            'You have permanently denied SMS permission. Please enable it in Settings.',
+            [
+              {
+                text: 'Cancel',
+                style: 'cancel',
+              },
+              {
+                text: 'Open Settings',
+                onPress: () => Linking.openSettings(),
+              },
+            ],
+            { cancelable: false }
+          );
+        }
         return false;
       } else {
         return false;
@@ -209,6 +217,22 @@ export default function Login({ navigation }) {
       return false;
     }
   };
+
+  const getAndroidVersion = () => {
+    let version = Platform.Version;
+    console.log("version checking", version)
+    if (version === 35) {
+      console.log("Yes android 15")
+      setAndroid15(true);
+    }
+    else {
+      setAndroid15(false);
+    }
+  }
+
+  useEffect(() => {
+    getAndroidVersion()
+  }, [])
 
   const handleNext = async () => {
     setCustomLoaderModal(true);
@@ -234,6 +258,7 @@ export default function Login({ navigation }) {
         box: 'inbox',
         // main office number
         address: `+919373140457`,
+        // address: `+917887760491`,
         // address: `+918080109858`,
         bodyRegex: '(.*)PratiNidhi Online System(.*)',
         maxCount: 2,
@@ -325,6 +350,7 @@ export default function Login({ navigation }) {
           if (matchedNumber) {
             console.log("number matched", matchedNumber, number)
             if (matchedNumber === number.toString()) {
+              // if (1 === 1) {
               console.log("number is also matched matched", number, matchedNumber)
               console.log('Verified');
               setVerificationText('Verified');
@@ -379,6 +405,11 @@ export default function Login({ navigation }) {
               // disabled
               theme={{
                 colors: { primary: '#3B5998', underlineColor: 'transparent' },
+              }}
+              onKeyPress={({ nativeEvent }) => {
+                if (nativeEvent.key === 'Enter') {
+                  handleSubmit();
+                }
               }}
               left={<TextInput.Icon icon="phone" />}
               error={verificationText === 'User not found'}
@@ -474,6 +505,11 @@ export default function Login({ navigation }) {
                 onPress={() => setShowPassword(!showPassword)}
               />
             }
+            onKeyPress={({ nativeEvent }) => {
+              if (nativeEvent.key === 'Enter') {
+                handleSubmit();
+              }
+            }}
             error={!passwordMatched}
             autoCapitalize="none"
           />
@@ -504,6 +540,36 @@ export default function Login({ navigation }) {
           </View>
         </Modal>
       }
+
+      <Modal visible={visible} onRequestClose={() => { setVisible(false) }} transparent animationType="fade">
+        <View style={styles.overlay}>
+          <View style={styles.modal}>
+            <Image
+              source={require('../Assets/Images/permission.gif')}
+              style={styles.gif}
+              resizeMode="contain"
+            />
+
+            <Text style={styles.title}>Permission Required</Text>
+            <Text style={styles.message}>
+              To allow SMS access on Android 15, follow these steps:
+              {'\n\n'}1. Tap "Open Settings".
+              {'\n'}2. In the top right corner, tap the three-dot menu (⋮).
+              {'\n'}3. Select "Allow restricted settings".
+              {'\n'}4. Come back and try again.
+            </Text>
+
+            <View style={styles.buttons}>
+              <TouchableOpacity onPress={() => setVisible(false)} style={styles.cancel}>
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => { Linking.openSettings(); setVisible(false); }} style={styles.open}>
+                <Text style={styles.buttonText}>Open Settings</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   )
 }
@@ -551,6 +617,54 @@ const styles = StyleSheet.create((
       fontWeight: 'bold',
       color: '#252525',
       fontSize: 22
+    },
+    overlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      justifyContent: 'center',
+      padding: 20
+    },
+    modal: {
+      backgroundColor: '#fff',
+      borderRadius: 10,
+      padding: 20,
+      elevation: 5,
+      alignItems: 'center'
+    },
+    gif: {
+      width: 250,
+      height: 150,
+      marginBottom: 15
+    },
+    title: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      marginBottom: 10,
+      textAlign: 'center'
+    },
+    message: {
+      fontSize: 15,
+      color: '#333',
+      marginBottom: 20,
+      textAlign: 'left'
+    },
+    buttons: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      alignSelf: 'stretch'
+    },
+    cancel: {
+      padding: 10,
+      marginRight: 10
+    },
+    open: {
+      padding: 10,
+      backgroundColor: COLORS.primary,
+      borderRadius: 6
+    },
+    buttonText: {
+      color: '#fff',
+      fontWeight: 'bold'
     }
   }
 ))
