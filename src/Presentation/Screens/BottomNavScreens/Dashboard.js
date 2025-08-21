@@ -231,6 +231,7 @@ export default function Dashboard({ navigation, route }) {
             } catch (error) {
                 setDataAvailable(false);
                 Alert.alert('Error occurred:', error.message);
+                console.log('Error occurred:', error)
                 await AsyncStorage.removeItem('firstLoginComplete');
 
                 if (!isConnected) {
@@ -319,6 +320,7 @@ export default function Dashboard({ navigation, route }) {
             } catch (error) {
                 setDataAvailable(false);
                 Alert.alert('Error occurred:', error.message);
+                console.log('Error occurred:', error)
                 await AsyncStorage.removeItem('firstLoginComplete');
                 if (!isConnected) {
                     Alert.alert('Failed getting data!', 'Please check your internet connection and try again.');
@@ -352,77 +354,144 @@ export default function Dashboard({ navigation, route }) {
         };
     }, []);
 
-    const sendDataInBackground = async (ClientID, BrCode, AgCode, BrAgCode, FileCreateDate, InputFileType) => {
-        const transactionTableData = await AsyncStorage.getItem('transactionTable');
-        const parsedData = JSON.parse(transactionTableData) || [];
-        const pendingTransactions = parsedData.filter((item) => item.pending === true);
-        const savedData = await AsyncStorage.getItem('dataObject');
-        const dataObject = JSON.parse(savedData);
+    // const sendDataInBackground = async (ClientID, BrCode, AgCode, BrAgCode, FileCreateDate, InputFileType) => {
+    //     const transactionTableData = await AsyncStorage.getItem('transactionTable');
+    //     const parsedData = JSON.parse(transactionTableData) || [];
+    //     const pendingTransactions = parsedData.filter((item) => item.pending === true);
+    //     const savedData = await AsyncStorage.getItem('dataObject');
+    //     const dataObject = JSON.parse(savedData);
 
-        if (!isConnected || pendingTransactions.length === 0) {
-            return;
-        }
-        console.log("pending data", pendingTransactions)
-        const transactionsWithoutPending = pendingTransactions.map(({ pending, ...rest }) => rest);
-        console.log("transactionsWithoutPending", transactionsWithoutPending)
-        const newArray = {
-            ClientID: dataObject.MstrData?.ClientID,
-            BrCode: dataObject.MstrData?.BrCode,
-            AgCode: dataObject.MstrData?.AgCode,
-            BrAgCode: dataObject.MstrData?.BrAgCode,
-            FileCreateDate: dataObject.MstrData?.FileCreateDate,
-            InputFileType: dataObject.MstrData?.InputFileType,
-            NoOfRecords: pendingTransactions.length.toString(),
-            CollectionData: transactionsWithoutPending,
-        };
+    //     if (!isConnected || pendingTransactions.length === 0) {
+    //         return;
+    //     }
 
+    //     console.log("pending data", pendingTransactions)
+
+    //     const transactionsWithoutPending = pendingTransactions.map(({ pending, ...rest }) => rest);
+
+    //     console.log("transactionsWithoutPending", transactionsWithoutPending)
+
+    //     const newArray = {
+    //         ClientID: dataObject.MstrData?.ClientID,
+    //         BrCode: dataObject.MstrData?.BrCode,
+    //         AgCode: dataObject.MstrData?.AgCode,
+    //         BrAgCode: dataObject.MstrData?.BrAgCode,
+    //         FileCreateDate: dataObject.MstrData?.FileCreateDate,
+    //         InputFileType: dataObject.MstrData?.InputFileType,
+    //         NoOfRecords: pendingTransactions.length.toString(),
+    //         CollectionData: transactionsWithoutPending,
+    //     };
+
+    //     try {
+    //         const response = await fetch(
+    //             `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp`,
+    //             {
+    //                 method: 'POST',
+    //                 headers: {
+    //                     'Content-Type': 'application/x-www-form-urlencoded',
+    //                 },
+    //                 body: new URLSearchParams({ DataFromApp: JSON.stringify(newArray) }).toString(),
+    //             }
+    //         );
+
+    //         const responseText = await response.text();
+
+    //         try {
+    //             const parser = new XMLParser();
+    //             const jsonResponse = parser.parse(responseText);
+    //             const jsonString = jsonResponse.string;
+    //             const dataObject = JSON.parse(jsonString);
+    //             const responseString = dataObject.ResonseCode;
+    //             if (responseString === '0000') {
+    //                 const updatedTransactionTable = parsedData.map((item) => {
+    //                     if (item.pending) {
+    //                         const { pending, ...rest } = item;
+    //                         return rest;
+    //                     }
+    //                     return item;
+    //                 });
+
+    //                 await AsyncStorage.setItem('transactionTable', JSON.stringify(updatedTransactionTable));
+    //                 fetchTransactionTable();
+    //                 console.log("Updated transaction table stored successfully.");
+    //             } else {
+    //                 Alert.alert(
+    //                     'Error:',
+    //                     `Response Code : ${responseString}, ${dataObject.ResponseString}`
+    //                 );
+    //             }
+    //         } catch (parseError) {
+    //             console.log("Error parsing response as JSON:", parseError, "Response text:", responseText);
+    //             Alert.alert("Error", `Failed to upload offline reciepts : ${responseText}`);
+    //         }
+    //     } catch (error) {
+    //         console.log("Error during API call:", error);
+    //         Alert.alert("Error", `Unexpected error during API call: ${error.message}`);
+    //     }
+    // };
+
+    const sendDataInBackground = async () => {
         try {
+            const transactionTableData = await AsyncStorage.getItem('transactionTable');
+            const parsedData = JSON.parse(transactionTableData) || [];
+            const pendingTransactions = parsedData.filter(item => item.pending === true);
+    
+            if (!isConnected || pendingTransactions.length === 0) return;
+    
+            const savedData = await AsyncStorage.getItem('dataObject');
+            const dataObject = JSON.parse(savedData);
+    
+            const payload = {
+                ClientID: dataObject?.MstrData?.ClientID,
+                BrCode: dataObject?.MstrData?.BrCode,
+                AgCode: dataObject?.MstrData?.AgCode,
+                BrAgCode: dataObject?.MstrData?.BrAgCode,
+                FileCreateDate: dataObject?.MstrData?.FileCreateDate,
+                InputFileType: dataObject?.MstrData?.InputFileType,
+                NoOfRecords: pendingTransactions.length.toString(),
+                CollectionData: pendingTransactions.map(({ pending, ...rest }) => rest),
+            };
+    
+            console.log("Sending pending data:", payload);
+    
             const response = await fetch(
-                `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp`,
+                'https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp',
                 {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: new URLSearchParams({ DataFromApp: JSON.stringify(newArray) }).toString(),
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ DataFromApp: JSON.stringify(payload) }).toString(),
                 }
             );
-
+    
             const responseText = await response.text();
-
-            try {
-                const parser = new XMLParser();
-                const jsonResponse = parser.parse(responseText);
-                const jsonString = jsonResponse.string;
-                const dataObject = JSON.parse(jsonString);
-                const responseString = dataObject.ResonseCode;
-                if (responseString === '0000') {
-                    const updatedTransactionTable = parsedData.map((item) => {
-                        if (item.pending) {
-                            const { pending, ...rest } = item;
-                            return rest;
-                        }
-                        return item;
-                    });
-
-                    await AsyncStorage.setItem('transactionTable', JSON.stringify(updatedTransactionTable));
-                    fetchTransactionTable();
-                    console.log("Updated transaction table stored successfully.");
-                } else {
-                    Alert.alert(
-                        'Error:',
-                        `Response Code : ${responseString}, ${dataObject.ResponseString}`
-                    );
-                }
-            } catch (parseError) {
-                console.log("Error parsing response as JSON:", parseError, "Response text:", responseText);
-                Alert.alert("Error", `Failed to upload offline reciepts : ${responseText}`);
+            const parser = new XMLParser();
+            const parsedXML = parser.parse(responseText);
+            const resultJson = JSON.parse(parsedXML.string);
+            const responseCode = resultJson?.ResonseCode;
+    
+            if (responseCode === '0000') {
+                const updatedTransactionTable = parsedData.map(item => {
+                    if (item.pending) {
+                        const { pending, ...rest } = item;
+                        return rest;
+                    }
+                    return item;
+                });
+    
+                await AsyncStorage.setItem('transactionTable', JSON.stringify(updatedTransactionTable));
+                fetchTransactionTable();
+                console.log("Pending transactions uploaded and cleared.");
+            } else {
+                Alert.alert(
+                    'Upload Failed',
+                    `Response Code: ${responseCode}, Message: ${resultJson?.ResponseString || 'Unknown error'}`
+                );
             }
         } catch (error) {
-            console.log("Error during API call:", error);
-            Alert.alert("Error", `Unexpected error during API call: ${error.message}`);
+            console.log("Background upload error:", error);
+            Alert.alert("Upload Error", `Something went wrong: ${error.message}`);
         }
-    };
+    };    
 
     const fetchTransactionTable = async () => {
         try {
@@ -471,7 +540,7 @@ export default function Dashboard({ navigation, route }) {
 
                             const closeCollectionUrl = `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/CloseCollection_FromApp`;
                             const dummyCloseCycleUrl = `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/Dummy_CloseCycle`;
-                            // let tempCount = 25;
+                            // let tempCount = 8;
                             let tempCount = parseInt(transactionTable.length);
                             // console.log("transacion count", tempCount)
                             try {
