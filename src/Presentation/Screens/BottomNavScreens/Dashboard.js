@@ -12,6 +12,7 @@ import SearchPopup from '../../Components/SearchPopup';
 import TransactionCard from '../../Components/TransactionCard';
 import NetInfo from '@react-native-community/netinfo';
 import { Buffer } from 'buffer';
+import axios from 'axios';
 
 export default function Dashboard({ navigation, route }) {
 
@@ -59,6 +60,7 @@ export default function Dashboard({ navigation, route }) {
     const [isFirstLogin, setIsFirstLogin] = useState(false);
     const [isConnected, setConnected] = useState(true);
     const [maxAmountLimit, setMaxAmountLimit] = useState(null);
+    const [syncLoading, setSyncLoading] = useState(false);
 
     useEffect(() => {
         if (route.params?.search === true) {
@@ -130,12 +132,31 @@ export default function Dashboard({ navigation, route }) {
                 console.log("try block executed")
                 if (mobileNumber) {
                     const url = `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/RequestData_App?MobileNo=${mobileNumber}`;
-                    const response = await fetch(url, {
-                        method: 'GET',
-                        headers: {
-                            'Content-Type': 'application/xml',
+
+                    // const response = await fetch(url, {
+                    //     method: 'GET',
+                    //     headers: {
+                    //         'Content-Type': 'application/xml',
+                    //     },
+                    // });
+
+                    const response = await fetchWithTimeout(
+                        url,
+                        {
+                            method: 'GET',
+                            headers: {
+                                'Content-Type': 'application/xml',
+                            },
                         },
-                    });
+                        15000 // ⏳ timeout in ms
+                    );
+
+                    // const response = await axios.get(url, {
+                    //     headers: {
+                    //         'Content-Type': 'application/xml',
+                    //     },
+                    //     responseType: 'text', // ensure we get raw XML as text
+                    // });            
 
                     const responseText = await response.text();
                     // const responseText = `<?xml version="1.0" encoding="utf-8"?><string xmlns="http://automatesystemsdataservice.in/">{"ResonseCode":"0000","ResponseString":"REQUEST PROCESSED OK","MstrData":{"ClientID":"21","ClientName":"AUTOMATE SYSTEMS","ClientHeader1":"header1","ClientHeader2":"","BrCode":"2","BrNameE":"SWARGATE","BrNameL":"","AgCode":"13","AgNameE":"Pratik","AgNameL":"","BrAgCode":"0","NoOfRecords":"15","AmountLimit":"15000","NewAcOpenAllowed":"True","AllowMultipleColln":"True","IsActive":"True","NoOfDaysAllowed":"5","LicenseValidUpto":"2026-03-31","FileCreateDate":"2025-05-29","InputFileType":"2","HdrLastAcNo":"200036","GLLastAc":["5","100025","200036","999999","999999","999999","999999","999999","999999","999999"],"MstrRecs":[{"GLCode":"0","GLText":"PIGMY0","AccountNo":"1","EnglishName":"Manjunath kat-PG","LName":"","LastMthBal":"0","ThisMthBal":"400","MaxInstal":"0","DailyAmt":"200","OneShotLmt":"0","MaxBalance":"0","AccOpenDt":"2014-08-21","LienGLCode":"0","LienGLText":"","LienAcntNo":"0","LienAmt":"1000","Mobile1":"0","IsAmtToBeAdded":"True"},{"GLCode":"0","GLText":"PIGMY0","AccountNo":"2","EnglishName":"Lalasab Bagaw-PG","LName":"","LastMthBal":"0","ThisMthBal":"400","MaxInstal":"0","DailyAmt":"100","OneShotLmt":"0","MaxBalance":"0","AccOpenDt":"2014-08-21","LienGLCode":"0","LienGLText":"","LienAcntNo":"0","LienAmt":"5000","Mobile1":"0","IsAmtToBeAdded":"True"}]}}</string>`
@@ -231,7 +252,7 @@ export default function Dashboard({ navigation, route }) {
             } catch (error) {
                 setDataAvailable(false);
                 Alert.alert('Error occurred:', error.message);
-                console.log('Error occurred:', error)
+                console.log('Error occurred:', error.message)
                 await AsyncStorage.removeItem('firstLoginComplete');
 
                 if (!isConnected) {
@@ -331,26 +352,50 @@ export default function Dashboard({ navigation, route }) {
         }
     };
 
+    // useEffect(() => {
+    //     let unsubscribe
+    //     let currentState
+
+    //     unsubscribe = NetInfo.addEventListener(state => {
+    //         if (currentState !== state.isConnected) {
+    //             currentState = state.isConnected
+    //             console.log("Is connected?", currentState);
+    //             setConnected(currentState);
+    //             if (currentState === true) {
+    //                 sendDataInBackground()
+    //             }
+    //         }
+    //     });
+
+    //     return () => {
+    //         console.log("unsubscribe");
+
+    //         if (unsubscribe)
+    //             unsubscribe();
+    //     };
+    // }, []);
+
     useEffect(() => {
-        let unsubscribe
-        let currentState
+        let unsubscribe;
+        let currentState;
 
         unsubscribe = NetInfo.addEventListener(state => {
-            if (currentState !== state.isConnected) {
-                currentState = state.isConnected
-                console.log("Is connected?", currentState);
+
+            const isOnline = state.isInternetReachable != null ? state.isInternetReachable : false;
+
+            if (currentState !== isOnline) {
+                currentState = isOnline;
+                console.log("Online status?", currentState);
                 setConnected(currentState);
                 if (currentState === true) {
-                    sendDataInBackground()
+                    sendDataInBackground();
                 }
             }
         });
 
         return () => {
             console.log("unsubscribe");
-
-            if (unsubscribe)
-                unsubscribe();
+            if (unsubscribe) unsubscribe();
         };
     }, []);
 
@@ -435,12 +480,12 @@ export default function Dashboard({ navigation, route }) {
             const transactionTableData = await AsyncStorage.getItem('transactionTable');
             const parsedData = JSON.parse(transactionTableData) || [];
             const pendingTransactions = parsedData.filter(item => item.pending === true);
-    
+
             if (!isConnected || pendingTransactions.length === 0) return;
-    
+
             const savedData = await AsyncStorage.getItem('dataObject');
             const dataObject = JSON.parse(savedData);
-    
+
             const payload = {
                 ClientID: dataObject?.MstrData?.ClientID,
                 BrCode: dataObject?.MstrData?.BrCode,
@@ -451,24 +496,34 @@ export default function Dashboard({ navigation, route }) {
                 NoOfRecords: pendingTransactions.length.toString(),
                 CollectionData: pendingTransactions.map(({ pending, ...rest }) => rest),
             };
-    
+
             console.log("Sending pending data:", payload);
-    
-            const response = await fetch(
+
+            // const response = await fetch(
+            //     'https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp',
+            //     {
+            //         method: 'POST',
+            //         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            //         body: new URLSearchParams({ DataFromApp: JSON.stringify(payload) }).toString(),
+            //     }
+            // );
+
+            const response = await fetchWithTimeout(
                 'https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp',
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: new URLSearchParams({ DataFromApp: JSON.stringify(payload) }).toString(),
-                }
+                },
+                15000
             );
-    
+
             const responseText = await response.text();
             const parser = new XMLParser();
             const parsedXML = parser.parse(responseText);
             const resultJson = JSON.parse(parsedXML.string);
             const responseCode = resultJson?.ResonseCode;
-    
+
             if (responseCode === '0000') {
                 const updatedTransactionTable = parsedData.map(item => {
                     if (item.pending) {
@@ -477,7 +532,7 @@ export default function Dashboard({ navigation, route }) {
                     }
                     return item;
                 });
-    
+
                 await AsyncStorage.setItem('transactionTable', JSON.stringify(updatedTransactionTable));
                 fetchTransactionTable();
                 console.log("Pending transactions uploaded and cleared.");
@@ -491,14 +546,186 @@ export default function Dashboard({ navigation, route }) {
             console.log("Background upload error:", error);
             Alert.alert("Upload Error", `Something went wrong: ${error.message}`);
         }
-    };    
+    };
+
+    // const handleSyncData = async () => {
+    //     try {
+    //         const transactionTableData = await AsyncStorage.getItem('transactionTable');
+    //         const parsedData = JSON.parse(transactionTableData) || [];
+
+    //         if (!isConnected || parsedData.length === 0) return;
+
+    //         const savedData = await AsyncStorage.getItem('dataObject');
+    //         const dataObject = JSON.parse(savedData);
+
+    //         // remove pending flag before sending
+    //         const cleanData = parsedData.map(({ pending, ...rest }) => rest);
+
+    //         const payload = {
+    //             ClientID: dataObject?.MstrData?.ClientID,
+    //             BrCode: dataObject?.MstrData?.BrCode,
+    //             AgCode: dataObject?.MstrData?.AgCode,
+    //             BrAgCode: dataObject?.MstrData?.BrAgCode,
+    //             FileCreateDate: dataObject?.MstrData?.FileCreateDate,
+    //             InputFileType: dataObject?.MstrData?.InputFileType,
+    //             NoOfRecords: cleanData.length.toString(),
+    //             CollectionData: cleanData,
+    //         };
+
+    //         console.log("Syncing all data:", payload);
+
+    //         const response = await fetch(
+    //             'https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp',
+    //             {
+    //                 method: 'POST',
+    //                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    //                 body: new URLSearchParams({ DataFromApp: JSON.stringify(payload) }).toString(),
+    //             }
+    //         );
+
+    //         const responseText = await response.text();
+    //         const parser = new XMLParser();
+    //         const parsedXML = parser.parse(responseText);
+    //         const resultJson = JSON.parse(parsedXML.string);
+    //         const responseCode = resultJson?.ResonseCode;
+    // console.log("response from sync button",resultJson)
+    //         if (responseCode === '0000') {
+    //             // Save cleaned data (without pending flag) back
+    //             // await AsyncStorage.setItem('transactionTable', JSON.stringify(cleanData));
+    //             // fetchTransactionTable();
+    //             Alert.alert('Success', 'All data synced successfully to the server.')
+    //             console.log("All transactions synced successfully (pending flag removed).");
+    //         } else {
+    //             Alert.alert(
+    //                 'Sync Failed',
+    //                 `Response Code: ${responseCode}, Message: ${resultJson?.ResponseString || 'Unknown error'}`
+    //             );
+    //         }
+    //     } catch (error) {
+    //         console.log("Sync error:", error);
+    //         Alert.alert("Sync Error", `Something went wrong: ${error.message}`);
+    //     }
+    // };    
+
+    const fetchWithTimeout = (url, options, timeout = 15000) => {
+        return Promise.race([
+            fetch(url, options),
+            new Promise((_, reject) =>
+                setTimeout(() => reject(new Error("Request timed out")), timeout)
+            ),
+        ]);
+    };
+
+    const handleSyncData = async () => {
+        setSyncLoading(true);
+        try {
+            const transactionTableData = await AsyncStorage.getItem('transactionTable');
+            const parsedData = JSON.parse(transactionTableData) || [];
+
+            if (!isConnected) {
+                setSyncLoading(false);
+                Alert.alert('Cannot sync data!', `You are offline, please connect to the Internet and try again.`);
+                return;
+            }
+
+            const savedData = await AsyncStorage.getItem('dataObject');
+            const dataObject = JSON.parse(savedData);
+
+            const cleanData = parsedData.map(({ pending, ...rest }) => rest);
+
+            // const chunkArray = (arr, size) =>
+            //     arr.reduce((acc, _, i) => (i % size ? acc : [...acc, arr.slice(i, i + size)]), []);
+
+            const chunkArray = (arr, size) => {
+                const result = [];
+                for (let i = 0; i < arr.length; i += size) {
+                  result.push(arr.slice(i, i + size));
+                }
+                return result;
+              };              
+
+            const chunkSize = 5;
+            const chunks = chunkArray(cleanData, chunkSize);
+
+            for (let i = 0; i < chunks.length; i++) {
+                const batch = chunks[i];
+                const payload = {
+                    ClientID: dataObject?.MstrData?.ClientID,
+                    BrCode: dataObject?.MstrData?.BrCode,
+                    AgCode: dataObject?.MstrData?.AgCode,
+                    BrAgCode: dataObject?.MstrData?.BrAgCode,
+                    FileCreateDate: dataObject?.MstrData?.FileCreateDate,
+                    InputFileType: dataObject?.MstrData?.InputFileType,
+                    NoOfRecords: batch.length.toString(),
+                    CollectionData: batch,
+                };
+
+                console.log(`Syncing batch ${i + 1} of ${chunks.length}:`, payload);
+
+                // const response = await fetch(
+                //     'https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp',
+                //     {
+                //         method: 'POST',
+                //         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                //         body: new URLSearchParams({ DataFromApp: JSON.stringify(payload) }).toString(),
+                //     }
+                // );
+
+                const response = await fetchWithTimeout(
+                    'https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp',
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams({ DataFromApp: JSON.stringify(payload) }).toString(),
+                    },
+                    15000 // 15 sec timeout
+                );
+
+                const responseText = await response.text();
+                const parser = new XMLParser();
+                const parsedXML = parser.parse(responseText);
+                const resultJson = JSON.parse(parsedXML.string);
+                const responseCode = resultJson?.ResonseCode;
+
+                console.log("Response from batch sync:", resultJson);
+
+                if (responseCode !== '0000') {
+                    Alert.alert(
+                        'Sync Failed',
+                        `Code: ${responseCode}, Message: ${resultJson?.ResponseString || 'Unknown error'}`
+                    );
+                    setSyncLoading(false);
+                    return;
+                }
+            }
+
+            setSyncLoading(false);
+            Alert.alert('Success', 'All data synced successfully.');
+            const updatedTransactionTable = parsedData.map(item => {
+                if (item.pending) {
+                    const { pending, ...rest } = item;
+                    return rest;
+                }
+                return item;
+            });
+
+            await AsyncStorage.setItem('transactionTable', JSON.stringify(updatedTransactionTable));
+            fetchTransactionTable();
+            console.log("All transactions synced successfully (pending flag removed).");
+
+        } catch (error) {
+            setSyncLoading(false);
+            console.log("Sync error:", error);
+            Alert.alert("Sync Error", `Something went wrong: ${error.message}`);
+        }
+    };
 
     const fetchTransactionTable = async () => {
         try {
             const transactionTableData = await AsyncStorage.getItem('transactionTable');
             if (transactionTableData) {
                 const parsedData = JSON.parse(transactionTableData);
-        // console.log("transactions latest checking now", parsedData)
+                // console.log("transactions latest checking now", parsedData)
 
                 setTransactionTable(parsedData);
                 const pendingTransactions = parsedData.filter((item) => item.pending === true);
@@ -544,7 +771,19 @@ export default function Dashboard({ navigation, route }) {
                             let tempCount = parseInt(transactionTable.length);
                             // console.log("transacion count", tempCount)
                             try {
-                                const closeCollectionResponse = await fetch(closeCollectionUrl, {
+                                // const closeCollectionResponse = await fetch(closeCollectionUrl, {
+                                //     method: 'POST',
+                                //     headers: {
+                                //         'Content-Type': 'application/x-www-form-urlencoded',
+                                //     },
+                                //     body: new URLSearchParams({
+                                //         MobileNo: mobileNumber,
+                                //         Fdate: FileCreateDate,
+                                //         NoofRecs: tempCount,
+                                //     }).toString(),
+                                // });
+
+                                const closeCollectionResponse = await fetchWithTimeout(closeCollectionUrl, {
                                     method: 'POST',
                                     headers: {
                                         'Content-Type': 'application/x-www-form-urlencoded',
@@ -554,7 +793,7 @@ export default function Dashboard({ navigation, route }) {
                                         Fdate: FileCreateDate,
                                         NoofRecs: tempCount,
                                     }).toString(),
-                                });
+                                }, 15000);
 
                                 const closeCollectionText = await closeCollectionResponse.text();
                                 const parser = new XMLParser();
@@ -563,7 +802,19 @@ export default function Dashboard({ navigation, route }) {
                                 const closeCollectionResponseCode = closeCollectionData.ResonseCode;
 
                                 if (closeCollectionResponseCode === '0000') {
-                                    const dummyCloseCycleResponse = await fetch(dummyCloseCycleUrl, {
+                                    // const dummyCloseCycleResponse = await fetch(dummyCloseCycleUrl, {
+                                    //     method: 'POST',
+                                    //     headers: {
+                                    //         'Content-Type': 'application/x-www-form-urlencoded',
+                                    //     },
+                                    //     body: new URLSearchParams({
+                                    //         MobileNo: mobileNumber,
+                                    //         Fdate: FileCreateDate,
+                                    //         NoofRecs: tempCount,
+                                    //     }).toString(),
+                                    // });
+
+                                    const dummyCloseCycleResponse = await fetchWithTimeout(dummyCloseCycleUrl, {
                                         method: 'POST',
                                         headers: {
                                             'Content-Type': 'application/x-www-form-urlencoded',
@@ -573,7 +824,7 @@ export default function Dashboard({ navigation, route }) {
                                             Fdate: FileCreateDate,
                                             NoofRecs: tempCount,
                                         }).toString(),
-                                    });
+                                    }, 15000);
 
                                     const dummyCloseCycleText = await dummyCloseCycleResponse.text();
                                     const dummyCloseCycleJson = parser.parse(dummyCloseCycleText);
@@ -1010,17 +1261,22 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
 
                         <View style={{ marginTop: 15, width: windowWidth * 1, height: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-evenly' }}>
                             <View style={[styles.dataInfoView, { width: windowWidth * 0.90, alignSelf: 'center', flexDirection: 'row', height: 'auto', overflow: 'hidden' }]}>
-                                <View style={{ width: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                                    <Text style={[styles.text, { marginLeft: 0 }]}>Total collected receipts </Text>
+                                <View style={{ width: '30%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                    <Text style={[styles.text, { marginLeft: 0 }]}>Total receipt</Text>
                                     <Text style={[styles.text, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>{transactionTable ? transactionTable.length : '-'} </Text>
                                 </View>
-                                <View style={{ width: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                <View style={{ width: '30%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                    <Text style={[styles.text]}>Pending</Text>
+                                    <Text style={[styles.text, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>{pendingCount ? pendingCount : '0'} </Text>
+                                    {/* <Text style={[styles.text, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>{noOfDaysAllowed ? noOfDaysAllowed : '0'} </Text> */}
+                                </View>
+                                <View style={{ width: '30%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                                     <Text style={[styles.text]}>Allowed days</Text>
                                     <Text style={[styles.text, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>{noOfDaysAllowed ? noOfDaysAllowed : '0'} </Text>
                                 </View>
                             </View>
-                            <View style={[styles.dataInfoView, { marginTop: 15, width: windowWidth * 0.90, alignSelf: 'center', flexDirection: 'row', height: 'auto', overflow: 'hidden' }]}>
 
+                            <View style={[styles.dataInfoView, { marginTop: 15, width: windowWidth * 0.90, alignSelf: 'center', flexDirection: 'row', height: 'auto', overflow: 'hidden' }]}>
                                 <View style={{ width: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                                     <Text style={[styles.text]}>Total collected amount </Text>
                                     <Text style={[styles.text, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>{totalAmount ? `₹${new Intl.NumberFormat('en-IN').format(totalAmount)}` : '0'}</Text>
@@ -1029,13 +1285,54 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
                                     <Text style={[styles.text]}>Amount limit</Text>
                                     <Text style={[styles.text, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>{maxAmountLimit ? `₹${new Intl.NumberFormat('en-IN').format(maxAmountLimit)}` : '0'}</Text>
                                 </View>
-
                             </View>
 
-                            <View style={[styles.dataInfoView, { marginTop: 15, width: windowWidth * 0.90, alignSelf: 'center', flexDirection: 'row', height: 'auto', overflow: 'hidden' }]}>
+                            {/* <View style={[styles.dataInfoView, { marginTop: 15, backgroundColor: 'none', width: windowWidth * 0.90, elevation: 0, alignSelf: 'center', flexDirection: 'row', height: 'auto', overflow: 'hidden' }]}>
+                                <View style={{ width: '50%', backgroundColor: '#eef2fa', elevation: 2, marginBottom: 5, borderRadius: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                    <Text style={[styles.text]}>File Created Date</Text>
+                                    <Text style={[styles.text, { fontSize: 20, fontFamily: 'Montserrat-Bold' }]}>{fileCreatedDate ? fileCreatedDate : '-'} </Text>
+                                </View>
                                 <View style={{ width: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                                    <Text style={[styles.text]}>Pending</Text>
-                                    <Text style={[styles.text, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>{pendingCount ? pendingCount : '0'} </Text>
+                                    <Button
+                                        icon={'cloud-sync-outline'}
+                                        loading={syncLoading}
+                                        disabled={syncLoading || loading || isFirstLogin || !IsActive || transactionTable?.length === 0}
+                                        onPress={handleSyncData}
+                                        labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }}
+                                        style={{ width: windowWidth * 0.30 }}
+                                        mode="contained"
+                                    >
+                                        Sync
+                                    </Button>
+                                </View>
+                            </View> */}
+
+                            {/* <View style={[styles.dataInfoView, { marginTop: 15, backgroundColor: 'transparent', width: windowWidth * 0.50, elevation: 0, alignSelf: 'center', flexDirection: 'row', height: 'auto', overflow: 'hidden' }]}>
+                                <View style={{ width: '90%', backgroundColor: '#eef2fa', elevation: 2, alignSelf: 'flex-end', marginBottom: 5, borderRadius: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                    <Text style={[styles.text]}>File Created Date</Text>
+                                    <Text style={[styles.text, { fontSize: 20, fontFamily: 'Montserrat-Bold' }]}>{fileCreatedDate ? fileCreatedDate : '-'} </Text>
+                                </View>
+                            </View> */}
+
+                            <View style={{ width: '100%', marginTop: 15, display: 'flex', flexDirection: 'row', justifyContent: 'center' }}>
+                                <View style={{  width: '50%', alignSelf: 'flex-start' }}>
+                                    <View style={{ width: '90%', backgroundColor: '#eef2fa', elevation: 2, alignSelf: 'flex-end', borderRadius: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                        <Text style={[styles.text]}>File Created Date</Text>
+                                        <Text style={[styles.text, { fontSize: 20, fontFamily: 'Montserrat-Bold' }]}>{fileCreatedDate ? fileCreatedDate : '-'} </Text>
+                                    </View>
+                                </View>
+                                <View style={{ width: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                    <Button
+                                        icon={'cloud-sync-outline'}
+                                        loading={syncLoading}
+                                        disabled={syncLoading || loading || isFirstLogin || !IsActive || transactionTable?.length === 0}
+                                        onPress={handleSyncData}
+                                        labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }}
+                                        style={{ width: windowWidth * 0.40 }}
+                                        mode="contained"
+                                    >
+                                        Sync
+                                    </Button>
                                 </View>
                             </View>
                         </View>
@@ -1315,7 +1612,8 @@ const styles = StyleSheet.create({
     text: {
         fontFamily: 'Montserrat-SemiBold',
         color: COLORS.gray,
-        marginLeft: 10
+        marginLeft: 10,
+        fontSize: 14
     },
     lineView: {
         marginTop: 20,

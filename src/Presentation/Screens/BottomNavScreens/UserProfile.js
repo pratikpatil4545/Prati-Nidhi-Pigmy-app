@@ -15,6 +15,7 @@ import RNFS from 'react-native-fs';
 export default function UserProfile({ route, navigation }) {
 
   const [item, setItem] = useState(route.params.item);
+  // console.log("all items checking: ", item)
   const [mobileInputVisible, setmobileInputVisible] = useState(false);
   const [mobileNumber, setmobileNumber] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
@@ -42,17 +43,41 @@ export default function UserProfile({ route, navigation }) {
   const [LicenseExpired, setLicenseExpired] = useState(false);
   const [collectionDate, setCollectionDate] = useState(null);
 
+  // useEffect(() => {
+  //   const unsubscribe = NetInfo.addEventListener((state) => {
+  //     setConnected(state.isConnected);
+  //     // console.log("networks state", state)
+  //     if (!state.isConnected) {
+  //       showAlert();
+  //     }
+  //   });
+
+  //   return () => {
+  //     unsubscribe();
+  //   };
+  // }, []);
+
   useEffect(() => {
-    const unsubscribe = NetInfo.addEventListener((state) => {
-      setConnected(state.isConnected);
-      // console.log("networks state", state)
-      if (!state.isConnected) {
-        showAlert();
+    let unsubscribe;
+    let currentState;
+
+    unsubscribe = NetInfo.addEventListener(state => {
+
+      const isOnline = state.isInternetReachable != null ? state.isInternetReachable : false;
+
+      if (currentState !== isOnline) {
+        currentState = isOnline;
+        console.log("Online status?", currentState);
+        setConnected(currentState);
+        if (currentState !== true) {
+          showAlert();
+        }
       }
     });
 
     return () => {
-      unsubscribe();
+      console.log("unsubscribe");
+      if (unsubscribe) unsubscribe();
     };
   }, []);
 
@@ -208,7 +233,7 @@ export default function UserProfile({ route, navigation }) {
       const savedMasterData = await AsyncStorage.getItem('dataObject');
       const dataObject = JSON.parse(savedMasterData);
       console.log("checking date and time in transactionTable from collection screen", savedData)
-      
+
       setClientId(dataObject.MstrData?.ClientID);
       setAgCode(dataObject.MstrData?.AgCode);
       setBrCode(dataObject.MstrData?.BrCode);
@@ -256,7 +281,6 @@ export default function UserProfile({ route, navigation }) {
   const handleSubmit = async () => {
     setButtonLoading(true);
     const { OneShotLmt, MaxBalance, ThisMthBal, DailyAmt, MaxInstal, IsAmtToBeAdded, GLCode, AccountNo, EnglishName } = item;
-
     const mobileValidation = () => {
       if (!mobileNumber) {
         Alert.alert('Warning', `Please enter customer's Mobile Number`);
@@ -269,17 +293,76 @@ export default function UserProfile({ route, navigation }) {
       return true;
     };
 
+    // const amountValidation = () => {
+    //   const currentBalance = parseFloat(ThisMthBal) || 0;
+    //   const amountValue = parseFloat(amount) || 0;
+    //   let updatedBalance;
+    //   if (IsAmtToBeAdded === 'True') {
+    //     updatedBalance = currentBalance + amountValue;
+    //   }
+    //   else {
+    //     if (currentBalance >= amountValue) {
+    //       updatedBalance = currentBalance - amountValue;
+    //     }
+    //     else {
+    //       Alert.alert('Warning', 'Amount More Than Balance Can Not be Accepted.')
+    //     }
+    //   }
+
+    //   const conditions = [
+    //     { condition: OneShotLmt != 0 && amountValue > parseInt(OneShotLmt), message: 'Amount exceeds one shot limit.' },
+    //     { condition: MaxBalance != 0 && updatedBalance > parseInt(MaxBalance), message: 'Amount exceeds maximum balance.' },
+    //     // { condition: MaxInstal != 0 && DailyAmt != 0 && amountValue != parseInt(DailyAmt), message: 'Amount is not equal to daily amount.' },
+    //     { condition: MaxInstal != 0 && DailyAmt != 0 && (amountValue % parseInt(DailyAmt)) !== 0, message: `Amount should be exact multiple of ${DailyAmt}.` },
+    //     { condition: MaxInstal != 0 && DailyAmt != 0 && (amountValue / parseInt(DailyAmt)) > parseInt(MaxInstal), message: `Maximum ${MaxInstal} installments can be accepted.` },
+    //     // { condition: updatedBalance === 0 && IsAmtToBeAdded === 'False', message: `Opening balance is '0', cannot take further collection.` },
+    //     // { condition: amountValue <= 0, message: 'Please enter a valid amount.' }
+    //   ];
+
+    //   for (const { condition, message } of conditions) {
+    //     if (condition) {
+    //       Alert.alert('Warning', message);
+    //       return false;
+    //     }
+    //   }
+    //   return true;
+    // };
+
     const amountValidation = () => {
       const currentBalance = parseFloat(ThisMthBal) || 0;
       const amountValue = parseFloat(amount) || 0;
-      const updatedBalance = currentBalance + amountValue;
+      let updatedBalance;
+
+      if (IsAmtToBeAdded === 'True') {
+        updatedBalance = currentBalance + amountValue;
+      } else {
+        updatedBalance = currentBalance - amountValue;
+      }
+
       const conditions = [
-        { condition: OneShotLmt != 0 && amountValue >= parseInt(OneShotLmt), message: 'Amount exceeds one shot limit.' },
-        { condition: MaxBalance != 0 && updatedBalance >= parseInt(MaxBalance), message: 'Amount exceeds maximum balance.' },
-        { condition: MaxInstal != 0 && DailyAmt != 0 && amountValue != parseInt(DailyAmt), message: 'Amount is not equal to daily amount.' },
-        { condition: MaxInstal != 0 && DailyAmt != 0 && (amountValue % parseInt(DailyAmt) !== 0 || amountValue > parseInt(MaxInstal)), message: `Amount must be a multiple of ${DailyAmt} and not exceed ${MaxInstal}.` },
-        { condition: updatedBalance === 0 && IsAmtToBeAdded === 'False', message: `Opening balance is '0'; cannot take further collection.` },
-        { condition: amountValue <= 0, message: 'Please enter a valid amount.' }
+        {
+          condition: IsAmtToBeAdded === 'False' && currentBalance < amountValue,
+          message: 'Amount more than balance cannot be accepted.'
+        },
+        {
+          condition: OneShotLmt != 0 && amountValue > parseInt(OneShotLmt),
+          message: 'Amount exceeds one shot limit.'
+        },
+        {
+          condition: MaxBalance != 0 && updatedBalance > parseInt(MaxBalance),
+          message: 'Amount exceeds maximum balance.'
+        },
+        {
+          condition: MaxInstal != 0 && DailyAmt != 0 && (amountValue % parseInt(DailyAmt)) !== 0,
+          message: `Amount should be exact multiple of ${DailyAmt}.`
+        },
+        {
+          condition: MaxInstal != 0 && DailyAmt != 0 && (amountValue / parseInt(DailyAmt)) > parseInt(MaxInstal),
+          message: `Maximum ${MaxInstal} installments can be accepted.`
+        },
+        // Uncomment if needed:
+        // { condition: updatedBalance === 0 && IsAmtToBeAdded === 'False', message: `Opening balance is '0', cannot take further collection.` },
+        // { condition: amountValue <= 0, message: 'Please enter a valid amount.' }
       ];
 
       for (const { condition, message } of conditions) {
@@ -288,6 +371,7 @@ export default function UserProfile({ route, navigation }) {
           return false;
         }
       }
+
       return true;
     };
 
@@ -380,30 +464,32 @@ export default function UserProfile({ route, navigation }) {
           const jsonString = jsonResponse.string;
           const responseObject = JSON.parse(jsonString);
           const rawResponseString = responseObject.ResponseString;
-
+          console.log("response check", responseObject)
           if (responseObject.ResonseCode != '0000') {
             Alert.alert(
               'Error:',
               `Response Code : ${responseObject.ResonseCode}, ${responseObject.ResponseString}`
             );
+            setCustomLoaderModal(false);
+
           }
           else {
             var lastTransactionRecordSentToServer = JSON.parse(newArrayString);
             var currentTransactionRecordsFromStorageAfterParse = JSON.parse(await AsyncStorage.getItem('transactionTable')) || [];
             console.log("Transaction sent to server: ", lastTransactionRecordSentToServer);
-            var latestTransactionRecord = currentTransactionRecordsFromStorageAfterParse.filter(item => 
+            var latestTransactionRecord = currentTransactionRecordsFromStorageAfterParse.filter(item =>
               item.pending === true &&
-              item.accountNo === lastTransactionRecordSentToServer.accountNo &&  
+              item.accountNo === lastTransactionRecordSentToServer.accountNo &&
               item.collDateTime === lastTransactionRecordSentToServer.collDateTime
             );
-            
+
             if (latestTransactionRecord.length > 0) {
               console.log("Before: ", latestTransactionRecord);
               latestTransactionRecord[0].pending = false;
               console.log("After: ", latestTransactionRecord);
-              await AsyncStorage.setItem('transactionTable', JSON.stringify(currentTransactionRecordsFromStorageAfterParse));  
+              await AsyncStorage.setItem('transactionTable', JSON.stringify(currentTransactionRecordsFromStorageAfterParse));
             }
-            
+
             const jsonStartIndex = rawResponseString.indexOf('{');
             const cleanedResponseString = rawResponseString.substring(jsonStartIndex);
             const dataObject = JSON.parse(cleanedResponseString);
@@ -412,7 +498,7 @@ export default function UserProfile({ route, navigation }) {
               if (collectionData && collectionData.length > 0) {
                 const collDateTime = collectionData[0].CollDateTime;
                 setCollectionDate(collDateTime);
-                
+
                 // const currentTransactions = JSON.parse(await AsyncStorage.getItem('transactionTable')) || [];
                 // await AsyncStorage.setItem('transactionTable', JSON.stringify([...currentTransactions, transactionData]));
                 setCollectionMadeToday(true);
@@ -497,6 +583,7 @@ Opeing Balance: ${(openingBalance || openingBalance === 0) ? `₹${new Intl.Numb
 Amount Collected: ₹${amount}
 Total Account Balance: ${closingBalance ? `₹${new Intl.NumberFormat('en-IN').format(closingBalance)}` : 0}
   `;
+
     Alert.alert(
       'Please Confirm Collection',
       message.trim(),
@@ -522,7 +609,9 @@ Total Account Balance: ${closingBalance ? `₹${new Intl.NumberFormat('en-IN').f
         }
       ]
     );
+
     setButtonLoading(false);
+
   };
 
   const handleSubmit2 = () => {
@@ -806,21 +895,21 @@ const styles = StyleSheet.create({
     elevation: 5,
     display: 'flex',
     alignItems: 'center',
-    paddingLeft: 20, 
+    paddingLeft: 20,
     flexDirection: 'row'
   },
-  profileIcon: { 
-    width: '30%', 
+  profileIcon: {
+    width: '30%',
     borderRadius: 60,
-    overflow: 'hidden', 
-    borderColor: COLORS.lightGrey, 
+    overflow: 'hidden',
+    borderColor: COLORS.lightGrey,
   },
   profileName: {
     width: '70%',
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'center',
-    alignItems: 'center' 
+    alignItems: 'center'
   },
   text: {
     fontFamily: 'Montserrat-Bold',
@@ -837,12 +926,12 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start'
   },
   dataInfoView: {
-    width: windowWidth * 0.85, 
+    width: windowWidth * 0.85,
     borderRadius: 10,
     alignSelf: 'center',
     marginTop: 20,
     paddingTop: 10,
-    paddingBottom: 10, 
+    paddingBottom: 10,
     display: 'flex',
     flexDirection: 'row',
     backgroundColor: '#eef2fa',
@@ -893,9 +982,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#25D366',
     borderRadius: 15,
     padding: 5,
-    elevation: 5, 
+    elevation: 5,
   },
-  noReceipt: { 
+  noReceipt: {
     backgroundColor: '#e1ebfa',
     elevation: 2,
     borderRadius: 10,
@@ -910,6 +999,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     borderRadius: 15,
     padding: 5,
-    elevation: 5, 
-  } 
+    elevation: 5,
+  }
 })
