@@ -133,13 +133,6 @@ export default function Dashboard({ navigation, route }) {
                 if (mobileNumber) {
                     const url = `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/RequestData_App?MobileNo=${mobileNumber}`;
 
-                    // const response = await fetch(url, {
-                    //     method: 'GET',
-                    //     headers: {
-                    //         'Content-Type': 'application/xml',
-                    //     },
-                    // });
-
                     const response = await fetchWithTimeout(
                         url,
                         {
@@ -151,15 +144,7 @@ export default function Dashboard({ navigation, route }) {
                         15000 // ⏳ timeout in ms
                     );
 
-                    // const response = await axios.get(url, {
-                    //     headers: {
-                    //         'Content-Type': 'application/xml',
-                    //     },
-                    //     responseType: 'text', // ensure we get raw XML as text
-                    // });            
-
                     const responseText = await response.text();
-                    // const responseText = `<?xml version="1.0" encoding="utf-8"?><string xmlns="http://automatesystemsdataservice.in/">{"ResonseCode":"0000","ResponseString":"REQUEST PROCESSED OK","MstrData":{"ClientID":"21","ClientName":"AUTOMATE SYSTEMS","ClientHeader1":"header1","ClientHeader2":"","BrCode":"2","BrNameE":"SWARGATE","BrNameL":"","AgCode":"13","AgNameE":"Pratik","AgNameL":"","BrAgCode":"0","NoOfRecords":"15","AmountLimit":"15000","NewAcOpenAllowed":"True","AllowMultipleColln":"True","IsActive":"True","NoOfDaysAllowed":"5","LicenseValidUpto":"2026-03-31","FileCreateDate":"2025-05-29","InputFileType":"2","HdrLastAcNo":"200036","GLLastAc":["5","100025","200036","999999","999999","999999","999999","999999","999999","999999"],"MstrRecs":[{"GLCode":"0","GLText":"PIGMY0","AccountNo":"1","EnglishName":"Manjunath kat-PG","LName":"","LastMthBal":"0","ThisMthBal":"400","MaxInstal":"0","DailyAmt":"200","OneShotLmt":"0","MaxBalance":"0","AccOpenDt":"2014-08-21","LienGLCode":"0","LienGLText":"","LienAcntNo":"0","LienAmt":"1000","Mobile1":"0","IsAmtToBeAdded":"True"},{"GLCode":"0","GLText":"PIGMY0","AccountNo":"2","EnglishName":"Lalasab Bagaw-PG","LName":"","LastMthBal":"0","ThisMthBal":"400","MaxInstal":"0","DailyAmt":"100","OneShotLmt":"0","MaxBalance":"0","AccOpenDt":"2014-08-21","LienGLCode":"0","LienGLText":"","LienAcntNo":"0","LienAmt":"5000","Mobile1":"0","IsAmtToBeAdded":"True"}]}}</string>`
                     const parser = new XMLParser();
                     const jsonResponse = parser.parse(responseText);
                     const jsonString = jsonResponse.string;
@@ -186,31 +171,24 @@ export default function Dashboard({ navigation, route }) {
 
                         let len1 = parseInt(dataObject.MstrData?.MstrRecs?.length);
                         let len2 = parseInt(dataObject.MstrData?.NoOfRecords);
-                        // console.log("length checking 1", len1, len2)
-                        // if (len1 && len2) {
-                        // console.log("length checking 2", len1, len2)
+
                         if (len1 != len2) {
                             console.log("length checking 3", len1, len2)
                             setIsDataValid(false);
                             Alert.alert('Error', 'Something went wrong while recieving data or data may be currupted please try again! or contact the main branch.')
                             return;
-                        }
-                        // }
-
+                        } 
                         setLicenseExpired(false);
                         setMappedMasterData(dataObject.MstrData?.MstrRecs);
                         setHeaderLastAccNo(dataObject.MstrData?.HdrLastAcNo);
                         setDataAvailable(true);
                         setNoOfRecords(dataObject.MstrData?.NoOfRecords);
-                        // setLicenseValidUpto('2024-12-31');
-                        // setLicenseValidUpto(dataObject.MstrData?.LicenseValidUpto);
                         await AsyncStorage.setItem('LicenseValidUpto', (dataObject.MstrData?.LicenseValidUpto).toString());
                         setClientName(dataObject.MstrData?.ClientName);
                         setBranchName(dataObject.MstrData?.BrNameE);
                         setBranchCode(dataObject.MstrData?.BrCode);
                         setAgentName(dataObject.MstrData?.AgNameE);
                         setIsActive(dataObject.MstrData?.IsActive ? true : false);
-                        // setIsActive(false);
                         setAllowNewUser((dataObject.MstrData?.NewAcOpenAllowed === 'True') ? true : false);
                         setFileCreatedDate(dataObject.MstrData?.FileCreateDate);
                         setNoOfDaysAllowed(dataObject.MstrData?.NoOfDaysAllowed);
@@ -223,41 +201,29 @@ export default function Dashboard({ navigation, route }) {
                         setGlLastAcc(dataObject.MstrData?.GLLastAc);
                         setGLCode(dataObject.MstrData?.GLCode);
                         setMaxAmountLimit(dataObject.MstrData?.AmountLimit);
-                        // setMultipleCollection(false)
                         setMultipleCollection((dataObject.MstrData?.AllowMultipleColln === 'True') ? true : false);
                         setSearchedResults(true);
                         await AsyncStorage.setItem('firstLoginComplete', 'true');
                         setIsFirstLogin(false);
                     }
                     else {
-                        // if (dataObject.ResonseCode != '0000') {
                         Alert.alert(
-                            'Error:',/*  */
+                            'Error:',
                             `Response Code : ${dataObject.ResonseCode}, ${dataObject.ResponseString}`
                         );
                         console.log("error block", dataObject.ResonseCode, dataObject.ResponseString)
-
-                        // }
                         setDataAvailable(false);
                         setIsAuth(false);
-                    }
-
+                    } 
                 } else {
                     setDataAvailable(false);
-                    if (!isConnected) {
-                        Alert.alert('Failed getting data!', 'Please check your internet connection and try again.');
-                    }
                     await AsyncStorage.removeItem('firstLoginComplete');
                 }
             } catch (error) {
                 setDataAvailable(false);
-                Alert.alert('Error occurred:', error.message);
+                Alert.alert('Error:', `Error: ${error.message}`);
                 console.log('Error occurred:', error.message)
                 await AsyncStorage.removeItem('firstLoginComplete');
-
-                if (!isConnected) {
-                    Alert.alert('Failed getting data!', 'Please check your internet connection and try again.');
-                }
             } finally {
                 setLoading(false);
             }
@@ -335,8 +301,6 @@ export default function Dashboard({ navigation, route }) {
                         Alert.alert('Failed getting data!', 'Please check your internet connection and try again.');
                     }
                     await AsyncStorage.removeItem('firstLoginComplete');
-
-                    console.warn('No mobile number found in AsyncStorage.');
                 }
             } catch (error) {
                 setDataAvailable(false);
@@ -351,29 +315,6 @@ export default function Dashboard({ navigation, route }) {
             }
         }
     };
-
-    // useEffect(() => {
-    //     let unsubscribe
-    //     let currentState
-
-    //     unsubscribe = NetInfo.addEventListener(state => {
-    //         if (currentState !== state.isConnected) {
-    //             currentState = state.isConnected
-    //             console.log("Is connected?", currentState);
-    //             setConnected(currentState);
-    //             if (currentState === true) {
-    //                 sendDataInBackground()
-    //             }
-    //         }
-    //     });
-
-    //     return () => {
-    //         console.log("unsubscribe");
-
-    //         if (unsubscribe)
-    //             unsubscribe();
-    //     };
-    // }, []);
 
     useEffect(() => {
         let unsubscribe;
@@ -398,82 +339,6 @@ export default function Dashboard({ navigation, route }) {
             if (unsubscribe) unsubscribe();
         };
     }, []);
-
-    // const sendDataInBackground = async (ClientID, BrCode, AgCode, BrAgCode, FileCreateDate, InputFileType) => {
-    //     const transactionTableData = await AsyncStorage.getItem('transactionTable');
-    //     const parsedData = JSON.parse(transactionTableData) || [];
-    //     const pendingTransactions = parsedData.filter((item) => item.pending === true);
-    //     const savedData = await AsyncStorage.getItem('dataObject');
-    //     const dataObject = JSON.parse(savedData);
-
-    //     if (!isConnected || pendingTransactions.length === 0) {
-    //         return;
-    //     }
-
-    //     console.log("pending data", pendingTransactions)
-
-    //     const transactionsWithoutPending = pendingTransactions.map(({ pending, ...rest }) => rest);
-
-    //     console.log("transactionsWithoutPending", transactionsWithoutPending)
-
-    //     const newArray = {
-    //         ClientID: dataObject.MstrData?.ClientID,
-    //         BrCode: dataObject.MstrData?.BrCode,
-    //         AgCode: dataObject.MstrData?.AgCode,
-    //         BrAgCode: dataObject.MstrData?.BrAgCode,
-    //         FileCreateDate: dataObject.MstrData?.FileCreateDate,
-    //         InputFileType: dataObject.MstrData?.InputFileType,
-    //         NoOfRecords: pendingTransactions.length.toString(),
-    //         CollectionData: transactionsWithoutPending,
-    //     };
-
-    //     try {
-    //         const response = await fetch(
-    //             `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp`,
-    //             {
-    //                 method: 'POST',
-    //                 headers: {
-    //                     'Content-Type': 'application/x-www-form-urlencoded',
-    //                 },
-    //                 body: new URLSearchParams({ DataFromApp: JSON.stringify(newArray) }).toString(),
-    //             }
-    //         );
-
-    //         const responseText = await response.text();
-
-    //         try {
-    //             const parser = new XMLParser();
-    //             const jsonResponse = parser.parse(responseText);
-    //             const jsonString = jsonResponse.string;
-    //             const dataObject = JSON.parse(jsonString);
-    //             const responseString = dataObject.ResonseCode;
-    //             if (responseString === '0000') {
-    //                 const updatedTransactionTable = parsedData.map((item) => {
-    //                     if (item.pending) {
-    //                         const { pending, ...rest } = item;
-    //                         return rest;
-    //                     }
-    //                     return item;
-    //                 });
-
-    //                 await AsyncStorage.setItem('transactionTable', JSON.stringify(updatedTransactionTable));
-    //                 fetchTransactionTable();
-    //                 console.log("Updated transaction table stored successfully.");
-    //             } else {
-    //                 Alert.alert(
-    //                     'Error:',
-    //                     `Response Code : ${responseString}, ${dataObject.ResponseString}`
-    //                 );
-    //             }
-    //         } catch (parseError) {
-    //             console.log("Error parsing response as JSON:", parseError, "Response text:", responseText);
-    //             Alert.alert("Error", `Failed to upload offline reciepts : ${responseText}`);
-    //         }
-    //     } catch (error) {
-    //         console.log("Error during API call:", error);
-    //         Alert.alert("Error", `Unexpected error during API call: ${error.message}`);
-    //     }
-    // };
 
     const sendDataInBackground = async () => {
         try {
@@ -548,65 +413,6 @@ export default function Dashboard({ navigation, route }) {
         }
     };
 
-    // const handleSyncData = async () => {
-    //     try {
-    //         const transactionTableData = await AsyncStorage.getItem('transactionTable');
-    //         const parsedData = JSON.parse(transactionTableData) || [];
-
-    //         if (!isConnected || parsedData.length === 0) return;
-
-    //         const savedData = await AsyncStorage.getItem('dataObject');
-    //         const dataObject = JSON.parse(savedData);
-
-    //         // remove pending flag before sending
-    //         const cleanData = parsedData.map(({ pending, ...rest }) => rest);
-
-    //         const payload = {
-    //             ClientID: dataObject?.MstrData?.ClientID,
-    //             BrCode: dataObject?.MstrData?.BrCode,
-    //             AgCode: dataObject?.MstrData?.AgCode,
-    //             BrAgCode: dataObject?.MstrData?.BrAgCode,
-    //             FileCreateDate: dataObject?.MstrData?.FileCreateDate,
-    //             InputFileType: dataObject?.MstrData?.InputFileType,
-    //             NoOfRecords: cleanData.length.toString(),
-    //             CollectionData: cleanData,
-    //         };
-
-    //         console.log("Syncing all data:", payload);
-
-    //         const response = await fetch(
-    //             'https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp',
-    //             {
-    //                 method: 'POST',
-    //                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    //                 body: new URLSearchParams({ DataFromApp: JSON.stringify(payload) }).toString(),
-    //             }
-    //         );
-
-    //         const responseText = await response.text();
-    //         const parser = new XMLParser();
-    //         const parsedXML = parser.parse(responseText);
-    //         const resultJson = JSON.parse(parsedXML.string);
-    //         const responseCode = resultJson?.ResonseCode;
-    // console.log("response from sync button",resultJson)
-    //         if (responseCode === '0000') {
-    //             // Save cleaned data (without pending flag) back
-    //             // await AsyncStorage.setItem('transactionTable', JSON.stringify(cleanData));
-    //             // fetchTransactionTable();
-    //             Alert.alert('Success', 'All data synced successfully to the server.')
-    //             console.log("All transactions synced successfully (pending flag removed).");
-    //         } else {
-    //             Alert.alert(
-    //                 'Sync Failed',
-    //                 `Response Code: ${responseCode}, Message: ${resultJson?.ResponseString || 'Unknown error'}`
-    //             );
-    //         }
-    //     } catch (error) {
-    //         console.log("Sync error:", error);
-    //         Alert.alert("Sync Error", `Something went wrong: ${error.message}`);
-    //     }
-    // };    
-
     const fetchWithTimeout = (url, options, timeout = 15000) => {
         return Promise.race([
             fetch(url, options),
@@ -621,28 +427,17 @@ export default function Dashboard({ navigation, route }) {
         try {
             const transactionTableData = await AsyncStorage.getItem('transactionTable');
             const parsedData = JSON.parse(transactionTableData) || [];
-
-            if (!isConnected) {
-                setSyncLoading(false);
-                Alert.alert('Cannot sync data!', `You are offline, please connect to the Internet and try again.`);
-                return;
-            }
-
             const savedData = await AsyncStorage.getItem('dataObject');
             const dataObject = JSON.parse(savedData);
-
             const cleanData = parsedData.map(({ pending, ...rest }) => rest);
-
-            // const chunkArray = (arr, size) =>
-            //     arr.reduce((acc, _, i) => (i % size ? acc : [...acc, arr.slice(i, i + size)]), []);
 
             const chunkArray = (arr, size) => {
                 const result = [];
                 for (let i = 0; i < arr.length; i += size) {
-                  result.push(arr.slice(i, i + size));
+                    result.push(arr.slice(i, i + size));
                 }
                 return result;
-              };              
+            };
 
             const chunkSize = 5;
             const chunks = chunkArray(cleanData, chunkSize);
@@ -661,15 +456,6 @@ export default function Dashboard({ navigation, route }) {
                 };
 
                 console.log(`Syncing batch ${i + 1} of ${chunks.length}:`, payload);
-
-                // const response = await fetch(
-                //     'https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp',
-                //     {
-                //         method: 'POST',
-                //         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                //         body: new URLSearchParams({ DataFromApp: JSON.stringify(payload) }).toString(),
-                //     }
-                // );
 
                 const response = await fetchWithTimeout(
                     'https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp',
@@ -712,11 +498,10 @@ export default function Dashboard({ navigation, route }) {
             await AsyncStorage.setItem('transactionTable', JSON.stringify(updatedTransactionTable));
             fetchTransactionTable();
             console.log("All transactions synced successfully (pending flag removed).");
-
         } catch (error) {
             setSyncLoading(false);
             console.log("Sync error:", error);
-            Alert.alert("Sync Error", `Something went wrong: ${error.message}`);
+            Alert.alert("Error", `Error: ${error.message}`);
         }
     };
 
@@ -747,11 +532,11 @@ export default function Dashboard({ navigation, route }) {
     const handleCloseCollection = async () => {
         setButtonLoading(true);
 
-        if (!isConnected) {
-            Alert.alert('Cannot Close collection!', `You are offline, please connect to the Internet and try again.`);
-            setButtonLoading(false);
-            return;
-        }
+        // if (!isConnected) {
+        //     Alert.alert('Cannot Close collection!', `You are offline, please connect to the Internet and try again.`);
+        //     setButtonLoading(false);
+        //     return;
+        // }
 
         Alert.alert(
             'Close Collection',
@@ -769,19 +554,7 @@ export default function Dashboard({ navigation, route }) {
                             const dummyCloseCycleUrl = `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/Dummy_CloseCycle`;
                             // let tempCount = 8;
                             let tempCount = parseInt(transactionTable.length);
-                            // console.log("transacion count", tempCount)
                             try {
-                                // const closeCollectionResponse = await fetch(closeCollectionUrl, {
-                                //     method: 'POST',
-                                //     headers: {
-                                //         'Content-Type': 'application/x-www-form-urlencoded',
-                                //     },
-                                //     body: new URLSearchParams({
-                                //         MobileNo: mobileNumber,
-                                //         Fdate: FileCreateDate,
-                                //         NoofRecs: tempCount,
-                                //     }).toString(),
-                                // });
 
                                 const closeCollectionResponse = await fetchWithTimeout(closeCollectionUrl, {
                                     method: 'POST',
@@ -802,18 +575,6 @@ export default function Dashboard({ navigation, route }) {
                                 const closeCollectionResponseCode = closeCollectionData.ResonseCode;
 
                                 if (closeCollectionResponseCode === '0000') {
-                                    // const dummyCloseCycleResponse = await fetch(dummyCloseCycleUrl, {
-                                    //     method: 'POST',
-                                    //     headers: {
-                                    //         'Content-Type': 'application/x-www-form-urlencoded',
-                                    //     },
-                                    //     body: new URLSearchParams({
-                                    //         MobileNo: mobileNumber,
-                                    //         Fdate: FileCreateDate,
-                                    //         NoofRecs: tempCount,
-                                    //     }).toString(),
-                                    // });
-
                                     const dummyCloseCycleResponse = await fetchWithTimeout(dummyCloseCycleUrl, {
                                         method: 'POST',
                                         headers: {
@@ -847,8 +608,7 @@ export default function Dashboard({ navigation, route }) {
                                         if (remainingData) {
                                             await AsyncStorage.removeItem('transactionTable');
                                             setTransactionTable([]);
-                                        }
-
+                                        } 
                                         setTransactionTable([]);
                                         fetchTransactionTable();
                                         setDataAvailable(false);
@@ -857,8 +617,7 @@ export default function Dashboard({ navigation, route }) {
                                         setTotalAmount(null);
                                         setpendingCount(0)
                                         await AsyncStorage.setItem('firstLoginComplete', 'false');
-                                    }
-
+                                    } 
                                     else {
                                         throw new Error(
                                             `DummyCloseCycle Error: Code ${dummyCloseCycleResponseCode}, ${dummyCloseCycleData.ResponseString}`
@@ -867,10 +626,9 @@ export default function Dashboard({ navigation, route }) {
                                 }
                                 else {
                                     Alert.alert('Error', ` Response Code - ${closeCollectionResponseCode} - ${closeCollectionData?.ResponseString} `)
-                                }
-
+                                } 
                             } catch (error) {
-                                Alert.alert('Error', error.message);
+                                Alert.alert('Error', `Error: ${error.message}`);
                             } finally {
                                 setButtonLoading(false);
                                 fetchTransactionTable();
@@ -1315,7 +1073,7 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
                             </View> */}
 
                             <View style={{ width: '100%', marginTop: 15, display: 'flex', flexDirection: 'row', justifyContent: 'center' }}>
-                                <View style={{  width: '50%', alignSelf: 'flex-start' }}>
+                                <View style={{ width: '50%', alignSelf: 'flex-start' }}>
                                     <View style={{ width: '90%', backgroundColor: '#eef2fa', elevation: 2, alignSelf: 'flex-end', borderRadius: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                                         <Text style={[styles.text]}>File Created Date</Text>
                                         <Text style={[styles.text, { fontSize: 20, fontFamily: 'Montserrat-Bold' }]}>{fileCreatedDate ? fileCreatedDate : '-'} </Text>

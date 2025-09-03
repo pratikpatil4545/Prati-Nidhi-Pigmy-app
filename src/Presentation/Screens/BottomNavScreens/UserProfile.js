@@ -291,43 +291,8 @@ export default function UserProfile({ route, navigation }) {
         return false;
       }
       return true;
-    };
-
-    // const amountValidation = () => {
-    //   const currentBalance = parseFloat(ThisMthBal) || 0;
-    //   const amountValue = parseFloat(amount) || 0;
-    //   let updatedBalance;
-    //   if (IsAmtToBeAdded === 'True') {
-    //     updatedBalance = currentBalance + amountValue;
-    //   }
-    //   else {
-    //     if (currentBalance >= amountValue) {
-    //       updatedBalance = currentBalance - amountValue;
-    //     }
-    //     else {
-    //       Alert.alert('Warning', 'Amount More Than Balance Can Not be Accepted.')
-    //     }
-    //   }
-
-    //   const conditions = [
-    //     { condition: OneShotLmt != 0 && amountValue > parseInt(OneShotLmt), message: 'Amount exceeds one shot limit.' },
-    //     { condition: MaxBalance != 0 && updatedBalance > parseInt(MaxBalance), message: 'Amount exceeds maximum balance.' },
-    //     // { condition: MaxInstal != 0 && DailyAmt != 0 && amountValue != parseInt(DailyAmt), message: 'Amount is not equal to daily amount.' },
-    //     { condition: MaxInstal != 0 && DailyAmt != 0 && (amountValue % parseInt(DailyAmt)) !== 0, message: `Amount should be exact multiple of ${DailyAmt}.` },
-    //     { condition: MaxInstal != 0 && DailyAmt != 0 && (amountValue / parseInt(DailyAmt)) > parseInt(MaxInstal), message: `Maximum ${MaxInstal} installments can be accepted.` },
-    //     // { condition: updatedBalance === 0 && IsAmtToBeAdded === 'False', message: `Opening balance is '0', cannot take further collection.` },
-    //     // { condition: amountValue <= 0, message: 'Please enter a valid amount.' }
-    //   ];
-
-    //   for (const { condition, message } of conditions) {
-    //     if (condition) {
-    //       Alert.alert('Warning', message);
-    //       return false;
-    //     }
-    //   }
-    //   return true;
-    // };
-
+    }; 
+    
     const amountValidation = () => {
       const currentBalance = parseFloat(ThisMthBal) || 0;
       const amountValue = parseFloat(amount) || 0;
@@ -360,10 +325,9 @@ export default function UserProfile({ route, navigation }) {
           condition: MaxInstal != 0 && DailyAmt != 0 && (amountValue / parseInt(DailyAmt)) > parseInt(MaxInstal),
           message: `Maximum ${MaxInstal} installments can be accepted.`
         },
-        // Uncomment if needed:
-        // { condition: updatedBalance === 0 && IsAmtToBeAdded === 'False', message: `Opening balance is '0', cannot take further collection.` },
-        // { condition: amountValue <= 0, message: 'Please enter a valid amount.' }
-      ];
+        { condition: amountValue <= 0, message: 'Please enter a valid amount.' }
+        
+       ];
 
       for (const { condition, message } of conditions) {
         if (condition) {
@@ -449,94 +413,80 @@ export default function UserProfile({ route, navigation }) {
     const submitData = async (transactionData, newArrayString, isOnline) => {
       const currentTransactions = JSON.parse(await AsyncStorage.getItem('transactionTable')) || [];
       await AsyncStorage.setItem('transactionTable', JSON.stringify([...currentTransactions, transactionData]));
-      // const pendingTransactions = JSON.parse(await AsyncStorage.getItem('pendingTransactions')) || [];
-      // await AsyncStorage.setItem('pendingTransactions', JSON.stringify([...pendingTransactions, transactionData]));
-      if (isOnline) {
-        try {
-          const response = await fetch(`https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp?DataFromApp=${newArrayString.toString()}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({ DataFromApp: newArrayString }).toString(),
-          });
-          const responseText = await response.text();
-          const parser = new XMLParser();
-          const jsonResponse = parser.parse(responseText);
-          const jsonString = jsonResponse.string;
-          const responseObject = JSON.parse(jsonString);
-          const rawResponseString = responseObject.ResponseString;
-          console.log("response check", responseObject)
-          if (responseObject.ResonseCode != '0000') {
-            Alert.alert(
-              'Error:',
-              `Response Code : ${responseObject.ResonseCode}, ${responseObject.ResponseString}`
-            );
-            setCustomLoaderModal(false);
 
+      try {
+        const response = await fetch(`https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp?DataFromApp=${newArrayString.toString()}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ DataFromApp: newArrayString }).toString(),
+        });
+
+        const responseText = await response.text();
+        const parser = new XMLParser();
+        const jsonResponse = parser.parse(responseText);
+        const jsonString = jsonResponse.string;
+        const responseObject = JSON.parse(jsonString);
+        const rawResponseString = responseObject.ResponseString;
+        console.log("response check", responseObject)
+
+        if (responseObject.ResonseCode === '0000') {
+
+          var lastTransactionRecordSentToServer = JSON.parse(newArrayString);
+          var currentTransactionRecordsFromStorageAfterParse = JSON.parse(await AsyncStorage.getItem('transactionTable')) || [];
+ 
+          var latestTransactionRecord = currentTransactionRecordsFromStorageAfterParse.filter(item =>
+            item.pending === true &&
+            item.accountNo === lastTransactionRecordSentToServer.accountNo &&
+            item.collDateTime === lastTransactionRecordSentToServer.collDateTime
+          );
+
+          if (latestTransactionRecord.length > 0) {
+            latestTransactionRecord[0].pending = false;
+            await AsyncStorage.setItem('transactionTable', JSON.stringify(currentTransactionRecordsFromStorageAfterParse));
           }
-          else {
-            var lastTransactionRecordSentToServer = JSON.parse(newArrayString);
-            var currentTransactionRecordsFromStorageAfterParse = JSON.parse(await AsyncStorage.getItem('transactionTable')) || [];
-            console.log("Transaction sent to server: ", lastTransactionRecordSentToServer);
-            var latestTransactionRecord = currentTransactionRecordsFromStorageAfterParse.filter(item =>
-              item.pending === true &&
-              item.accountNo === lastTransactionRecordSentToServer.accountNo &&
-              item.collDateTime === lastTransactionRecordSentToServer.collDateTime
-            );
 
-            if (latestTransactionRecord.length > 0) {
-              console.log("Before: ", latestTransactionRecord);
-              latestTransactionRecord[0].pending = false;
-              console.log("After: ", latestTransactionRecord);
-              await AsyncStorage.setItem('transactionTable', JSON.stringify(currentTransactionRecordsFromStorageAfterParse));
-            }
+          const jsonStartIndex = rawResponseString.indexOf('{');
+          const cleanedResponseString = rawResponseString.substring(jsonStartIndex);
+          const dataObject = JSON.parse(cleanedResponseString);
+          const collectionData = dataObject.CollectionData;
 
-            const jsonStartIndex = rawResponseString.indexOf('{');
-            const cleanedResponseString = rawResponseString.substring(jsonStartIndex);
-            const dataObject = JSON.parse(cleanedResponseString);
-            const collectionData = dataObject.CollectionData;
-            try {
-              if (collectionData && collectionData.length > 0) {
-                const collDateTime = collectionData[0].CollDateTime;
-                setCollectionDate(collDateTime);
-
-                // const currentTransactions = JSON.parse(await AsyncStorage.getItem('transactionTable')) || [];
-                // await AsyncStorage.setItem('transactionTable', JSON.stringify([...currentTransactions, transactionData]));
-                setCollectionMadeToday(true);
-                setModalVisible2(true);
-                setCustomLoaderModal(false);
-              } else {
-                Alert.alert("No collection date found.");
-                setCustomLoaderModal(false);
-              }
-            }
-            catch (error) {
-              Alert.alert("Error parsing the response:", error.message);
-              if (responseObject.ResonseCode != '0000' || !response.ok) {
-                Alert.alert(
-                  'Error:',
-                  `Response Code : ${responseObject.ResonseCode}, ${responseObject.ResponseString}`
-                );
-              }
+          try {
+            if (collectionData && collectionData.length > 0) {
+              const collDateTime = collectionData[0].CollDateTime;
+              setCollectionDate(collDateTime);
+              setCollectionMadeToday(true);
+              setModalVisible2(true);
+              setCustomLoaderModal(false);
+            } else {
+              Alert.alert("No collection date found.");
+              setCustomLoaderModal(false);
             }
           }
 
-        } catch (error) {
-          // Alert.alert("Warning", "Internet connection has changed. Please check and try again.");
-          setCollectionMadeToday(true);
-          setModalVisible2(true);
-          setCustomLoaderModal(false);
-          // const pendingTransactions = JSON.parse(await AsyncStorage.getItem('pendingTransactions')) || [];
-          // await AsyncStorage.setItem('pendingTransactions', JSON.stringify([...pendingTransactions, transactionData]));
+          catch (error) {
+            Alert.alert("Error parsing the response:", error.message);
+            if (responseObject.ResonseCode != '0000' || !response.ok) {
+              Alert.alert(
+                'Error:',
+                `Response Code : ${responseObject.ResonseCode}, ${responseObject.ResponseString}`
+              );
+            }
+          }
         }
-      } else {
-        // const currentTransactions = JSON.parse(await AsyncStorage.getItem('transactionTable')) || [];
-        // await AsyncStorage.setItem('transactionTable', JSON.stringify([...currentTransactions, transactionData]));
-        // setupdatedBalance(newBalance);
+
+        else {
+          Alert.alert(
+            'Error:',
+            `Response Code : ${responseObject.ResonseCode}, ${responseObject.ResponseString}`
+          );
+          setCustomLoaderModal(false);
+        }
+      }
+
+      catch (error) {
         setCollectionMadeToday(true);
         setModalVisible2(true);
         setCustomLoaderModal(false);
-        // const pendingTransactions = JSON.parse(await AsyncStorage.getItem('pendingTransactions')) || [];
-        // await AsyncStorage.setItem('pendingTransactions', JSON.stringify([...pendingTransactions, transactionData]));
       }
     };
 
