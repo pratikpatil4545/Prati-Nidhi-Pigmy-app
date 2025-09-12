@@ -2,17 +2,13 @@ import { View, Text, StyleSheet, ToastAndroid, ScrollView, StatusBar, Modal, Pre
 import React, { useCallback, useEffect, useState } from 'react'
 import { COLORS, windowHeight, windowWidth } from '../../../Common/Constants'
 import { Button, Searchbar, TextInput } from 'react-native-paper'
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import MaterialCommunityIcons2 from 'react-native-vector-icons/FontAwesome5';
-import MaterialCommunityIcons3 from 'react-native-vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { XMLParser } from 'fast-xml-parser';
 import SearchPopup from '../../Components/SearchPopup';
 import TransactionCard from '../../Components/TransactionCard';
 import NetInfo from '@react-native-community/netinfo';
-import { Buffer } from 'buffer';
-import axios from 'axios';
 
 export default function Dashboard({ navigation, route }) {
 
@@ -149,7 +145,7 @@ export default function Dashboard({ navigation, route }) {
                     const jsonResponse = parser.parse(responseText);
                     const jsonString = jsonResponse.string;
                     const dataObject = JSON.parse(jsonString);
-                    console.log("tdataObject.ResonseCode", dataObject, dataObject.MstrData?.FileCreateDate)
+                    // console.log("tdataObject.ResonseCode", dataObject, dataObject.MstrData?.FileCreateDate)
 
                     if (dataObject.ResonseCode === '0000') {
                         await AsyncStorage.setItem('dataObject', JSON.stringify(dataObject));
@@ -177,7 +173,7 @@ export default function Dashboard({ navigation, route }) {
                             setIsDataValid(false);
                             Alert.alert('Error', 'Something went wrong while recieving data or data may be currupted please try again! or contact the main branch.')
                             return;
-                        } 
+                        }
                         setLicenseExpired(false);
                         setMappedMasterData(dataObject.MstrData?.MstrRecs);
                         setHeaderLastAccNo(dataObject.MstrData?.HdrLastAcNo);
@@ -214,7 +210,7 @@ export default function Dashboard({ navigation, route }) {
                         console.log("error block", dataObject.ResonseCode, dataObject.ResponseString)
                         setDataAvailable(false);
                         setIsAuth(false);
-                    } 
+                    }
                 } else {
                     setDataAvailable(false);
                     await AsyncStorage.removeItem('firstLoginComplete');
@@ -608,7 +604,7 @@ export default function Dashboard({ navigation, route }) {
                                         if (remainingData) {
                                             await AsyncStorage.removeItem('transactionTable');
                                             setTransactionTable([]);
-                                        } 
+                                        }
                                         setTransactionTable([]);
                                         fetchTransactionTable();
                                         setDataAvailable(false);
@@ -617,7 +613,7 @@ export default function Dashboard({ navigation, route }) {
                                         setTotalAmount(null);
                                         setpendingCount(0)
                                         await AsyncStorage.setItem('firstLoginComplete', 'false');
-                                    } 
+                                    }
                                     else {
                                         throw new Error(
                                             `DummyCloseCycle Error: Code ${dummyCloseCycleResponseCode}, ${dummyCloseCycleData.ResponseString}`
@@ -626,7 +622,7 @@ export default function Dashboard({ navigation, route }) {
                                 }
                                 else {
                                     Alert.alert('Error', ` Response Code - ${closeCollectionResponseCode} - ${closeCollectionData?.ResponseString} `)
-                                } 
+                                }
                             } catch (error) {
                                 Alert.alert('Error', `Error: ${error.message}`);
                             } finally {
@@ -639,309 +635,6 @@ export default function Dashboard({ navigation, route }) {
             ]
         );
     };
-
-    const handleCancel = () => {
-        setModalVisible(false);
-    };
-
-    let transactionCount = 1;
-
-    const generateReceiptNo = () => {
-        const date = new Date();
-        const day = String(date.getDate()).padStart(2, '0');
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const year = date.getFullYear();
-        const count = String(transactionCount).padStart(4, '0');
-
-        transactionCount++;
-
-        return `${day}${month}${year}${count}`;
-    };
-
-    const formatDateTime1 = (date) => {
-        const year = date.getFullYear();
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        const day = date.getDate().toString().padStart(2, '0');
-        const hours = date.getHours().toString().padStart(2, '0');
-        const minutes = date.getMinutes().toString().padStart(2, '0');
-        const seconds = date.getSeconds().toString().padStart(2, '0');
-
-        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-    }
-
-    const [collectionDate, setCollectionDate] = useState(null);
-
-    const handleSubmit = async () => {
-        let newAccNo;
-        const mobileValidation = () => {
-            if (!mobileNumber) {
-                Alert.alert('Warning', `Please enter customer's Mobile Number`);
-                return false;
-            }
-            if (mobileNumber.length !== 10 || /\D/.test(mobileNumber)) {
-                Alert.alert('Warning', `Please enter a valid 10-digit mobile number`);
-                return false;
-            }
-            return true;
-        };
-
-        if (!amount) {
-            Alert.alert('Warning', `Please enter collection amount!`);
-            return;
-        }
-
-        if (!name) {
-            Alert.alert('Warning', `Please enter customer name!`);
-            return;
-        }
-
-        if (!mobileValidation()) {
-            return;
-        }
-
-        try {
-            let transactionTable = await AsyncStorage.getItem('transactionTable');
-            transactionTable = transactionTable ? JSON.parse(transactionTable) : [];
-
-            const newAccounts = transactionTable.filter(item => item.IsitNew === 'True');
-
-            if (newAccounts.length > 0) {
-                const maxAccountNo = Math.max(...newAccounts.map(item => parseInt(item.AccountNo, 10)));
-                newAccNo = maxAccountNo + 1;
-            } else {
-                if (InputFileType === '1' || InputFileType === '3') {
-                    newAccNo = parseInt(headerLastAccNo, 10) + 1;
-                }
-                else if (InputFileType === '2') {
-                    let glAcc = parseInt(GlLastAcc[0]);
-                    if (glAcc === 999999) {
-                        if (newAccounts.length > 0) {
-                            const maxAccountNo = Math.max(...newAccounts.map(item => parseInt(item.AccountNo, 10)));
-                            newAccNo = maxAccountNo + 1;
-                        }
-                        else {
-                            newAccNo = 1;
-                        }
-                    }
-                    else {
-                        if (newAccounts.length > 0) {
-                            const maxAccountNo = Math.max(...newAccounts.map(item => parseInt(item.AccountNo, 10)));
-                            newAccNo = maxAccountNo + 1;
-                        }
-                        else {
-                            newAccNo = glAcc + 1;
-                        }
-                    }
-                }
-            }
-
-            setHeaderLastAccNo(newAccNo);
-            setnewAccCreated(newAccNo.toString());
-            const receiptNo = generateReceiptNo();
-
-            const transactionData = {
-                // receiptNo: receiptNo,
-                GLCode: '0',
-                AccountNo: newAccNo.toString(),
-                EnglishName: name,
-                OpeningBal: '0',
-                Collection: amount.toString(),
-                ClosingBal: amount.toString(),
-                CollDateTime: formatDateTime1(new Date()),
-                IsAmtAdd: "1",
-                IsitNew: 'True',
-                MobileNo: mobileNumber
-            };
-
-            const newArray = {
-                ClientID: ClientID,
-                BrCode: BrCode,
-                AgCode: AgCode,
-                BrAgCode: BrAgCode,
-                FileCreateDate: FileCreateDate,
-                InputFileType: InputFileType,
-                NoOfRecords: '1',
-                CollectionData: [
-                    transactionData
-                ]
-            };
-
-            const message = `
-            Name: ${name}
-Account Number: ${newAccNo}
-Opeing Balance: 0.00
-Amount Collected: ₹${new Intl.NumberFormat('en-IN').format(amount)}
-Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
-          `;
-
-            Alert.alert(
-                'Please Confirm Collection',
-                message.trim(),
-                [
-                    { text: 'Cancel', style: 'cancel' },
-                    {
-                        text: 'Confirm', onPress: async () => {
-                            if (isConnected) {
-                                const agentmobileNumber = await AsyncStorage.getItem('mobileNumber');
-
-                                if (agentmobileNumber) {
-                                    const newArrayString = JSON.stringify(newArray);
-
-                                    const url = `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp?DataFromApp=${newArrayString.toString()}`;
-
-                                    try {
-                                        const response = await fetch(url, {
-                                            method: 'POST',
-                                            headers: {
-                                                'Content-Type': 'application/x-www-form-urlencoded',
-                                            },
-                                            body: new URLSearchParams({ DataFromApp: newArrayString }).toString(),
-                                        });
-
-                                        // const responseData = await response.text();
-                                        const responseText = await response.text();
-                                        const parser = new XMLParser();
-                                        const jsonResponse = parser.parse(responseText);
-                                        const jsonString = jsonResponse.string;
-                                        const responseObject = JSON.parse(jsonString);
-                                        const rawResponseString = responseObject.ResponseString;
-                                        const jsonStartIndex = rawResponseString.indexOf('{');
-                                        const cleanedResponseString = rawResponseString.substring(jsonStartIndex);
-                                        const dataObject = JSON.parse(cleanedResponseString);
-                                        try {
-                                            const collectionData = dataObject.CollectionData;
-                                            if (collectionData && collectionData.length > 0) {
-                                                const collDateTime = collectionData[0].CollDateTime;
-                                                // console.log("CollDateTime:", collDateTime);
-                                                setCollectionDate(collDateTime);
-                                            } else {
-                                                console.log("No collection data found.");
-                                            }
-                                        }
-                                        catch (error) {
-                                            if (dataObject.ResonseCode != '0000') {
-                                                Alert.alert(
-                                                    'Error:',
-                                                    `Code : ${dataObject.ResonseCode}, ${dataObject.ResponseString}`
-                                                );
-                                            }
-                                            Alert.alert("Error parsing the response:", error.message);
-                                        }
-                                        transactionTable.push(transactionData);
-                                        await AsyncStorage.setItem('transactionTable', JSON.stringify(transactionTable));
-                                        setModalVisible2(true);
-                                        fetchTransactionTable();
-                                    } catch (error) {
-                                        Alert.alert("Error during API call:", error.message);
-                                    }
-                                }
-                            }
-                            else {
-                                const updatedTransactionData = {
-                                    ...transactionData,
-                                    pending: !isConnected
-                                };
-                                const currentTransactions = JSON.parse(await AsyncStorage.getItem('transactionTable')) || [];
-                                await AsyncStorage.setItem('transactionTable', JSON.stringify([...currentTransactions, updatedTransactionData]));
-                                setModalVisible2(true);
-                                fetchTransactionTable();
-                            }
-                        }
-                    }
-                ]
-            );
-
-        } catch (error) {
-            Alert.alert('Error', 'An error occurred while processing your transaction. Please try again.');
-        }
-
-    };
-
-    const addNewUser = () => {
-        setModalVisible(true);
-    }
-
-    const handleCancel2 = () => {
-        setModalVisible2(false);
-    };
-
-    const handleWhatsAppPress = async () => {
-
-        const formatDateTime = (date) => {
-            const padZero = (num) => (num < 10 ? `0${num}` : num);
-            const year = date.getFullYear();
-            const month = padZero(date.getMonth() + 1);
-            const day = padZero(date.getDate());
-            const hours = padZero(date.getHours());
-            const minutes = padZero(date.getMinutes());
-            const seconds = padZero(date.getSeconds());
-
-            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-        };
-        const clId = ClientID;
-        const Brid = BrCode;
-        const Agid = AgCode;
-        const glcod = '0';
-        const acno = newAccCreated;
-        const ColldateTime = formatDateTime(new Date());
-        const ruidString = `${clId},${Brid},${Agid},${glcod},${acno}`;
-        const ruid = Buffer.from(ruidString).toString('base64');
-        const encodedDateTime = collectionDate.replace(' ', '%20');
-        const encodedURL = `https://app.automatesystemsdataservice.in/Customer/api/Receipt?ruid=${ruid}&ColldateTime=${encodedDateTime}`;
-
-        const getNumber = mobileNumber;
-        const phoneNumber = `+91${getNumber}`;
-        const message = `Hi, Please click on the link Below for the Receipt of your Transaction. ${encodedURL} `;
-
-        const url = `whatsapp://send?text=${encodeURIComponent(message)}&phone=${phoneNumber}`;
-
-        Linking.openURL(url);
-    };
-
-    const handleSmsPress = async () => {
-        const formatDateTime = (date) => {
-            const padZero = (num) => (num < 10 ? `0${num}` : num);
-            const year = date.getFullYear();
-            const month = padZero(date.getMonth() + 1);
-            const day = padZero(date.getDate());
-            const hours = padZero(date.getHours());
-            const minutes = padZero(date.getMinutes());
-            const seconds = padZero(date.getSeconds());
-
-            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-        };
-
-        const clId = ClientID;
-        const Brid = BrCode;
-        const Agid = AgCode;
-        const glcod = '0';
-        const acno = newAccCreated;
-        const ColldateTime = formatDateTime(new Date());
-        const ruidString = `${clId},${Brid},${Agid},${glcod},${acno}`;
-        const ruid = Buffer.from(ruidString).toString('base64');
-        const encodedDateTime = collectionDate.replace(' ', '%20');
-        //   console.log("data for sms messages ",  `${clId},${Brid},${Agid},${glcod},${acno}`)
-        const encodedURL = `https://app.automatesystemsdataservice.in/Customer/api/Receipt?ruid=${ruid}&ColldateTime=${encodedDateTime}`;
-
-        const getNumber = mobileNumber;
-        const phoneNumber = `+91${getNumber}`; // Replace with the actual phone number (with country code)
-        const message = `Hi, Please click on the link Below for the Receipt of your Transaction. ${encodedURL} `;
-
-        const smsUrl = `sms:${phoneNumber}?body=${encodeURIComponent(message)}`;
-        try {
-            await Linking.openURL(smsUrl);
-        } catch (error) {
-            Alert.alert("Error", "Unable to open SMS app.");
-        }
-    };
-
-    const handleSubmit2 = () => {
-        setModalVisible(false);
-        setModalVisible2(false);
-        setName(null);
-        setmobileNumber(null);
-        setAmount(null);
-    }
 
     return (
         <View style={styles.dashView}>
@@ -1045,33 +738,6 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
                                 </View>
                             </View>
 
-                            {/* <View style={[styles.dataInfoView, { marginTop: 15, backgroundColor: 'none', width: windowWidth * 0.90, elevation: 0, alignSelf: 'center', flexDirection: 'row', height: 'auto', overflow: 'hidden' }]}>
-                                <View style={{ width: '50%', backgroundColor: '#eef2fa', elevation: 2, marginBottom: 5, borderRadius: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                                    <Text style={[styles.text]}>File Created Date</Text>
-                                    <Text style={[styles.text, { fontSize: 20, fontFamily: 'Montserrat-Bold' }]}>{fileCreatedDate ? fileCreatedDate : '-'} </Text>
-                                </View>
-                                <View style={{ width: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                                    <Button
-                                        icon={'cloud-sync-outline'}
-                                        loading={syncLoading}
-                                        disabled={syncLoading || loading || isFirstLogin || !IsActive || transactionTable?.length === 0}
-                                        onPress={handleSyncData}
-                                        labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }}
-                                        style={{ width: windowWidth * 0.30 }}
-                                        mode="contained"
-                                    >
-                                        Sync
-                                    </Button>
-                                </View>
-                            </View> */}
-
-                            {/* <View style={[styles.dataInfoView, { marginTop: 15, backgroundColor: 'transparent', width: windowWidth * 0.50, elevation: 0, alignSelf: 'center', flexDirection: 'row', height: 'auto', overflow: 'hidden' }]}>
-                                <View style={{ width: '90%', backgroundColor: '#eef2fa', elevation: 2, alignSelf: 'flex-end', marginBottom: 5, borderRadius: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                                    <Text style={[styles.text]}>File Created Date</Text>
-                                    <Text style={[styles.text, { fontSize: 20, fontFamily: 'Montserrat-Bold' }]}>{fileCreatedDate ? fileCreatedDate : '-'} </Text>
-                                </View>
-                            </View> */}
-
                             <View style={{ width: '100%', marginTop: 15, display: 'flex', flexDirection: 'row', justifyContent: 'center' }}>
                                 <View style={{ width: '50%', alignSelf: 'flex-start' }}>
                                     <View style={{ width: '90%', backgroundColor: '#eef2fa', elevation: 2, alignSelf: 'flex-end', borderRadius: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
@@ -1154,169 +820,9 @@ Total Account Balance: ₹${new Intl.NumberFormat('en-IN').format(amount)}
                                 <Text style={styles.text1}>Your license has expired. Please pay subscription!</Text>
                             </View>
                         )}
-
                     </View>
                 )}
             </>
-
-            {/* <Modal
-                animationType="slide"
-                transparent={true}
-                visible={modalVisible}
-                onRequestClose={handleCancel}
-            >
-                <StatusBar
-                    barStyle={'light-content'}
-                    backgroundColor={'rgba(0, 0, 0, 0.5)'}
-                />
-                <View style={styles.modalContainer}>
-                    <View style={styles.modalView11}>
-                        <Text style={styles.text}>New account collection </Text>
-                        <TextInput
-                            label="Enter customer name"
-                            mode='outlined'
-                            outlineColor='#8ABCF9'
-                            autoFocus={true}
-                            // ref={textInputRef} 
-                            value={name}
-                            // keyboardType='numeric'
-                            onChangeText={text => setName(text)}
-                            style={{ width: "100%", marginBottom: 10, fontSize: 18, marginTop: 10, backgroundColor: COLORS.white }}
-                            outlineStyle={{ borderRadius: 15, fontSize: 18, color: COLORS.darkGrey, fontFamily: "Montserrat-Bold", }}
-                            contentStyle={{ fontFamily: "Montserrat-SemiBold", }}
-                        />
-                        <TextInput
-                            label="Enter mobile number"
-                            mode='outlined'
-                            outlineColor='#8ABCF9'
-                            // autoFocus={true}
-                            // ref={textInputRef} 
-                            value={mobileNumber}
-                            keyboardType='numeric'
-                            onChangeText={text => setmobileNumber(text)}
-                            style={{ width: "100%", marginBottom: 10, fontSize: 18, marginTop: 10, backgroundColor: COLORS.white }}
-                            outlineStyle={{ borderRadius: 15, fontSize: 18, color: COLORS.darkGrey, fontFamily: "Montserrat-Bold", }}
-                            contentStyle={{ fontFamily: "Montserrat-SemiBold", }}
-                        />
-
-                        <TextInput
-                            label="Enter amount"
-                            mode='outlined'
-                            outlineColor='#8ABCF9'
-                            // autoFocus={true}
-                            // ref={textInputRef} 
-                            value={amount}
-                            keyboardType='numeric'
-                            onChangeText={text => setAmount(text)}
-                            style={{ width: "100%", marginBottom: 10, fontSize: 18, marginTop: 10, backgroundColor: COLORS.white }}
-                            outlineStyle={{ borderRadius: 15, fontSize: 18, color: COLORS.darkGrey, fontFamily: "Montserrat-Bold", }}
-                            contentStyle={{ fontFamily: "Montserrat-SemiBold", }}
-                        />
-                        <View style={styles.buttonContainer}>
-                            <Button style={{ width: '48%', marginTop: 5 }} mode="contained" labelStyle={{ fontSize: 16, fontFamily: 'Montserrat-Bold' }} onPress={handleSubmit} >Submit</Button>
-                            <Button style={{ width: '48%', marginTop: 5, borderColor: COLORS.primaryAccent }} labelStyle={{ fontSize: 16, fontFamily: 'Montserrat-Bold' }} mode="outlined" onPress={handleCancel} >Cancel</Button>
-                        </View>
-                    </View>
-                </View>
-            </Modal>
-
-            <Modal
-                animationType="slide"
-                transparent={true}
-                visible={modalVisible2}
-                onRequestClose={handleCancel2}
-            >
-                <StatusBar
-                    barStyle={'light-content'}
-                    backgroundColor={'rgba(0, 0, 0, 0.5)'}
-                />
-                <View style={{
-                    flex: 1,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                }}>
-                    <View style={{
-                        width: '90%',
-                        padding: 30,
-                        paddingBottom: 50,
-                        paddingTop: 30,
-                        backgroundColor: 'white',
-                        borderRadius: 10,
-                        alignItems: 'center',
-                    }}>
-                        <MaterialCommunityIcons3 name='cloud-done' color={COLORS.primary} size={100} />
-                        <View style={{
-                            width: '100%',
-                            // height: 120,
-                            borderRadius: 10,
-                            alignSelf: 'center',
-                            marginTop: 20,
-                            paddingTop: 10,
-                            paddingBottom: 10,
-                            display: 'flex',
-                            flexDirection: 'row',
-                            backgroundColor: '#eef2fa',
-                            elevation: 1
-                        }}>
-                            <View style={styles.left}>
-                                <Text style={[styles.text1, { fontSize: 16, color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>Name : </Text>
-                                <Text style={[styles.text1, { fontSize: 16, fontFamily: 'Montserrat-SemiBold', marginHorizontal: 25 }]}>{name}</Text>
-                                <Text style={[styles.text1, { fontSize: 16, color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>Account Number : </Text>
-                                <Text style={[styles.text1, { fontSize: 16, fontFamily: 'Montserrat-SemiBold', marginHorizontal: 25 }]}>0{newAccCreated}</Text>
-                                <Text style={[styles.text1, { fontSize: 16, color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>Opeing Balance : </Text>
-                                <Text style={[styles.text1, { fontSize: 16, fontFamily: 'Montserrat-SemiBold', marginHorizontal: 25 }]}>0.00</Text>
-                                <Text style={[styles.text1, { fontSize: 16, color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>Amount Collected : </Text>
-                                <Text style={[styles.text1, { fontSize: 16, fontFamily: 'Montserrat-SemiBold', marginHorizontal: 25 }]}>₹{new Intl.NumberFormat('en-IN').format(amount)}</Text>
-                                <Text style={[styles.text1, { fontSize: 16, color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }]}>Closing Balance : </Text>
-                                <Text style={[styles.text1, { fontSize: 16, fontFamily: 'Montserrat-SemiBold', marginHorizontal: 25 }]}>₹{new Intl.NumberFormat('en-IN').format(amount)}</Text>
-                            </View>
-                        </View>
-
-                        <View style={[styles.buttonContainer, { marginTop: 30 }]}>
-
-                            <Button
-                                icon={'printer'}
-                                style={styles.modalButton}
-                                mode="outlined"
-                                labelStyle={styles.buttonLabel}
-                                onPress={() => { Alert.alert("Printing") }}
-                            >
-                                Print
-                            </Button>
-                        </View>
-
-                        <View style={[styles.buttonContainer, { marginTop: 10, justifyContent: 'space-evenly' }]}>
-
-                            <MaterialCommunityIcons
-                                onPress={handleWhatsAppPress}
-                                style={styles.whatsappIcon}
-                                name='whatsapp'
-                                color={COLORS.white}
-                                size={35}
-                            />
-                            <Text style={{ alignSelf: 'center', fontSize: 26, fontWeight: 'thin', color: '#999999' }}>|</Text>
-                            <MaterialCommunityIcons
-                                onPress={handleSmsPress}
-                                style={styles.smsIcon}
-                                name='android-messages'
-                                color={COLORS.white}
-                                size={35}
-                            />
-                            <Text style={{ alignSelf: 'center', fontSize: 26, fontWeight: 'thin', color: '#999999' }}>|</Text>
-
-                            <Button
-                                style={{ marginHorizontal: 0, marginVertical: 10, borderColor: COLORS.primaryAccent }}
-                                mode="contained"
-                                labelStyle={styles.buttonLabel}
-                                onPress={handleSubmit2}
-                            >
-                                No Receipt
-                            </Button>
-                        </View>
-                    </View>
-                </View>
-            </Modal> */}
         </View>
     )
 }

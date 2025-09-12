@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, StyleSheet, FlatList, BackHandler } from 'react-native';
 import { COLORS, windowHeight, windowWidth } from '../../Common/Constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -12,7 +12,7 @@ const MemoizedDataCard = React.memo(DataCard);
 export default function SearchPopup(props, { route }) {
     const { modalVisible, setModalVisible, searchQuery } = props;
     const [data, setData] = useState([]);
-    const [filteredData, setFilteredData] = useState([]);
+    // const [filteredData, setFilteredData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [visibleItemsCount, setVisibleItemsCount] = useState(10); // Initially render 10 items
     const isFocused = useIsFocused();
@@ -20,29 +20,39 @@ export default function SearchPopup(props, { route }) {
     const [refreshData, setRefreshData] = useState(false);
     // console.log("propss ", props)
 
-    useEffect(() => {
-        const debounceSearch = setTimeout(() => {
-            const query = searchQuery.trim().toLowerCase();
-            const filtered = data.filter((item) => {
-                const name = item.EnglishName?.toLowerCase();
-                const accNumber = `${item.GLCode}${item.AccountNo}`.toLowerCase();
-                return name.includes(query) || accNumber.includes(query);
-            });
-            setFilteredData(filtered);
-        }, 300); // Delay the filter logic by 300ms to debounce
+    // useEffect(() => {
+    //     const debounceSearch = setTimeout(() => {
+    //         const query = searchQuery.trim().toLowerCase();
+    //         const filtered = data.filter((item) => {
+    //             const name = item.EnglishName?.toLowerCase();
+    //             const accNumber = `${item.GLCode}${item.AccountNo}`.toLowerCase();
+    //             return name.includes(query) || accNumber.includes(query);
+    //         });
+    //         setFilteredData(filtered);
+    //     }, 300); // Delay the filter logic by 300ms to debounce
 
-        return () => clearTimeout(debounceSearch);
+    //     return () => clearTimeout(debounceSearch);
+    // }, [searchQuery, data]);
+
+    const filteredData = useMemo(() => {
+        const query = searchQuery.trim().toLowerCase();
+        if (!query) return data;
+        return data.filter((item) => {
+            const name = item.EnglishName?.toLowerCase() || '';
+            const accNumber = `${item.GLCode}${item.AccountNo}`.toLowerCase();
+            return name.includes(query) || accNumber.includes(query);
+        });
     }, [searchQuery, data]);
- 
+
     useEffect(() => {
         setLoading(true);
     }, [isFocused]);
 
-    useEffect(() => {
-        if (data) {
-            setFilteredData(data);
-        }
-    }, [data]);
+    // useEffect(() => {
+    //     if (data) {
+    //         setFilteredData(data);
+    //     }
+    // }, [data]);
 
     const getMasterData = async () => {
         try {
@@ -52,7 +62,7 @@ export default function SearchPopup(props, { route }) {
             if (savedData) {
                 const dataObject = JSON.parse(savedData);
                 setData(dataObject.MstrData?.MstrRecs);
-                setFilteredData(dataObject.MstrData?.MstrRecs);
+                // setFilteredData(dataObject.MstrData?.MstrRecs);
                 setLoading(false);
             }
         } catch (e) {
@@ -85,21 +95,40 @@ export default function SearchPopup(props, { route }) {
         const backHandler = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
         return () => backHandler.remove();
     }, []);
- 
-    const renderItem = useCallback(({ item, index }) => (
-        <MemoizedDataCard
-            maxAmountLimit={props.maxAmountLimit}
-            BranchName={props.BranchName}
-            BranchCode={props.BranchCode}
-            collectionAllowed={props.collectionAllowed}
-            multipleCollection={props.multipleCollection}
-            searchQuery={searchQuery}
-            item={item}
-            key={index}
-            index={index}
-        />
-    ), [props, searchQuery]);
 
+    // const renderItem = useCallback(({ item, index }) => (
+    //     <MemoizedDataCard
+    //         maxAmountLimit={props.maxAmountLimit}
+    //         BranchName={props.BranchName}
+    //         BranchCode={props.BranchCode}
+    //         collectionAllowed={props.collectionAllowed}
+    //         multipleCollection={props.multipleCollection}
+    //         searchQuery={searchQuery}
+    //         item={item}
+    //         key={index}
+    //         index={index}
+    //     />
+    // ), [props, searchQuery]);
+
+    const renderItem = useCallback(
+        ({ item, index }) => {
+            if (index >= visibleItemsCount) return null;
+            return (
+                <MemoizedDataCard
+                    maxAmountLimit={props.maxAmountLimit}
+                    BranchName={props.BranchName}
+                    BranchCode={props.BranchCode}
+                    collectionAllowed={props.collectionAllowed}
+                    multipleCollection={props.multipleCollection}
+                    searchQuery={searchQuery}
+                    item={item}
+                    key={index}
+                    index={index}
+                />
+            );
+        },
+        [props, searchQuery, visibleItemsCount]
+    );
 
     const loadMoreItems = () => {
         if (visibleItemsCount < filteredData.length) {
@@ -126,7 +155,7 @@ export default function SearchPopup(props, { route }) {
                     ))}
                 </>
             ) : (
-                <View style={{marginBottom: windowHeight * 0.10}}>
+                <View style={{ marginBottom: windowHeight * 0.10 }}>
                     <FlatList
                         data={filteredData.slice(0, visibleItemsCount)} // Only render the visible items
                         renderItem={renderItem}
