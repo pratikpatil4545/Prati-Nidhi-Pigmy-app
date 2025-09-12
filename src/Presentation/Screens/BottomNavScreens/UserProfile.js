@@ -768,7 +768,7 @@ Total Account Balance: ${closingBalance ? `₹${new Intl.NumberFormat('en-IN').f
         animationType="slide"
         transparent={true}
         visible={modalVisible2}
-        onRequestClose={handleCancel2}
+        // onRequestClose={handleCancel2}
       >
         <StatusBar
           barStyle={'light-content'}

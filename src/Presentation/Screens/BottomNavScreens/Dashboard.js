@@ -749,7 +749,7 @@ export default function Dashboard({ navigation, route }) {
                                     <Button
                                         icon={'cloud-sync-outline'}
                                         loading={syncLoading}
-                                        disabled={syncLoading || loading || isFirstLogin || !IsActive || transactionTable?.length === 0}
+                                        disabled={syncLoading || buttonLoading || loading || isFirstLogin || !IsActive || transactionTable?.length === 0}
                                         onPress={handleSyncData}
                                         labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }}
                                         style={{ width: windowWidth * 0.40 }}
@@ -775,7 +775,7 @@ export default function Dashboard({ navigation, route }) {
                                 <Button
                                     icon={'play'}
                                     // loading={loading}
-                                    disabled={loading || dataAvailable || !IsActive}
+                                    disabled={loading || dataAvailable || !IsActive || syncLoading}
                                     onPress={handleGetData}
                                     labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }}
                                     style={{ marginTop: '8%', minWidth: windowWidth * 0.45 }}
@@ -787,7 +787,7 @@ export default function Dashboard({ navigation, route }) {
                             {buttonLoading ? (
                                 <ActivityIndicator size={30} color={COLORS.primary} style={{ margin: 'auto', marginTop: '8%' }} />
                             ) : (
-                                <Button icon={'arrow-up'} loading={buttonLoading} disabled={buttonLoading || !dataAvailable || isFirstLogin} onPress={handleCloseCollection} labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }} style={{ marginTop: '8%', minWidth: windowWidth * 0.45 }} mode="contained">Close collection</Button>
+                                <Button icon={'arrow-up'} loading={buttonLoading} disabled={syncLoading || buttonLoading || !dataAvailable || isFirstLogin} onPress={handleCloseCollection} labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }} style={{ marginTop: '8%', minWidth: windowWidth * 0.45 }} mode="contained">Close collection</Button>
                             )}
                         </View>
 
