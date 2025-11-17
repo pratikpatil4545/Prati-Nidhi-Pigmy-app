@@ -138,7 +138,7 @@ export default function DataCard(props) {
                 }
 
                 return (
-                  <View key={subIndex} style={{ marginBottom: 5 }}>
+                  <View key={subIndex} style={{ marginTop: 0, marginBottom: 5 }}>
                     <Text style={{ color: COLORS.primary, fontFamily: 'Montserrat-SemiBold' }}>
                       {label}:{' '}
                       <Text style={[styles.text, { color: COLORS.darkGrey }]}>
@@ -226,6 +226,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'flex-start',
     padding: 10,
+    marginBottom: 5
   },
   right: {
     marginLeft: 10,

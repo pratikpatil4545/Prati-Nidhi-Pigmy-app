@@ -3,7 +3,7 @@ import * as React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Dashboard from '../Screens/BottomNavScreens/Dashboard';
-import Profile from '../Screens/BottomNavScreens/Profile';
+import Profile from '../Screens/ProfileScreens/Profile';
 import Settings from '../Screens/BottomNavScreens/Settings';
 import { COLORS } from '../../Common/Constants';
 import UserProfile from '../Screens/BottomNavScreens/UserProfile';

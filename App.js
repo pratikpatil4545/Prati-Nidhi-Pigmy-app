@@ -27,11 +27,11 @@ import { COLORS } from './src/Common/Constants';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Dashboard from './src/Presentation/Screens/BottomNavScreens/Dashboard';
-import Profile from './src/Presentation/Screens/BottomNavScreens/Profile';
-import AccountSetting from './src/Presentation/Screens/SettingScreens/AccountSetting';
-import BankDetails from './src/Presentation/Screens/SettingScreens/BankDetails';
-import GeneralSetting from './src/Presentation/Screens/SettingScreens/GeneralSetting';
-import CollectionHistory from './src/Presentation/Screens/SettingScreens/CollectionHistory';
+import Profile from './src/Presentation/Screens/ProfileScreens/Profile';
+import AccountSetting from './src/Presentation/Screens/ProfileScreens/AccountSetting';
+import BankDetails from './src/Presentation/Screens/ProfileScreens/BankDetails';
+// import GeneralSetting from './src/Presentation/Screens/SettingScreens/GeneralSetting';
+import CollectionHistory from './src/Presentation/Screens/ProfileScreens/CollectionHistory';
 import UserProfile from './src/Presentation/Screens/BottomNavScreens/UserProfile';
 
 // ✅ Error handling
@@ -123,7 +123,7 @@ function App() {
               <Stack.Screen name="Profile" component={Profile} options={{ headerShown: false }} />
               <Stack.Screen name="AccountSetting" component={AccountSetting} options={{ headerShown: false }} />
               <Stack.Screen name="BankDetails" component={BankDetails} options={{ headerShown: false }} />
-              <Stack.Screen name="GeneralSetting" component={GeneralSetting} options={{ headerShown: false }} />
+              {/* <Stack.Screen name="GeneralSetting" component={GeneralSetting} options={{ headerShown: false }} /> */}
               <Stack.Screen name="CollectionHistory" component={CollectionHistory} options={{ headerShown: false }} />
               <Stack.Screen name="Dashboard" component={Dashboard} options={{ headerShown: false }} />
               <Stack.Screen name="UserProfile" component={UserProfile} options={{ headerShown: false }} />

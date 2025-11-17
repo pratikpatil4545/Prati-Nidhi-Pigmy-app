@@ -23,7 +23,7 @@ export default function BankDetails({ navigation }) {
 
             if (savedData) {
                 const dataObject = JSON.parse(savedData);
-                setBranchName(dataObject?.MstrData?.BrNameE || ''); // Set a fallback value if missing
+                setBranchName(dataObject?.MstrData?.BrNameE || '');
                 setbranchCode(dataObject?.MstrData?.BrCode);
                 setClientName(dataObject.MstrData?.ClientName);
             }
@@ -76,7 +76,6 @@ const styles = StyleSheet.create({
     profileView: {
         width: windowWidth * 1,
         height: windowHeight * 0.20,
-        // backgroundColor: COLORS.lightGrey,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -85,12 +84,11 @@ const styles = StyleSheet.create({
     profileIcon: {
         width: 125,
         height: 125,
-        // borderWidth: 1,
         borderRadius: 180,
         overflow: 'hidden',
         padding: 2,
         resizeMode: 'cover',
-        // backgroundColor: COLORS.primary,
+
         elevation: 5,
         position: 'absolute',
         top: windowHeight * 0.04
@@ -99,7 +97,6 @@ const styles = StyleSheet.create({
         width: windowWidth * 1,
         height: windowHeight * 0.10,
         backgroundColor: COLORS.primaryAccent,
-        // position: 'absolute',
         marginBottom: 'auto',
         borderBottomLeftRadius: 0,
         borderBottomRightRadius: 0,
@@ -125,7 +122,6 @@ const styles = StyleSheet.create({
     profileInfo: {
         marginTop: 10,
         width: windowWidth * 0.85,
-        // backgroundColor: 'grey',
         alignSelf: 'center'
     },
     keyName: {

@@ -1,979 +1,818 @@
-import { View, Text, StyleSheet, ToastAndroid, ScrollView, StatusBar, Modal, Pressable, BackHandler, Keyboard, TouchableOpacity, ActivityIndicator, FlatList, Alert, Linking, Platform, PermissionsAndroid } from 'react-native'
-import React, { useCallback, useEffect, useState } from 'react'
-import { COLORS, windowHeight, windowWidth } from '../../../Common/Constants'
-import { Button, Searchbar, TextInput } from 'react-native-paper'
-import MaterialCommunityIcons2 from 'react-native-vector-icons/FontAwesome5';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ToastAndroid,
+  ScrollView,
+  StatusBar,
+  Modal,
+  Pressable,
+  BackHandler,
+  Keyboard,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { COLORS, windowHeight, windowWidth } from '../../../Common/Constants';
+import { Button, Searchbar } from 'react-native-paper';
+import UserIcon from 'react-native-vector-icons/FontAwesome5';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect, useIsFocused } from '@react-navigation/native';
+import { useIsFocused } from '@react-navigation/native';
 import { XMLParser } from 'fast-xml-parser';
 import SearchPopup from '../../Components/SearchPopup';
 import TransactionCard from '../../Components/TransactionCard';
 import NetInfo from '@react-native-community/netinfo';
 
-export default function Dashboard({ navigation, route }) {
+export default function DashboardScreen({ navigation, route }) {
+  const [hasData, setHasData] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const [isSearchActive, setIsSearchActive] = useState(false);
+  const [backPressedOnce, setBackPressedOnce] = useState(false);
+  const isFocused = useIsFocused();
 
-    const [dataAvailable, setDataAvailable] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [searchedResults, setSearchedResults] = useState(false);
-    const [backPressedOnce, setBackPressedOnce] = useState(false);
-    const isFocused = useIsFocused();
-    const [mappedMasterData, setMappedMasterData] = useState([]);
-    const [headerLastAccNo, setHeaderLastAccNo] = useState(null);
-    const [newAccCreated, setnewAccCreated] = useState(null);
-    const [NoOfRecords, setNoOfRecords] = useState(null);
-    const [isDataValid, setIsDataValid] = useState(true);
-    const [LicenseValidUpto, setLicenseValidUpto] = useState(null);
-    const [LicenseExpired, setLicenseExpired] = useState(false);
-    const [ClientName, setClientName] = useState(null);
-    const [BranchName, setBranchName] = useState(null);
-    const [BranchCode, setBranchCode] = useState(null);
-    const [AgentName, setAgentName] = useState(null);
-    const [IsActive, setIsActive] = useState(true);
-    const [AllowNewUser, setAllowNewUser] = useState(true);
-    const [fileCreatedDate, setFileCreatedDate] = useState(null);
-    const [noOfDaysAllowed, setNoOfDaysAllowed] = useState(null);
-    const [InputFileType, setInputFileType] = useState(null);
-    const [ClientID, setClientId] = useState(null);
-    const [BrCode, setBrCode] = useState(null);
-    const [AgCode, setAgCode] = useState(null);
-    const [BrAgCode, setBrAgCode] = useState(null);
-    const [FileCreateDate, setFileCreateDate] = useState(null);
-    const [GlLastAcc, setGlLastAcc] = useState(null);
-    const [GLCode, setGLCode] = useState(null);
-    const [pendingCount, setpendingCount] = useState(null);
-    const [collectionAllowed, setCollectionAllowed] = useState(true);
-    const [multipleCollection, setMultipleCollection] = useState(false);
-    const [totalAmount, setTotalAmount] = useState(0);
-    const [transactionTable, setTransactionTable] = useState([]);
-    const [isAuth, setIsAuth] = useState(true);
-    const [modalVisible, setModalVisible] = useState(false);
-    const [amount, setAmount] = useState(null);
-    const [name, setName] = useState(null);
-    const [mobileNumber, setmobileNumber] = useState(null);
-    const [buttonLoading, setButtonLoading] = useState(false);
-    const [modalVisible2, setModalVisible2] = useState(false);
-    const [isFirstLogin, setIsFirstLogin] = useState(false);
-    const [isConnected, setConnected] = useState(true);
-    const [maxAmountLimit, setMaxAmountLimit] = useState(null);
-    const [syncLoading, setSyncLoading] = useState(false);
+  const [masterRecords, setMasterRecords] = useState([]);
+  const [headerLastAccountNo, setHeaderLastAccountNo] = useState(null);
+  const [recordCount, setRecordCount] = useState(null);
+  const [isDataConsistent, setIsDataConsistent] = useState(true);
 
-    useEffect(() => {
-        if (route.params?.search === true) {
-            setSearchedResults(true);
-        }
-        setSearchQuery('');
-    }, [isFocused])
+  const [licenseValidUpto, setLicenseValidUpto] = useState(null);
+  const [licenseExpired, setLicenseExpired] = useState(false);
 
-    useEffect(() => {
-        if (!fileCreatedDate || !noOfDaysAllowed) return;
+  const [clientName, setClientName] = useState(null);
+  const [branchName, setBranchName] = useState(null);
+  const [branchCode, setBranchCode] = useState(null);
+  const [agentName, setAgentName] = useState(null);
 
-        const fileDate = new Date(fileCreatedDate);
-        const endDate = new Date(fileDate);
-        endDate.setDate(fileDate.getDate() + parseInt(noOfDaysAllowed));
+  const [isActiveAccount, setIsActiveAccount] = useState(true);
+  const [allowNewAccount, setAllowNewAccount] = useState(true);
 
-        const currentDate = new Date();
-        if (currentDate >= fileDate && currentDate < endDate) {
-            setCollectionAllowed(true);
-        } else {
-            setCollectionAllowed(false);
-        }
-    }, [fileCreatedDate, noOfDaysAllowed]);
+  const [fileCreateDate, setFileCreateDate] = useState(null);
+  const [allowedDays, setAllowedDays] = useState(null);
+  const [inputFileType, setInputFileType] = useState(null);
 
-    useEffect(() => {
-        const handleBackPress = () => {
-            if (backPressedOnce && !searchedResults) {
-                BackHandler.exitApp();
-            } else {
-                setBackPressedOnce(true);
-                ToastAndroid.show('Press back again to exit', ToastAndroid.SHORT);
-                setTimeout(() => {
-                    setBackPressedOnce(false);
-                }, 2000);
-                return true;
-            }
-        };
-        const backHandler = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
+  const [clientId, setClientId] = useState(null);
+  const [branchCodeFromData, setBranchCodeFromData] = useState(null);
+  const [agentCode, setAgentCode] = useState(null);
+  const [branchAgentCode, setBranchAgentCode] = useState(null);
 
-        return () => backHandler.remove();
-    }, [backPressedOnce]);
+  const [glLastAccount, setGlLastAccount] = useState(null);
+  const [glCode, setGlCode] = useState(null);
 
-    useEffect(() => {
-        const checkFirstLogin = async () => {
-            const firstLoginComplete = await AsyncStorage.getItem('firstLoginComplete');
-            const savedData = await AsyncStorage.getItem('dataObject');
-            // console.log("old local data chaeck", savedData)
-            if (firstLoginComplete === 'true') {
-                getFileContent();
-            }
-            else {
-                setIsFirstLogin(true);
-            }
-        };
-        checkFirstLogin();
-    }, []);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [allowCollection, setAllowCollection] = useState(true);
+  const [allowMultipleCollection, setAllowMultipleCollection] = useState(false);
 
-    const handleGetData = async () => {
-        getFileContent();
+  const [totalCollectedAmount, setTotalCollectedAmount] = useState(0);
+  const [transactionTable, setTransactionTable] = useState([]);
+
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
+
+  const [closeButtonLoading, setCloseButtonLoading] = useState(false);
+  const [syncLoading, setSyncLoading] = useState(false);
+
+  const [isFirstLogin, setIsFirstLogin] = useState(false);
+  const [isConnected, setIsConnected] = useState(true);
+  const [amountLimit, setAmountLimit] = useState(null);
+
+  useEffect(() => {
+    if (route.params?.search === true) {
+      setIsSearchActive(true);
     }
+    setSearchText('');
+  }, [isFocused, route?.params]);
 
-    const getFileContent = async () => {
-        setLoading(true);
-        const firstLoginComplete = await AsyncStorage.getItem('firstLoginComplete');
-        console.log("firstLoginComplete", firstLoginComplete)
-        if ((firstLoginComplete === 'false') || (!firstLoginComplete)) {
+  useEffect(() => {
+    if (!fileCreateDate || !allowedDays) return;
+    const start = new Date(fileCreateDate);
+    const end = new Date(start);
+    end.setDate(start.getDate() + parseInt(allowedDays));
+    const now = new Date();
+    if (now >= start && now < end) {
+      setAllowCollection(true);
+    } else {
+      setAllowCollection(false);
+    }
+  }, [fileCreateDate, allowedDays]);
 
-            try {
-                const mobileNumber = await AsyncStorage.getItem('mobileNumber');
-                console.log("try block executed")
-                if (mobileNumber) {
-                    const url = `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/RequestData_App?MobileNo=${mobileNumber}`;
-
-                    const response = await fetchWithTimeout(
-                        url,
-                        {
-                            method: 'GET',
-                            headers: {
-                                'Content-Type': 'application/xml',
-                            },
-                        },
-                        15000 // ⏳ timeout in ms
-                    );
-
-                    const responseText = await response.text();
-                    const parser = new XMLParser();
-                    const jsonResponse = parser.parse(responseText);
-                    const jsonString = jsonResponse.string;
-                    const dataObject = JSON.parse(jsonString);
-                    // console.log("tdataObject.ResonseCode", dataObject, dataObject.MstrData?.FileCreateDate)
-
-                    if (dataObject.ResonseCode === '0000') {
-                        await AsyncStorage.setItem('dataObject', JSON.stringify(dataObject));
-
-                        const licenseExpiryDate = dataObject.MstrData?.LicenseValidUpto;
-                        setLicenseValidUpto(licenseExpiryDate);
-                        const currentDate = new Date();
-                        const expiryDate = new Date(licenseExpiryDate);
-                        const timeDiff = expiryDate.getTime() - currentDate.getTime();
-                        const daysLeft = Math.ceil(timeDiff / (1000 * 3600 * 24));
-
-                        if (daysLeft < 0) {
-                            Alert.alert('License expired!', 'Your license has expired. Please pay subscription.');
-                        }
-
-                        if (daysLeft <= 15 && daysLeft >= 0) {
-                            Alert.alert('License Reminder', `Your license is about to expire in ${daysLeft} day(s). Please renew it soon.`);
-                        }
-
-                        let len1 = parseInt(dataObject.MstrData?.MstrRecs?.length);
-                        let len2 = parseInt(dataObject.MstrData?.NoOfRecords);
-
-                        if (len1 != len2) {
-                            console.log("length checking 3", len1, len2)
-                            setIsDataValid(false);
-                            Alert.alert('Error', 'Something went wrong while recieving data or data may be currupted please try again! or contact the main branch.')
-                            return;
-                        }
-                        setLicenseExpired(false);
-                        setMappedMasterData(dataObject.MstrData?.MstrRecs);
-                        setHeaderLastAccNo(dataObject.MstrData?.HdrLastAcNo);
-                        setDataAvailable(true);
-                        setNoOfRecords(dataObject.MstrData?.NoOfRecords);
-                        await AsyncStorage.setItem('LicenseValidUpto', (dataObject.MstrData?.LicenseValidUpto).toString());
-                        setClientName(dataObject.MstrData?.ClientName);
-                        setBranchName(dataObject.MstrData?.BrNameE);
-                        setBranchCode(dataObject.MstrData?.BrCode);
-                        setAgentName(dataObject.MstrData?.AgNameE);
-                        setIsActive(dataObject.MstrData?.IsActive ? true : false);
-                        setAllowNewUser((dataObject.MstrData?.NewAcOpenAllowed === 'True') ? true : false);
-                        setFileCreatedDate(dataObject.MstrData?.FileCreateDate);
-                        setNoOfDaysAllowed(dataObject.MstrData?.NoOfDaysAllowed);
-                        setClientId(dataObject.MstrData?.ClientID);
-                        setAgCode(dataObject.MstrData?.AgCode);
-                        setBrCode(dataObject.MstrData?.BrCode);
-                        setBrAgCode(dataObject.MstrData?.BrAgCode);
-                        setFileCreateDate(dataObject.MstrData?.FileCreateDate);
-                        setInputFileType(dataObject.MstrData?.InputFileType);
-                        setGlLastAcc(dataObject.MstrData?.GLLastAc);
-                        setGLCode(dataObject.MstrData?.GLCode);
-                        setMaxAmountLimit(dataObject.MstrData?.AmountLimit);
-                        setMultipleCollection((dataObject.MstrData?.AllowMultipleColln === 'True') ? true : false);
-                        setSearchedResults(true);
-                        await AsyncStorage.setItem('firstLoginComplete', 'true');
-                        setIsFirstLogin(false);
-                    }
-                    else {
-                        Alert.alert(
-                            'Error:',
-                            `Response Code : ${dataObject.ResonseCode}, ${dataObject.ResponseString}`
-                        );
-                        console.log("error block", dataObject.ResonseCode, dataObject.ResponseString)
-                        setDataAvailable(false);
-                        setIsAuth(false);
-                    }
-                } else {
-                    setDataAvailable(false);
-                    await AsyncStorage.removeItem('firstLoginComplete');
-                }
-            } catch (error) {
-                setDataAvailable(false);
-                Alert.alert('Error:', `Error: ${error.message}`);
-                console.log('Error occurred:', error.message)
-                await AsyncStorage.removeItem('firstLoginComplete');
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        else if (firstLoginComplete === 'true') {
-            try {
-                const savedData = await AsyncStorage.getItem('dataObject');
-
-                if (savedData) {
-                    const dataObject = JSON.parse(savedData);
-                    if (dataObject.ResonseCode === '0000') {
-                        await AsyncStorage.setItem('dataObject', JSON.stringify(dataObject));
-                        const licenseExpiryDate = dataObject.MstrData?.LicenseValidUpto;
-                        setLicenseValidUpto(licenseExpiryDate);
-                        const currentDate = new Date();
-                        const expiryDate = new Date(licenseExpiryDate);
-                        const timeDiff = expiryDate.getTime() - currentDate.getTime();
-                        const daysLeft = Math.ceil(timeDiff / (1000 * 3600 * 24));
-                        console.log("days left when api called", daysLeft)
-                        if (daysLeft < 0) {
-                            Alert.alert('License expired!', 'Your license has expired. Please pay subscription.');
-                        }
-
-                        if (daysLeft <= 15 && daysLeft >= 0) {
-                            Alert.alert('License Reminder', `Your license is about to expire in ${daysLeft} day(s). Please renew it soon.`);
-                        }
-
-                        setLicenseExpired(false);
-                        setMappedMasterData(dataObject.MstrData?.MstrRecs);
-                        setHeaderLastAccNo(dataObject.MstrData?.HdrLastAcNo);
-                        setDataAvailable(true);
-                        setNoOfRecords(dataObject.MstrData?.NoOfRecords);
-                        await AsyncStorage.setItem('LicenseValidUpto', (dataObject.MstrData?.LicenseValidUpto).toString());
-                        setClientName(dataObject.MstrData?.ClientName);
-                        setBranchName(dataObject.MstrData?.BrNameE);
-                        setBranchCode(dataObject.MstrData?.BrCode);
-                        setAgentName(dataObject.MstrData?.AgNameE);
-                        // console.log("is active??", dataObject.MstrData?.IsActive)
-                        setIsActive(dataObject.MstrData?.IsActive ? true : false);
-                        // setIsActive(false);
-                        setAllowNewUser((dataObject.MstrData?.NewAcOpenAllowed === 'True') ? true : false);
-                        setFileCreatedDate(dataObject.MstrData?.FileCreateDate);
-                        setNoOfDaysAllowed(dataObject.MstrData?.NoOfDaysAllowed);
-                        setClientId(dataObject.MstrData?.ClientID);
-                        setAgCode(dataObject.MstrData?.AgCode);
-                        setBrCode(dataObject.MstrData?.BrCode);
-                        setBrAgCode(dataObject.MstrData?.BrAgCode);
-                        setFileCreateDate(dataObject.MstrData?.FileCreateDate);
-                        setInputFileType(dataObject.MstrData?.InputFileType);
-                        setGlLastAcc(dataObject.MstrData?.GLLastAc);
-                        setGLCode(dataObject.MstrData?.GLCode);
-                        setMaxAmountLimit(dataObject.MstrData?.AmountLimit);
-                        // setMultipleCollection(false)
-                        setMultipleCollection((dataObject.MstrData?.AllowMultipleColln === 'True') ? true : false);
-                        setSearchedResults(true);
-                    }
-                    else {
-                        if (dataObject.ResonseCode != '0000') {
-                            Alert.alert(
-                                'Error:',
-                                `Code : ${dataObject.ResonseCode}, ${dataObject.ResponseString}`
-                            );
-                        }
-                        setDataAvailable(false);
-                        setIsAuth(false);
-                        if (!isConnected) {
-                            Alert.alert('Failed getting data!', 'Please check your internet connection and try again.');
-                        }
-                    }
-
-                } else {
-                    setDataAvailable(false);
-                    if (!isConnected) {
-                        Alert.alert('Failed getting data!', 'Please check your internet connection and try again.');
-                    }
-                    await AsyncStorage.removeItem('firstLoginComplete');
-                }
-            } catch (error) {
-                setDataAvailable(false);
-                Alert.alert('Error occurred:', error.message);
-                console.log('Error occurred:', error)
-                await AsyncStorage.removeItem('firstLoginComplete');
-                if (!isConnected) {
-                    Alert.alert('Failed getting data!', 'Please check your internet connection and try again.');
-                }
-            } finally {
-                setLoading(false);
-            }
-        }
+  useEffect(() => {
+    const backAction = () => {
+      if (backPressedOnce && !isSearchActive) {
+        BackHandler.exitApp();
+      } else {
+        setBackPressedOnce(true);
+        ToastAndroid.show('Press back again to exit', ToastAndroid.SHORT);
+        setTimeout(() => {
+          setBackPressedOnce(false);
+        }, 2000);
+      }
+      return true;
     };
 
-    useEffect(() => {
-        let unsubscribe;
-        let currentState;
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+    return () => backHandler.remove();
+  }, [backPressedOnce, isSearchActive]);
 
-        unsubscribe = NetInfo.addEventListener(state => {
+  useEffect(() => {
+    const checkSavedLogin = async () => {
+      const firstLoginComplete = await AsyncStorage.getItem('firstLoginComplete');
+      if (firstLoginComplete === 'true') {
+        loadServerData();
+      } else {
+        setIsFirstLogin(true);
+      }
+    };
+    checkSavedLogin();
+  }, []);
 
-            const isOnline = state.isInternetReachable != null ? state.isInternetReachable : false;
+  const handleGetData = async () => {
+    loadServerData();
+  };
 
-            if (currentState !== isOnline) {
-                currentState = isOnline;
-                console.log("Online status?", currentState);
-                setConnected(currentState);
-                if (currentState === true) {
-                    sendDataInBackground();
-                }
-            }
-        });
+  const loadServerData = async () => {
+    setLoading(true);
+    const firstLoginComplete = await AsyncStorage.getItem('firstLoginComplete');
 
-        return () => {
-            console.log("unsubscribe");
-            if (unsubscribe) unsubscribe();
-        };
-    }, []);
+    if (firstLoginComplete !== 'true') {
+      try {
+        const mobileNo = await AsyncStorage.getItem('mobileNumber');
+        if (!mobileNo) {
+          setHasData(false);
+          await AsyncStorage.removeItem('firstLoginComplete');
+          setLoading(false);
+          return;
+        }
 
-    const sendDataInBackground = async () => {
+        const url = `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/RequestData_App?MobileNo=${mobileNo}`;
+
+        const response = await fetchWithTimeout(
+          url,
+          {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/xml' },
+          },
+          15000
+        );
+
+        const responseText = await response.text();
+        const parser = new XMLParser();
+        const parsed = parser.parse(responseText);
+        const jsonString = parsed.string;
+        const dataObject = JSON.parse(jsonString);
+
+        if (dataObject.ResonseCode === '0000') {
+          try {
+            await AsyncStorage.setItem('dataObject', JSON.stringify(dataObject));
+          } catch (err) {
+            console.warn('Storage Error', 'Failed to store transaction locally.');
+            Alert.alert('Error', 'Failed to save data. Please try again.');
+            setLoading(false);
+            return;
+          }
+
+          const expiry = dataObject.MstrData?.LicenseValidUpto;
+          setLicenseValidUpto(expiry);
+          const now = new Date();
+          const expiryDate = new Date(expiry);
+          const daysLeft = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 3600 * 24));
+
+          if (daysLeft < 0) {
+            Alert.alert('License expired!', 'Your license has expired. Please pay subscription.');
+          }
+
+          if (daysLeft <= 15 && daysLeft >= 0) {
+            Alert.alert('License Reminder', `Your license is about to expire in ${daysLeft} day(s). Please renew it soon.`);
+          }
+
+          const lenRecords = parseInt(dataObject.MstrData?.MstrRecs?.length);
+          const declaredCount = parseInt(dataObject.MstrData?.NoOfRecords);
+
+          if (lenRecords !== declaredCount) {
+            // setIsDataConsistent(false);
+            Alert.alert('Error', 'Something went wrong while receiving data or data may be corrupted. Please try again or contact main branch.');
+            setLoading(false);
+            return;
+          }
+
+          setLicenseExpired(false);
+          setMasterRecords(dataObject.MstrData?.MstrRecs);
+          setHeaderLastAccountNo(dataObject.MstrData?.HdrLastAcNo);
+          setHasData(true);
+          setRecordCount(dataObject.MstrData?.NoOfRecords);
+          await AsyncStorage.setItem('LicenseValidUpto', (dataObject.MstrData?.LicenseValidUpto).toString());
+          setClientName(dataObject.MstrData?.ClientName);
+          setBranchName(dataObject.MstrData?.BrNameE);
+          setBranchCode(dataObject.MstrData?.BrCode);
+          setAgentName(dataObject.MstrData?.AgNameE);
+          // setIsActiveAccount(false);
+          setIsActiveAccount(dataObject.MstrData?.IsActive ? true : false);
+          setAllowNewAccount((dataObject.MstrData?.NewAcOpenAllowed === 'True') ? true : false);
+          setFileCreateDate(dataObject.MstrData?.FileCreateDate);
+          setAllowedDays(dataObject.MstrData?.NoOfDaysAllowed);
+          setClientId(dataObject.MstrData?.ClientID);
+          setAgentCode(dataObject.MstrData?.AgCode);
+          setBranchCodeFromData(dataObject.MstrData?.BrCode);
+          setBranchAgentCode(dataObject.MstrData?.BrAgCode);
+          setInputFileType(dataObject.MstrData?.InputFileType);
+          setGlLastAccount(dataObject.MstrData?.GLLastAc);
+          setGlCode(dataObject.MstrData?.GLCode);
+          setAmountLimit(dataObject.MstrData?.AmountLimit);
+          setAllowMultipleCollection((dataObject.MstrData?.AllowMultipleColln === 'True') ? true : false);
+          setIsSearchActive(true);
+          await AsyncStorage.setItem('firstLoginComplete', 'true');
+          setIsFirstLogin(false);
+        } else {
+          Alert.alert('Error:', `Response Code : ${dataObject.ResonseCode}, ${dataObject.ResponseString}`);
+          setHasData(false);
+          setIsAuthenticated(false);
+        }
+      } catch (error) {
+        setHasData(false);
+        Alert.alert('Error:', `Error: ${error.message}`);
+        await AsyncStorage.removeItem('firstLoginComplete');
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      try {
+        const savedData = await AsyncStorage.getItem('dataObject');
+        if (!savedData) {
+          setHasData(false);
+          await AsyncStorage.removeItem('firstLoginComplete');
+          if (!isConnected) {
+            Alert.alert('Failed getting data!', 'Please check your internet connection and try again.');
+          }
+          setLoading(false);
+          return;
+        }
+
+        const dataObject = JSON.parse(savedData);
+        if (dataObject.ResonseCode === '0000') {
+          try {
+            await AsyncStorage.setItem('dataObject', JSON.stringify(dataObject));
+          } catch (err) {
+            console.warn('Storage Error', 'Failed to store transaction locally.');
+            Alert.alert('Error', 'Failed to save data. Please try again.');
+            setLoading(false);
+            return;
+          }
+          const expiry = dataObject.MstrData?.LicenseValidUpto;
+          setLicenseValidUpto(expiry);
+          const now = new Date();
+          const expiryDate = new Date(expiry);
+          const daysLeft = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 3600 * 24));
+
+          if (daysLeft < 0) {
+            Alert.alert('License expired!', 'Your license has expired. Please pay subscription.');
+          }
+
+          if (daysLeft <= 15 && daysLeft >= 0) {
+            Alert.alert('License Reminder', `Your license is about to expire in ${daysLeft} day(s). Please renew it soon.`);
+          }
+
+          setLicenseExpired(false);
+          setMasterRecords(dataObject.MstrData?.MstrRecs);
+          setHeaderLastAccountNo(dataObject.MstrData?.HdrLastAcNo);
+          setHasData(true);
+          setRecordCount(dataObject.MstrData?.NoOfRecords);
+          await AsyncStorage.setItem('LicenseValidUpto', (dataObject.MstrData?.LicenseValidUpto).toString());
+          setClientName(dataObject.MstrData?.ClientName);
+          setBranchName(dataObject.MstrData?.BrNameE);
+          setBranchCode(dataObject.MstrData?.BrCode);
+          setAgentName(dataObject.MstrData?.AgNameE);
+          // setIsActiveAccount(false);
+          setIsActiveAccount(dataObject.MstrData?.IsActive ? true : false);
+          setAllowNewAccount((dataObject.MstrData?.NewAcOpenAllowed === 'True') ? true : false);
+          setFileCreateDate(dataObject.MstrData?.FileCreateDate);
+          setAllowedDays(dataObject.MstrData?.NoOfDaysAllowed);
+          setClientId(dataObject.MstrData?.ClientID);
+          setAgentCode(dataObject.MstrData?.AgCode);
+          setBranchCodeFromData(dataObject.MstrData?.BrCode);
+          setBranchAgentCode(dataObject.MstrData?.BrAgCode);
+          setInputFileType(dataObject.MstrData?.InputFileType);
+          setGlLastAccount(dataObject.MstrData?.GLLastAc);
+          setGlCode(dataObject.MstrData?.GLCode);
+          setAmountLimit(dataObject.MstrData?.AmountLimit);
+          setAllowMultipleCollection((dataObject.MstrData?.AllowMultipleColln === 'True') ? true : false);
+          setIsSearchActive(true);
+        } else {
+          if (dataObject.ResonseCode !== '0000') {
+            Alert.alert('Error:', `Code : ${dataObject.ResonseCode}, ${dataObject.ResponseString}`);
+          }
+          setHasData(false);
+          setIsAuthenticated(false);
+          if (!isConnected) {
+            Alert.alert('Failed getting data!', 'Please check your internet connection and try again.');
+          }
+        }
+      } catch (error) {
+        setHasData(false);
+        Alert.alert('Error occurred:', error.message);
+        await AsyncStorage.removeItem('firstLoginComplete');
+        if (!isConnected) {
+          Alert.alert('Failed getting data!', 'Please check your internet connection and try again.');
+        }
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      const online = state.isInternetReachable != null ? state.isInternetReachable : false;
+      setIsConnected(online);
+      if (online) sendPendingTransactions();
+    });
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
+
+  const sendPendingTransactions = async () => {
+    try {
+      const raw = await AsyncStorage.getItem('transactionTable');
+      const parsed = JSON.parse(raw) || [];
+      const pending = parsed.filter((t) => t.pending === true);
+      if (!isConnected || pending.length === 0) return;
+
+      const savedData = await AsyncStorage.getItem('dataObject');
+      const dataObject = JSON.parse(savedData);
+
+      const payload = {
+        ClientID: dataObject?.MstrData?.ClientID,
+        BrCode: dataObject?.MstrData?.BrCode,
+        AgCode: dataObject?.MstrData?.AgCode,
+        BrAgCode: dataObject?.MstrData?.BrAgCode,
+        FileCreateDate: dataObject?.MstrData?.FileCreateDate,
+        InputFileType: dataObject?.MstrData?.InputFileType,
+        NoOfRecords: pending.length.toString(),
+        CollectionData: pending.map(({ pending, ...rest }) => rest),
+      };
+
+      const response = await fetchWithTimeout(
+        'https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ DataFromApp: JSON.stringify(payload) }).toString(),
+        },
+        15000
+      );
+
+      const text = await response.text();
+      const parser = new XMLParser();
+      const parsedXML = parser.parse(text);
+      const result = JSON.parse(parsedXML.string);
+      const code = result?.ResonseCode;
+
+      if (code === '0000') {
+        const updated = parsed.map((item) => (item.pending ? (() => {
+          const { pending, ...rest } = item;
+          return rest;
+        })() : item));
+
         try {
-            const transactionTableData = await AsyncStorage.getItem('transactionTable');
-            const parsedData = JSON.parse(transactionTableData) || [];
-            const pendingTransactions = parsedData.filter(item => item.pending === true);
+          await AsyncStorage.setItem('transactionTable', JSON.stringify(updated));
+        } catch (err) {
+          console.warn('Storage Error', 'Failed to store transaction locally.');
+          Alert.alert('Error', 'Failed to save data. Please try again.');
+          return;
+        }
+        await refreshTransactionTable();
+      } else {
+        Alert.alert('Upload Failed', `Response Code: ${code}, Message: ${result?.ResponseString || 'Unknown error'}`);
+      }
+    } catch (error) {
+      Alert.alert('Upload Error', `Something went wrong: ${error.message}`);
+    }
+  };
 
-            if (!isConnected || pendingTransactions.length === 0) return;
+  const fetchWithTimeout = (url, options, timeout = 15000) => {
+    return Promise.race([
+      fetch(url, options),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Request timed out')), timeout)),
+    ]);
+  };
 
-            const savedData = await AsyncStorage.getItem('dataObject');
-            const dataObject = JSON.parse(savedData);
+  const handleSyncData = async () => {
+    setSyncLoading(true);
+    try {
+      const raw = await AsyncStorage.getItem('transactionTable');
+      const parsed = JSON.parse(raw) || [];
+      const savedData = await AsyncStorage.getItem('dataObject');
+      const dataObject = JSON.parse(savedData);
 
-            const payload = {
-                ClientID: dataObject?.MstrData?.ClientID,
-                BrCode: dataObject?.MstrData?.BrCode,
-                AgCode: dataObject?.MstrData?.AgCode,
-                BrAgCode: dataObject?.MstrData?.BrAgCode,
-                FileCreateDate: dataObject?.MstrData?.FileCreateDate,
-                InputFileType: dataObject?.MstrData?.InputFileType,
-                NoOfRecords: pendingTransactions.length.toString(),
-                CollectionData: pendingTransactions.map(({ pending, ...rest }) => rest),
-            };
+      const cleaned = parsed.map(({ pending, ...rest }) => rest);
+      const chunkArray = (arr, size) => {
+        const res = [];
+        for (let i = 0; i < arr.length; i += size) res.push(arr.slice(i, i + size));
+        return res;
+      };
 
-            console.log("Sending pending data:", payload);
+      const chunks = chunkArray(cleaned, 5);
 
-            // const response = await fetch(
-            //     'https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp',
-            //     {
-            //         method: 'POST',
-            //         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            //         body: new URLSearchParams({ DataFromApp: JSON.stringify(payload) }).toString(),
-            //     }
-            // );
+      for (let i = 0; i < chunks.length; i++) {
+        const batch = chunks[i];
+        const payload = {
+          ClientID: dataObject?.MstrData?.ClientID,
+          BrCode: dataObject?.MstrData?.BrCode,
+          AgCode: dataObject?.MstrData?.AgCode,
+          BrAgCode: dataObject?.MstrData?.BrAgCode,
+          FileCreateDate: dataObject?.MstrData?.FileCreateDate,
+          InputFileType: dataObject?.MstrData?.InputFileType,
+          NoOfRecords: batch.length.toString(),
+          CollectionData: batch,
+        };
 
-            const response = await fetchWithTimeout(
-                'https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp',
+        const response = await fetchWithTimeout(
+          'https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ DataFromApp: JSON.stringify(payload) }).toString(),
+          },
+          15000
+        );
+
+        const text = await response.text();
+        const parser = new XMLParser();
+        const parsedXML = parser.parse(text);
+        const result = JSON.parse(parsedXML.string);
+        const code = result?.ResonseCode;
+
+        if (code !== '0000') {
+          Alert.alert('Sync Failed', `Code: ${code}, Message: ${result?.ResponseString || 'Unknown error'}`);
+          setSyncLoading(false);
+          return;
+        }
+      }
+
+      setSyncLoading(false);
+      ToastAndroid.show('All data synced successfully.', ToastAndroid.SHORT)
+      const updatedTransactionTable = parsed.map((item) => (item.pending ? (() => {
+        const { pending, ...rest } = item;
+        return rest;
+      })() : item));
+      try {
+        await AsyncStorage.setItem('transactionTable', JSON.stringify(updatedTransactionTable));
+      } catch (err) {
+        console.warn('Storage Error', 'Failed to store transaction locally.');
+        Alert.alert('Error', 'Failed to save data. Please try again.');
+        setSyncLoading(false);
+        return;
+      }
+      await refreshTransactionTable();
+    } catch (error) {
+      setSyncLoading(false);
+      Alert.alert('Error', `Error: ${error.message}`);
+    }
+  };
+
+  const refreshTransactionTable = async () => {
+    try {
+      const raw = await AsyncStorage.getItem('transactionTable');
+      if (!raw) {
+        setTransactionTable([]);
+        setPendingCount(0);
+        setTotalCollectedAmount(0);
+        return;
+      }
+      const parsed = JSON.parse(raw);
+      setTransactionTable(parsed);
+      const pending = parsed.filter((p) => p.pending === true);
+      setPendingCount(pending.length);
+      const total = parsed.reduce((sum, t) => sum + (parseFloat(t.Collection) || 0), 0);
+      setTotalCollectedAmount(total);
+    } catch (error) {
+      Alert.alert('Error fetching transaction table from Local storage:', error.message);
+    }
+  };
+
+  useEffect(() => {
+    refreshTransactionTable();
+  }, [isFocused]);
+
+  const handleCloseCollection = async () => {
+    setCloseButtonLoading(true);
+
+    Alert.alert(
+      'Close Collection',
+      'Do you really want to close the collection?',
+      [
+        { text: 'Cancel', style: 'cancel', onPress: () => setCloseButtonLoading(false) },
+        {
+          text: 'Yes',
+          onPress: async () => {
+            const mobileNo = await AsyncStorage.getItem('mobileNumber');
+            if (!mobileNo) {
+              setCloseButtonLoading(false);
+              return;
+            }
+
+            const closeUrl = `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/CloseCollection_FromApp`;
+            const dummyUrl = `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/Dummy_CloseCycle`;
+            const tempCount = parseInt(transactionTable.length);
+
+            try {
+              const closeResponse = await fetchWithTimeout(
+                closeUrl,
                 {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: new URLSearchParams({ DataFromApp: JSON.stringify(payload) }).toString(),
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                  body: new URLSearchParams({
+                    MobileNo: mobileNo,
+                    Fdate: fileCreateDate,
+                    NoofRecs: tempCount,
+                  }).toString(),
                 },
                 15000
-            );
+              );
 
-            const responseText = await response.text();
-            const parser = new XMLParser();
-            const parsedXML = parser.parse(responseText);
-            const resultJson = JSON.parse(parsedXML.string);
-            const responseCode = resultJson?.ResonseCode;
+              const closeText = await closeResponse.text();
+              const parser = new XMLParser();
+              const closeParsed = parser.parse(closeText);
+              const closeData = JSON.parse(closeParsed.string);
+              const closeCode = closeData.ResonseCode;
 
-            if (responseCode === '0000') {
-                const updatedTransactionTable = parsedData.map(item => {
-                    if (item.pending) {
-                        const { pending, ...rest } = item;
-                        return rest;
-                    }
-                    return item;
-                });
-
-                await AsyncStorage.setItem('transactionTable', JSON.stringify(updatedTransactionTable));
-                fetchTransactionTable();
-                console.log("Pending transactions uploaded and cleared.");
-            } else {
-                Alert.alert(
-                    'Upload Failed',
-                    `Response Code: ${responseCode}, Message: ${resultJson?.ResponseString || 'Unknown error'}`
-                );
-            }
-        } catch (error) {
-            console.log("Background upload error:", error);
-            Alert.alert("Upload Error", `Something went wrong: ${error.message}`);
-        }
-    };
-
-    const fetchWithTimeout = (url, options, timeout = 15000) => {
-        return Promise.race([
-            fetch(url, options),
-            new Promise((_, reject) =>
-                setTimeout(() => reject(new Error("Request timed out")), timeout)
-            ),
-        ]);
-    };
-
-    const handleSyncData = async () => {
-        setSyncLoading(true);
-        try {
-            const transactionTableData = await AsyncStorage.getItem('transactionTable');
-            const parsedData = JSON.parse(transactionTableData) || [];
-            const savedData = await AsyncStorage.getItem('dataObject');
-            const dataObject = JSON.parse(savedData);
-            const cleanData = parsedData.map(({ pending, ...rest }) => rest);
-
-            const chunkArray = (arr, size) => {
-                const result = [];
-                for (let i = 0; i < arr.length; i += size) {
-                    result.push(arr.slice(i, i + size));
-                }
-                return result;
-            };
-
-            const chunkSize = 5;
-            const chunks = chunkArray(cleanData, chunkSize);
-
-            for (let i = 0; i < chunks.length; i++) {
-                const batch = chunks[i];
-                const payload = {
-                    ClientID: dataObject?.MstrData?.ClientID,
-                    BrCode: dataObject?.MstrData?.BrCode,
-                    AgCode: dataObject?.MstrData?.AgCode,
-                    BrAgCode: dataObject?.MstrData?.BrAgCode,
-                    FileCreateDate: dataObject?.MstrData?.FileCreateDate,
-                    InputFileType: dataObject?.MstrData?.InputFileType,
-                    NoOfRecords: batch.length.toString(),
-                    CollectionData: batch,
-                };
-
-                console.log(`Syncing batch ${i + 1} of ${chunks.length}:`, payload);
-
-                const response = await fetchWithTimeout(
-                    'https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/GetData_FromApp',
-                    {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: new URLSearchParams({ DataFromApp: JSON.stringify(payload) }).toString(),
-                    },
-                    15000 // 15 sec timeout
+              if (closeCode === '0000') {
+                const dummyResponse = await fetchWithTimeout(
+                  dummyUrl,
+                  {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                      MobileNo: mobileNo,
+                      Fdate: fileCreateDate,
+                      NoofRecs: tempCount,
+                    }).toString(),
+                  },
+                  15000
                 );
 
-                const responseText = await response.text();
-                const parser = new XMLParser();
-                const parsedXML = parser.parse(responseText);
-                const resultJson = JSON.parse(parsedXML.string);
-                const responseCode = resultJson?.ResonseCode;
+                const dummyText = await dummyResponse.text();
+                const dummyParsed = parser.parse(dummyText);
+                const dummyData = JSON.parse(dummyParsed.string);
+                const dummyCode = dummyData.ResonseCode;
 
-                console.log("Response from batch sync:", resultJson);
-
-                if (responseCode !== '0000') {
-                    Alert.alert(
-                        'Sync Failed',
-                        `Code: ${responseCode}, Message: ${resultJson?.ResponseString || 'Unknown error'}`
-                    );
-                    setSyncLoading(false);
+                if (dummyCode === '0000') {
+                  Alert.alert('Success', 'Successfully closed Collections');
+                  let history = await AsyncStorage.getItem('transactionHistoryTable');
+                  history = history ? JSON.parse(history) : [];
+                  let table = await AsyncStorage.getItem('transactionTable');
+                  table = table ? JSON.parse(table) : [];
+                  table.forEach((t) => history.push(t));
+                  try {
+                    await AsyncStorage.setItem('transactionHistoryTable', JSON.stringify(history));
+                  } catch (err) {
+                    console.warn('Storage Error', 'Failed to store transaction locally.');
+                    Alert.alert('Error', 'Failed to save data. Please try again.');
+                    setCloseButtonLoading(false);
                     return;
+                  }
+                  await AsyncStorage.removeItem('transactionTable');
+                  setTransactionTable([]);
+                  await refreshTransactionTable();
+                  setHasData(false);
+                  setAmountLimit(null);
+                  setAllowedDays(null);
+                  setTotalCollectedAmount(null);
+                  setPendingCount(0);
+                  await AsyncStorage.setItem('firstLoginComplete', 'false');
+                } else {
+                  throw new Error(`DummyCloseCycle Error: Code ${dummyCode}, ${dummyData.ResponseString}`);
                 }
+              } else {
+                Alert.alert('Error', ` Response Code - ${closeCode} - ${closeData?.ResponseString} `);
+                setCloseButtonLoading(false);
+              }
+            } catch (error) {
+              Alert.alert('Error', `Error: ${error.message}`);
+              setCloseButtonLoading(false);
+            } finally {
+              setCloseButtonLoading(false);
+              await refreshTransactionTable();
             }
+          },
+        },
+      ]
+    );
+  };
 
-            setSyncLoading(false);
-            Alert.alert('Success', 'All data synced successfully.');
-            const updatedTransactionTable = parsedData.map(item => {
-                if (item.pending) {
-                    const { pending, ...rest } = item;
-                    return rest;
-                }
-                return item;
-            });
+  return (
+    <View style={styles.dashView}>
+      <StatusBar backgroundColor={COLORS.primaryAccent} barStyle="light-content" />
 
-            await AsyncStorage.setItem('transactionTable', JSON.stringify(updatedTransactionTable));
-            fetchTransactionTable();
-            console.log("All transactions synced successfully (pending flag removed).");
-        } catch (error) {
-            setSyncLoading(false);
-            console.log("Sync error:", error);
-            Alert.alert("Error", `Error: ${error.message}`);
-        }
-    };
+      <>
+        {(hasData || allowCollection) && (
+          <View style={styles.headerRow}>
+            <Searchbar
+              placeholder="Search by Name or A/C No"
+              onChangeText={setSearchText}
+              value={searchText}
+              autoFocus={isSearchActive}
+              onIconPress={() => {
+                setIsSearchActive(false);
+                setSearchText('');
+                Keyboard.dismiss();
+              }}
+              icon={isSearchActive ? 'arrow-left-thin' : 'magnify'}
+              iconColor={COLORS.primary}
+              onPress={() => setIsSearchActive(true)}
+              elevation={1}
+              style={styles.searchbarStyle}
+            />
+            <Pressable onPress={() => navigation.navigate('Profile', { count: recordCount, amount: totalCollectedAmount, collectionAllowed: allowCollection })}>
+              <UserIcon name="user-circle" style={{ elevation: 5 }} color={COLORS.primary} size={45} />
+            </Pressable>
+            {!hasData && <View style={styles.overlayBlocked} />}
+          </View>
+        )}
 
-    const fetchTransactionTable = async () => {
-        try {
-            const transactionTableData = await AsyncStorage.getItem('transactionTable');
-            if (transactionTableData) {
-                const parsedData = JSON.parse(transactionTableData);
-                // console.log("transactions latest checking now", parsedData)
+        {isSearchActive ? (
+          <SearchPopup
+            maxAmountLimit={amountLimit}
+            BranchName={branchName}
+            BranchCode={branchCode}
+            collectionAllowed={allowCollection}
+            multipleCollection={allowMultipleCollection}
+            mappedMasterData={masterRecords}
+            setSearchedResults={setIsSearchActive}
+            searchQuery={searchText}
+          />
+        ) : (
+          <View style={{ height: windowHeight * 0.85 }}>
+            <View style={styles.infoHeader}>
+              <View style={{ flex: 1, marginRight: 8 }}>
+                <Text style={[styles.labelText, { fontSize: 14, fontFamily: 'Montserrat-Bold', marginLeft: 0 }]}>
+                  {clientName ? clientName : '-'}
+                </Text>
+              </View>
+              <View style={{ flex: 1, marginLeft: 8 }}>
+                <Text style={styles.labelText}>Branch</Text>
+                <Text style={[styles.labelText, { fontSize: 14, fontFamily: 'Montserrat-Bold' }]}>
+                  {branchName ? branchName : '-'} {branchCode ? `(${branchCode})` : ''}
+                </Text>
+              </View>
+            </View>
 
-                setTransactionTable(parsedData);
-                const pendingTransactions = parsedData.filter((item) => item.pending === true);
-                setpendingCount(pendingTransactions.length);
-                const total = parsedData.reduce((sum, transaction) => {
-                    return sum + (parseFloat(transaction.Collection) || 0);
-                }, 0);
-                setTotalAmount(total);
-            }
-        } catch (error) {
-            Alert.alert('Error fetching transaction table from Local storage:', error.message);
-        }
-    };
+            <View style={styles.summaryContainer}>
+              <View style={[styles.dataInfoView, { width: windowWidth * 0.90 }]}>
+                <View style={styles.dataBlock}>
+                  <Text style={[styles.labelText, { marginLeft: 0 }]}>Total receipt</Text>
+                  <Text style={[styles.labelText, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>{transactionTable ? transactionTable.length : '-'}</Text>
+                </View>
+                <View style={styles.dataBlock}>
+                  <Text style={styles.labelText}>Pending</Text>
+                  <Text style={[styles.labelText, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>{pendingCount ? pendingCount : '0'}</Text>
+                </View>
+                <View style={styles.dataBlock}>
+                  <Text style={styles.labelText}>Allowed days</Text>
+                  <Text style={[styles.labelText, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>{allowedDays ? allowedDays : '0'}</Text>
+                </View>
+              </View>
 
-    useEffect(() => {
-        fetchTransactionTable();
-    }, [isFocused]);
+              <View style={[styles.dataInfoView, { marginTop: 15, width: windowWidth * 0.90 }]}>
+                <View style={{ width: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={styles.labelText}>Total collected amount</Text>
+                  <Text style={[styles.labelText, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>{totalCollectedAmount ? `₹${new Intl.NumberFormat('en-IN').format(totalCollectedAmount)}` : '0'}</Text>
+                </View>
+                <View style={{ width: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={styles.labelText}>Amount limit</Text>
+                  <Text style={[styles.labelText, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>{amountLimit ? `₹${new Intl.NumberFormat('en-IN').format(amountLimit)}` : '0'}</Text>
+                </View>
+              </View>
 
-    const handleCloseCollection = async () => {
-        setButtonLoading(true);
+              <View style={styles.fileDateAndSync}>
+                <View style={{ width: '50%', alignSelf: 'flex-start' }}>
+                  <View style={styles.fileDateBox}>
+                    <Text style={styles.labelText}>File created date</Text>
+                    <Text style={[styles.labelText, { fontSize: 20, fontFamily: 'Montserrat-Bold' }]}>{fileCreateDate ? fileCreateDate : '-'}</Text>
+                  </View>
+                </View>
 
-        // if (!isConnected) {
-        //     Alert.alert('Cannot Close collection!', `You are offline, please connect to the Internet and try again.`);
-        //     setButtonLoading(false);
-        //     return;
-        // }
+                <View style={{ width: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                  <Button
+                    icon="cloud-sync-outline"
+                    loading={syncLoading}
+                    disabled={syncLoading || closeButtonLoading || loading || isFirstLogin || !isActiveAccount || transactionTable?.length === 0}
+                    onPress={handleSyncData}
+                    labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }}
+                    style={{ width: windowWidth * 0.40 }}
+                    mode="contained"
+                  >
+                    Sync
+                  </Button>
+                </View>
+              </View>
+            </View>
 
-        Alert.alert(
-            'Close Collection',
-            'Do you really want to close the collection?',
-            [
-                { text: 'Cancel', style: 'cancel', onPress: () => setButtonLoading(false) },
-                {
-                    text: 'Yes',
-                    onPress: async () => {
-                        const mobileNumber = await AsyncStorage.getItem('mobileNumber');
+            {!allowCollection && (
+              <View>
+                <Text style={{ color: '#c72a2a', fontSize: 16, alignSelf: 'center', marginTop: 10, marginBottom: 10, fontFamily: 'Montserrat-Bold' }}>
+                  The allowed days for collection have expired.
+                </Text>
+              </View>
+            )}
 
-                        if (mobileNumber) {
+            <View style={styles.actionsRow}>
+              {loading ? (
+                <ActivityIndicator size={30} color={COLORS.primary} style={{ marginTop: '8%' }} />
+              ) : (
+                <Button
+                  icon="play"
+                  disabled={loading || hasData || !isActiveAccount || syncLoading}
+                  onPress={handleGetData}
+                  labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }}
+                  style={{ marginTop: '8%', minWidth: windowWidth * 0.45, justifyContent: 'center', alignItems: 'center' }}
+                  mode="contained"
+                >
+                  Get data
+                </Button>
+              )}
 
-                            const closeCollectionUrl = `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/CloseCollection_FromApp`;
-                            const dummyCloseCycleUrl = `https://app.automatesystemsdataservice.in/Internal/PigmyServices.asmx/Dummy_CloseCycle`;
-                            // let tempCount = 8;
-                            let tempCount = parseInt(transactionTable.length);
-                            try {
+              {closeButtonLoading ? (
+                <ActivityIndicator size={30} color={COLORS.primary} style={{ marginTop: '8%' }} />
+              ) : (
+                <Button
+                  icon="arrow-up"
+                  loading={closeButtonLoading}
+                  disabled={syncLoading || closeButtonLoading || !hasData || isFirstLogin}
+                  onPress={handleCloseCollection}
+                  labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }}
+                  style={{ marginTop: '8%', minWidth: windowWidth * 0.45 }}
+                  mode="contained"
+                >
+                  Close collection
+                </Button>
+              )}
+            </View>
 
-                                const closeCollectionResponse = await fetchWithTimeout(closeCollectionUrl, {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/x-www-form-urlencoded',
-                                    },
-                                    body: new URLSearchParams({
-                                        MobileNo: mobileNumber,
-                                        Fdate: FileCreateDate,
-                                        NoofRecs: tempCount,
-                                    }).toString(),
-                                }, 15000);
+            {!licenseExpired ? (
+              <>
+                <View style={styles.lineView}>
+                  <Text style={styles.lineText}>Recent transactions </Text>
+                </View>
 
-                                const closeCollectionText = await closeCollectionResponse.text();
-                                const parser = new XMLParser();
-                                const closeCollectionJson = parser.parse(closeCollectionText);
-                                const closeCollectionData = JSON.parse(closeCollectionJson.string);
-                                const closeCollectionResponseCode = closeCollectionData.ResonseCode;
-
-                                if (closeCollectionResponseCode === '0000') {
-                                    const dummyCloseCycleResponse = await fetchWithTimeout(dummyCloseCycleUrl, {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/x-www-form-urlencoded',
-                                        },
-                                        body: new URLSearchParams({
-                                            MobileNo: mobileNumber,
-                                            Fdate: FileCreateDate,
-                                            NoofRecs: tempCount,
-                                        }).toString(),
-                                    }, 15000);
-
-                                    const dummyCloseCycleText = await dummyCloseCycleResponse.text();
-                                    const dummyCloseCycleJson = parser.parse(dummyCloseCycleText);
-                                    const dummyCloseCycleData = JSON.parse(dummyCloseCycleJson.string);
-                                    const dummyCloseCycleResponseCode = dummyCloseCycleData.ResonseCode;
-
-                                    if (dummyCloseCycleResponseCode === '0000') {
-                                        Alert.alert("Success", "Successfully closed Collections");
-                                        let transactionHistoryTable = await AsyncStorage.getItem('transactionHistoryTable');
-                                        transactionHistoryTable = transactionHistoryTable ? JSON.parse(transactionHistoryTable) : [];
-                                        let transactionTableData = await AsyncStorage.getItem('transactionTable');
-                                        transactionTableData = transactionTableData ? JSON.parse(transactionTableData) : [];
-                                        transactionTableData.forEach(transaction => {
-                                            transactionHistoryTable.push(transaction);
-                                        });
-                                        await AsyncStorage.setItem('transactionHistoryTable', JSON.stringify(transactionHistoryTable));
-                                        await AsyncStorage.removeItem('transactionTable');
-
-                                        const remainingData = await AsyncStorage.getItem('transactionTable');
-                                        if (remainingData) {
-                                            await AsyncStorage.removeItem('transactionTable');
-                                            setTransactionTable([]);
-                                        }
-                                        setTransactionTable([]);
-                                        fetchTransactionTable();
-                                        setDataAvailable(false);
-                                        setMaxAmountLimit(null);
-                                        setNoOfDaysAllowed(null);
-                                        setTotalAmount(null);
-                                        setpendingCount(0)
-                                        await AsyncStorage.setItem('firstLoginComplete', 'false');
-                                    }
-                                    else {
-                                        throw new Error(
-                                            `DummyCloseCycle Error: Code ${dummyCloseCycleResponseCode}, ${dummyCloseCycleData.ResponseString}`
-                                        );
-                                    }
-                                }
-                                else {
-                                    Alert.alert('Error', ` Response Code - ${closeCollectionResponseCode} - ${closeCollectionData?.ResponseString} `)
-                                }
-                            } catch (error) {
-                                Alert.alert('Error', `Error: ${error.message}`);
-                            } finally {
-                                setButtonLoading(false);
-                                fetchTransactionTable();
-                            }
-                        }
-                    }
-                }
-            ]
-        );
-    };
-
-    return (
-        <View style={styles.dashView}>
-            <StatusBar backgroundColor={COLORS.primaryAccent} barStyle="light-content" />
-
-            <>
-                {(dataAvailable || collectionAllowed) &&
-                    <View style={{ width: windowWidth * 1, height: windowHeight * 0.1, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly' }}>
-                        <Searchbar
-                            placeholder="Search by Name or A/C No"
-                            onChangeText={setSearchQuery}
-                            // loading={true}
-                            value={searchQuery}
-                            autoFocus={searchedResults}
-                            onIconPress={() => { setSearchedResults(false), setSearchQuery(''), Keyboard.dismiss() }}
-                            icon={searchedResults ? 'arrow-left-thin' : 'magnify'}
-                            iconColor={COLORS.primary}
-                            onPress={() => { setSearchedResults(true) }}
-                            elevation={1}
-                            style={{
-                                width: '80%',
-                                alignSelf: 'center',
-                                // marginTop: 20,
-                                backgroundColor: '#FFFFFF',
-                                elevation: 15,
-                            }}
-                        />
-                        <Pressable onPress={() => { navigation.navigate('Profile', { count: NoOfRecords, amount: totalAmount, collectionAllowed: collectionAllowed }) }}>
-                            <MaterialCommunityIcons2 name='user-circle' style={{ elevation: 5 }} elevation={5} color={COLORS.primary} size={45} />
-                        </Pressable>
-                        {(!dataAvailable) && (
-                            <View style={{
-                                position: 'absolute',
-                                width: '80%',
-                                height: '100%',
-                                backgroundColor: 'rgba(255, 255, 255, 0.6)',
-                                alignSelf: 'center',
-                                borderRadius: 10,
-                            }} />
-                        )}
-                    </View>
-                }
-                {searchedResults ? (
+                <ScrollView style={{ marginTop: 20, marginBottom: windowHeight * 0.002 }}>
+                  {transactionTable && transactionTable.length > 0 ? (
+                    transactionTable
+                      .sort((a, b) => new Date(b.CollDateTime) - new Date(a.CollDateTime))
+                      .map((item, index) => (
+                        <TransactionCard InputFileType={inputFileType} searchQuery={searchText} item={item} key={index} index={index} />
+                      ))
+                  ) : (
                     <>
-                        <SearchPopup maxAmountLimit={maxAmountLimit} BranchName={BranchName} BranchCode={BranchCode} collectionAllowed={collectionAllowed} multipleCollection={multipleCollection} mappedMasterData={mappedMasterData} setSearchedResults={setSearchedResults} searchQuery={searchQuery} />
+                      {(!isActiveAccount) ? (
+                        <Text style={[styles.text1, { marginTop: 100, textAlign: 'center', fontSize: 15 }]}>Your account is not Active, Please contact administrator</Text>
+                      ) : (
+                        <Text style={[styles.text1, { marginTop: 100, textAlign: 'center' }]}>No transactions yet</Text>
+                      )}
                     </>
-                ) : (
-                    <View style={{ height: windowHeight * 0.85 }}>
-                        <View
-                            style={{
-                                width: windowWidth * 0.90,
-                                alignSelf: 'center',
-                                flexDirection: 'row',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                height: 'auto',
-                                overflow: 'hidden',
-                                backgroundColor: '#eef2fa',
-                                borderRadius: 10,
-                                elevation: 2,
-                            }}
-                        >
-                            <View style={{ flex: 1, marginRight: 8 }}>
-                                <Text style={[styles.text, { fontSize: 14, fontFamily: 'Montserrat-Bold', marginLeft: 0 }]}>
-                                    {ClientName ? ClientName : '-'}
-                                </Text>
-                            </View>
-                            <View style={{ flex: 1, marginLeft: 8 }}>
-                                <Text style={styles.text}>Branch</Text>
-                                <Text style={[styles.text, { fontSize: 14, fontFamily: 'Montserrat-Bold' }]}>
-                                    {BranchName ? BranchName : "-"} {BranchCode ? `(${BranchCode})` : ''}
-                                </Text>
-                            </View>
-                        </View>
-
-                        <View style={{ marginTop: 15, width: windowWidth * 1, height: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-evenly' }}>
-                            <View style={[styles.dataInfoView, { width: windowWidth * 0.90, alignSelf: 'center', flexDirection: 'row', height: 'auto', overflow: 'hidden' }]}>
-                                <View style={{ width: '30%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                                    <Text style={[styles.text, { marginLeft: 0 }]}>Total receipt</Text>
-                                    <Text style={[styles.text, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>{transactionTable ? transactionTable.length : '-'} </Text>
-                                </View>
-                                <View style={{ width: '30%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                                    <Text style={[styles.text]}>Pending</Text>
-                                    <Text style={[styles.text, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>{pendingCount ? pendingCount : '0'} </Text>
-                                    {/* <Text style={[styles.text, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>{noOfDaysAllowed ? noOfDaysAllowed : '0'} </Text> */}
-                                </View>
-                                <View style={{ width: '30%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                                    <Text style={[styles.text]}>Allowed days</Text>
-                                    <Text style={[styles.text, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>{noOfDaysAllowed ? noOfDaysAllowed : '0'} </Text>
-                                </View>
-                            </View>
-
-                            <View style={[styles.dataInfoView, { marginTop: 15, width: windowWidth * 0.90, alignSelf: 'center', flexDirection: 'row', height: 'auto', overflow: 'hidden' }]}>
-                                <View style={{ width: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                                    <Text style={[styles.text]}>Total collected amount </Text>
-                                    <Text style={[styles.text, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>{totalAmount ? `₹${new Intl.NumberFormat('en-IN').format(totalAmount)}` : '0'}</Text>
-                                </View>
-                                <View style={{ width: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                                    <Text style={[styles.text]}>Amount limit</Text>
-                                    <Text style={[styles.text, { fontSize: 26, fontFamily: 'Montserrat-Bold' }]}>{maxAmountLimit ? `₹${new Intl.NumberFormat('en-IN').format(maxAmountLimit)}` : '0'}</Text>
-                                </View>
-                            </View>
-
-                            <View style={{ width: '100%', marginTop: 15, display: 'flex', flexDirection: 'row', justifyContent: 'center' }}>
-                                <View style={{ width: '50%', alignSelf: 'flex-start' }}>
-                                    <View style={{ width: '90%', backgroundColor: '#eef2fa', elevation: 2, alignSelf: 'flex-end', borderRadius: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                                        <Text style={[styles.text]}>File Created Date</Text>
-                                        <Text style={[styles.text, { fontSize: 20, fontFamily: 'Montserrat-Bold' }]}>{fileCreatedDate ? fileCreatedDate : '-'} </Text>
-                                    </View>
-                                </View>
-                                <View style={{ width: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                                    <Button
-                                        icon={'cloud-sync-outline'}
-                                        loading={syncLoading}
-                                        disabled={syncLoading || buttonLoading || loading || isFirstLogin || !IsActive || transactionTable?.length === 0}
-                                        onPress={handleSyncData}
-                                        labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }}
-                                        style={{ width: windowWidth * 0.40 }}
-                                        mode="contained"
-                                    >
-                                        Sync
-                                    </Button>
-                                </View>
-                            </View>
-                        </View>
-
-                        {!collectionAllowed &&
-                            <View>
-                                <Text style={{ color: '#CC5500', fontSize: 16, alignSelf: 'center', marginTop: 10, marginBottom: 10, fontFamily: 'Montserrat-Bold' }}>The allowed days for collection have expired.</Text>
-                            </View>
-                        }
-
-                        <View style={{ width: '95%', alignSelf: 'center', display: 'flex', justifyContent: 'space-between', flexDirection: 'row' }}>
-
-                            {loading ? (
-                                <ActivityIndicator size={30} color={COLORS.primary} style={{ margin: 'auto', marginTop: '8%' }} />
-                            ) : (
-                                <Button
-                                    icon={'play'}
-                                    // loading={loading}
-                                    disabled={loading || dataAvailable || !IsActive || syncLoading}
-                                    onPress={handleGetData}
-                                    labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }}
-                                    style={{ marginTop: '8%', minWidth: windowWidth * 0.45 }}
-                                    mode="contained"
-                                >
-                                    Get Data
-                                </Button>
-                            )}
-                            {buttonLoading ? (
-                                <ActivityIndicator size={30} color={COLORS.primary} style={{ margin: 'auto', marginTop: '8%' }} />
-                            ) : (
-                                <Button icon={'arrow-up'} loading={buttonLoading} disabled={syncLoading || buttonLoading || !dataAvailable || isFirstLogin} onPress={handleCloseCollection} labelStyle={{ fontFamily: 'Montserrat-SemiBold', fontSize: 14 }} style={{ marginTop: '8%', minWidth: windowWidth * 0.45 }} mode="contained">Close collection</Button>
-                            )}
-                        </View>
-
-                        {!LicenseExpired ? (
-                            <>
-                                <View style={styles.lineView}>
-                                    <Text style={styles.lineText}>Recent transactions </Text>
-                                </View>
-
-                                <ScrollView style={{ marginTop: 20, marginBottom: windowHeight * 0.002 }}>
-                                    <>
-                                        {transactionTable && transactionTable?.length > 0 ? (
-                                            transactionTable
-                                                ?.sort((a, b) => {
-                                                    const dateA = new Date(a.CollDateTime);
-                                                    const dateB = new Date(b.CollDateTime);
-                                                    return dateB - dateA;
-                                                })
-                                                ?.map((item, index) => (
-                                                    <TransactionCard InputFileType={InputFileType} searchQuery={searchQuery} item={item} key={index} index={index} />
-                                                ))
-                                        ) : (
-                                            <Text style={[styles.text1, { margin: 'auto', marginTop: 100 }]}>No transactions yet</Text>
-                                        )}
-                                    </>
-                                </ScrollView>
-                            </>
-                        ) : (
-                            <View style={styles.notFound}>
-                                <Text style={styles.text1}>Your license has expired. Please pay subscription!</Text>
-                            </View>
-                        )}
-                    </View>
-                )}
-            </>
-        </View>
-    )
+                  )}
+                </ScrollView>
+              </>
+            ) : (
+              <View style={styles.notFound}>
+                <Text style={styles.text1}>Your license has expired. Please pay subscription!</Text>
+              </View>
+            )}
+          </View>
+        )}
+      </>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-    loaderContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    dashView: {
-        width: windowWidth * 1,
-        height: windowHeight * 1,
-        backgroundColor: '#FFFFFF'
-    },
-    text1: {
-        fontFamily: 'Montserrat-SemiBold',
-        fontSize: 18,
-        color: COLORS.gray
-    },
-    notFound: {
-        width: windowWidth * 0.8,
-        height: windowHeight * 0.80,
-        // backgroundColor: COLORS.lightGrey,
-        alignSelf: 'center',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center'
-    },
-    getData: {
-        width: windowWidth * 1,
-        height: windowHeight * 0.1,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        // backgroundColor: COLORS.primary
-    },
-    dataInfoView: {
-        width: '45%',
-        height: 80,
-        borderRadius: 10,
-        // alignSelf: 'center',
-        // marginTop: 20,
-        justifyContent: 'space-evenly',
-        alignItems: 'center',
-        display: 'flex',
-        flexDirection: 'column',
-        backgroundColor: '#eef2fa',
-        elevation: 2
-    },
-    text: {
-        fontFamily: 'Montserrat-SemiBold',
-        color: COLORS.gray,
-        marginLeft: 10,
-        fontSize: 14
-    },
-    lineView: {
-        marginTop: 20,
-        width: windowWidth * 0.85,
-        height: windowHeight * 0.02,
-        alignSelf: 'center',
-        borderBottomWidth: 2,
-        borderBottomColor: COLORS.primary
-    },
-    lineText: {
-        position: 'absolute',
-        top: 5,
-        backgroundColor: '#FFFFFF',
-        fontFamily: 'Montserrat-Bold',
-        color: COLORS.gray,
-        alignSelf: 'flex-start',
-        fontSize: 16
-    },
-    curveView: {
-        width: windowWidth * 1,
-        height: windowHeight * 0.18,
-        backgroundColor: COLORS.primaryAccent,
-        // position: 'absolute',
-        marginBottom: 'auto',
-        borderBottomLeftRadius: 100,
-        borderBottomRightRadius: 100,
-        elevation: 5
-    },
-    modalView: {
-        flex: 1,
-        backgroundColor: 'white',
-        padding: 20,
-        marginTop: 1,
-        borderRadius: 10,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
-        elevation: 5,
-    },
-    modalContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    },
-    modalView11: {
-        width: '90%',
-        padding: 30,
-        paddingBottom: 50,
-        paddingTop: 30,
-        backgroundColor: 'white',
-        borderRadius: 10,
-        alignItems: 'center',
-    },
-    buttonContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        width: '100%',
-    },
-    modalButton: {
-        flex: 1,
-        marginHorizontal: 5,
-        marginVertical: 5,
-        borderColor: COLORS.primaryAccent,
-    },
-    modalTitle: {
-        fontSize: 20,
-        fontFamily: 'Montserrat-Bold',
-        marginBottom: 20,
-    },
-    noResultsText: {
-        textAlign: 'center',
-        marginTop: 20,
-        fontSize: 16,
-        color: 'gray',
-    },
-    cloudIcon: {
-        marginBottom: 20,
-    },
-    buttonLabel: {
-        fontSize: 16,
-        fontFamily: 'Montserrat-Bold',
-    },
-    whatsappIcon: {
-        marginHorizontal: 5,
-        marginVertical: 5,
-        backgroundColor: '#25D366',
-        borderRadius: 15,
-        padding: 5,
-    },
-    smsIcon: {
-        marginHorizontal: 5,
-        marginVertical: 5,
-        backgroundColor: COLORS.primary,
-        borderRadius: 15,
-        padding: 5,
-    }
-})
+  loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  dashView: { width: windowWidth, height: windowHeight, backgroundColor: '#FFFFFF' },
+  text1: { fontFamily: 'Montserrat-SemiBold', fontSize: 18, color: COLORS.gray },
+  notFound: { width: windowWidth * 0.8, height: windowHeight * 0.8, alignSelf: 'center', justifyContent: 'center', alignItems: 'center' },
+  headerRow: { width: windowWidth, height: windowHeight * 0.1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly' },
+  searchbarStyle: { width: '80%', alignSelf: 'center', backgroundColor: '#FFFFFF', elevation: 15 },
+  overlayBlocked: { position: 'absolute', width: '80%', height: '100%', backgroundColor: 'rgba(255,255,255,0.6)', alignSelf: 'center', borderRadius: 10 },
+  infoHeader: { width: windowWidth * 0.9, alignSelf: 'center', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#eef2fa', borderRadius: 10, elevation: 2, padding: 8 },
+  summaryContainer: { marginTop: 15, width: windowWidth, alignItems: 'center', justifyContent: 'space-evenly' },
+  dataInfoView: { width: '45%', height: 80, borderRadius: 10, justifyContent: 'space-evenly', alignItems: 'center', backgroundColor: '#eef2fa', elevation: 2, flexDirection: 'row' },
+  dataBlock: { width: '30%', alignItems: 'center', justifyContent: 'center' },
+  labelText: { fontFamily: 'Montserrat-SemiBold', color: COLORS.gray, marginLeft: 10, fontSize: 14, textAlign: 'center' },
+  lineView: { marginTop: 20, width: windowWidth * 0.85, height: windowHeight * 0.02, alignSelf: 'center', borderBottomWidth: 2, borderBottomColor: COLORS.primary },
+  lineText: { position: 'absolute', top: 5, backgroundColor: '#FFFFFF', fontFamily: 'Montserrat-Bold', color: COLORS.gray, alignSelf: 'flex-start', fontSize: 16 },
+  fileDateAndSync: { width: windowWidth * 0.9, marginTop: 15, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
+  fileDateBox: { width: '100%', backgroundColor: '#eef2fa', elevation: 2, alignSelf: 'flex-end', borderRadius: 10, alignItems: 'center', justifyContent: 'center', padding: 10 },
+  actionsRow: { width: '95%', alignSelf: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  curveView: { width: windowWidth, height: windowHeight * 0.18, backgroundColor: COLORS.primaryAccent, marginBottom: 'auto', borderBottomLeftRadius: 100, borderBottomRightRadius: 100, elevation: 5 },
+  modalView: { flex: 1, backgroundColor: 'white', padding: 20, marginTop: 1, borderRadius: 10, elevation: 5 },
+  modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
+  modalView11: { width: '90%', padding: 30, paddingBottom: 50, paddingTop: 30, backgroundColor: 'white', borderRadius: 10, alignItems: 'center' },
+  buttonContainer: { flexDirection: 'row', justifyContent: 'space-between', width: '100%' },
+  modalButton: { flex: 1, marginHorizontal: 5, marginVertical: 5, borderColor: COLORS.primaryAccent },
+  modalTitle: { fontSize: 20, fontFamily: 'Montserrat-Bold', marginBottom: 20 },
+  noResultsText: { textAlign: 'center', marginTop: 20, fontSize: 16, color: 'gray' },
+  cloudIcon: { marginBottom: 20 },
+  buttonLabel: { fontSize: 16, fontFamily: 'Montserrat-Bold' },
+  whatsappIcon: { marginHorizontal: 5, marginVertical: 5, backgroundColor: '#25D366', borderRadius: 15, padding: 5 },
+  smsIcon: { marginHorizontal: 5, marginVertical: 5, backgroundColor: COLORS.primary, borderRadius: 15, padding: 5 },
+});

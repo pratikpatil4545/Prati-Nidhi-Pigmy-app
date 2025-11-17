@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Image, ScrollView, TextInput, Pressable, Keyboard } from 'react-native'
+import { View, Text, StyleSheet, Image, ScrollView, TextInput, Pressable, Keyboard, Alert } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import { COLORS, windowHeight, windowWidth } from '../../../Common/Constants'
 import MaterialCommunityIcons4 from 'react-native-vector-icons/FontAwesome6';
@@ -11,7 +11,7 @@ export default function CollectionHistory({ navigation }) {
     const [transactionTable, setTransactionTable] = useState([]);
     const [filteredTable, setFilteredTable] = useState([]);
     const [totalAmount, setTotalAmount] = useState(0);
-    const [searchTerm, setSearchTerm] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
     const isFocused = useIsFocused();
 
     useEffect(() => {
@@ -19,17 +19,17 @@ export default function CollectionHistory({ navigation }) {
     }, [isFocused]);
 
     useEffect(() => {
-        if (searchTerm.trim() === '') {
+        if (searchQuery.trim() === '') {
             setFilteredTable(transactionTable);
         } else {
             const filteredData = transactionTable.filter(
                 (item) =>
-                    item.EnglishName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    item.AccountNo?.toString().includes(searchTerm)
+                    item.EnglishName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    item.AccountNo?.toString().includes(searchQuery)
             );
             setFilteredTable(filteredData);
         }
-    }, [searchTerm, transactionTable]);
+    }, [searchQuery, transactionTable]);
 
     const fetchTransactionTable = async () => {
         try {
@@ -45,7 +45,13 @@ export default function CollectionHistory({ navigation }) {
                     return transactionDate >= sevenDaysAgo;
                 });
 
-                await AsyncStorage.setItem('transactionHistoryTable', JSON.stringify(filteredData));
+                try {
+                    await AsyncStorage.setItem('transactionHistoryTable', JSON.stringify(filteredData));
+                  } catch (err) {
+                    console.warn('Storage Error', 'Failed to store transaction locally.');
+                    Alert.alert('Error', 'Failed to save data. Please try again.')
+                    return;
+                  }
 
                 setTransactionTable(filteredData);
                 setFilteredTable(filteredData);
@@ -75,16 +81,14 @@ export default function CollectionHistory({ navigation }) {
             <View style={{ width: windowWidth * 1, marginTop: '2%', height: windowHeight * 0.1, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly' }}>
                 <Searchbar
                     placeholder="Search by Name or A/C No"
-                    onChangeText={setSearchTerm}
-                    // loading={true}
-                    value={searchTerm}
-                    onIconPress={() => { setSearchTerm(''), Keyboard.dismiss() }}
+                    onChangeText={setSearchQuery}
+                    value={searchQuery}
+                    onIconPress={() => { setSearchQuery(''), Keyboard.dismiss() }}
                     iconColor={COLORS.primary}
                     elevation={1}
                     style={{
                         width: '80%',
                         alignSelf: 'center',
-                        // marginTop: 20,
                         backgroundColor: '#FFFFFF',
                         elevation: 15,
                     }}
