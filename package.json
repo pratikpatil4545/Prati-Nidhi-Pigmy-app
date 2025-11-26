@@ -19,7 +19,7 @@
     "@react-navigation/bottom-tabs": "^6.6.1",
     "@react-navigation/native": "^6.1.18",
     "@react-navigation/native-stack": "^6.11.0",
-    "axios": "^1.7.7",
+    "axios": "^1.12.0",
     "fs": "^0.0.1-security",
     "metro-react-native-babel-preset": "^0.77.0",
     "net": "^1.0.2",
